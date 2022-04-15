@@ -32,7 +32,7 @@ OutputDir={#WORKSPACE}\deploy\installers\gixsql-{#HOST_PLATFORM}
 OutputBaseFilename=gixsql-{#VER_GIXIDEMAJ}.{#VER_GIXIDEMIN}.{#VER_GIXIDEREL}-{#GIX_REVISION}-installer
 ArchitecturesInstallIn64BitMode=x64
 DefaultGroupName=GixSQL
-LicenseFile={#WORKSPACE}\GPL-3.0.txt
+LicenseFile={#WORKSPACE}\LICENSE
 RestartIfNeededByRun=False
 DisableWelcomePage=False
 
@@ -42,7 +42,7 @@ Source: "{#DIST_DIR}\bin\gixpp.exe"; DestDir: "{app}\bin"; Flags: ignoreversion 
 Source: "{#DIST_DIR}\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion createallsubdirs recursesubdirs
 
 ; COPY files
-Source: "{#WORKSPACE}\gixsql\copy\SQLCA.cpy"; DestDir: "{app}\lib\copy"; Flags: ignoreversion createallsubdirs recursesubdirs
+Source: "{#WORKSPACE}\copy\SQLCA.cpy"; DestDir: "{app}\lib\copy"; Flags: ignoreversion createallsubdirs recursesubdirs
 
 ; examples and docs
 ;Source: "{#WORKSPACE}\deploy\examples\*"; DestDir: "{userdocs}\Gix\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
