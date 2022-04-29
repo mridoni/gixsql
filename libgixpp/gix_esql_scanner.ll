@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2021 Marco Ridoni
+* Copyright (C) 2021,2022 Marco Ridoni
 * Copyright (C) 2013 Tokyo System House Co.,Ltd.
 *
 * This library is free software; you can redistribute it and/or
@@ -144,10 +144,10 @@ LOW_VALUE "LOW\-VALUE"
 	__yy_push_state(DATA_DIVISION_STATE);
 }
 
-"WORKING-STORAGE"[ ]+"SECTION"[ ]*"." | 
-"LOCAL-STORAGE"[ ]+"SECTION"[ ]*"." |
-"LINKAGE"[ ]+"SECTION"[ ]*"." |
-"FILE"[ ]+"SECTION"[ ]*"." {
+[ ]?"WORKING-STORAGE"[ ]+"SECTION"[ ]*"." | 
+[ ]?"LOCAL-STORAGE"[ ]+"SECTION"[ ]*"." |
+[ ]?"LINKAGE"[ ]+"SECTION"[ ]*"." |
+[ ]?"FILE"[ ]+"SECTION"[ ]*"." {
         driver.startlineno = yylineno;
         driver.endlineno = yylineno;
 		driver.host_reference_list->clear();
