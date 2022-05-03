@@ -44,8 +44,18 @@ void extract_precision_scale(char * s, uint16_t *precision, uint16_t *scale);
 #define strcasecmp _stricmp
 #endif
 
-//#define UNPUT_TOKEN() yyless(strlen(yytext));
-#define UNPUT_TOKEN() { int i; char *yycopy = strdup( yytext ); for ( i = yyleng - 1; i >= 0; --i ) unput( yycopy[i] ); free( yycopy ); }
+#define UNPUT_TOKEN() { \
+	int i; \
+	char *yycopy = strdup( yytext ); \
+	for ( i = yyleng - 1; i >= 0; --i ) { \
+		unput( yycopy[i] ); \
+	} \
+	free( yycopy ); \
+	}
+
+// This "fakes" being at the beginning of the line, so we can correctly
+// parse expressions with '^' after unputting a token to the input buffer
+#define SET_AT_BOL() YY_CURRENT_BUFFER->yy_at_bol = 1;
 
 #define FLAG_LINKAGE_START	128
 
@@ -142,84 +152,6 @@ LOW_VALUE "LOW\-VALUE"
 
 "DATA"[ ]+"DIVISION"[ ]*"." {
 	__yy_push_state(DATA_DIVISION_STATE);
-}
-
-"WORKING-STORAGE"[ ]+"SECTION"[ ]*"." | 
-"LOCAL-STORAGE"[ ]+"SECTION"[ ]*"." |
-"LINKAGE"[ ]+"SECTION"[ ]*"." |
-"FILE"[ ]+"SECTION"[ ]*"." {
-        driver.startlineno = yylineno;
-        driver.endlineno = yylineno;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();	
-		driver.cursorname = "";
-		driver.sqlname = "";
-		driver.incfilename = "";
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
-
-		if (driver.data_division_section != DD_SECTION_INITIAL) {
-			switch (driver.data_division_section) {
-				case DD_SECTION_WS:
-					driver.data_division_section = DD_SECTION_INITIAL;
-					driver.commandname ="WORKING_END";
-					driver.startlineno = yylineno - 1;
-					driver.endlineno = yylineno - 1;
-					UNPUT_TOKEN();
-					return yy::gix_esql_parser::make_WORKINGEND(loc); 
-
-				case DD_SECTION_LL:
-					driver.data_division_section = DD_SECTION_INITIAL;
-					driver.commandname ="LOCALSTORAGE_END";
-					driver.startlineno = yylineno - 1;
-					driver.endlineno = yylineno - 1;
-					UNPUT_TOKEN();
-					return yy::gix_esql_parser::make_LOCALSTORAGEEND(loc); 
-
-				case DD_SECTION_LS:
-					driver.data_division_section = DD_SECTION_INITIAL;
-					driver.commandname ="LINKAGE_END";
-					driver.startlineno = yylineno - 1;
-					driver.endlineno = yylineno - 1;
-					UNPUT_TOKEN();
-					return yy::gix_esql_parser::make_LINKAGEEND(loc); 
-
-				case DD_SECTION_FS:
-					driver.data_division_section = DD_SECTION_INITIAL;
-					driver.commandname ="FILE_END";
-					driver.startlineno = yylineno - 1;
-					driver.endlineno = yylineno - 1;
-					UNPUT_TOKEN();
-					return yy::gix_esql_parser::make_FILEEND(loc); 
-			}
-		}
-
-		if (strncasecmp(yytext,"WORKING-STORAGE", 15) == 0) {
-				driver.commandname ="WORKING_BEGIN";
-				driver.data_division_section = DD_SECTION_WS;
-				return yy::gix_esql_parser::make_WORKINGBEGIN(loc); 
-			}
-			else 
-				if (strncasecmp(yytext,"LOCAL-STORAGE", 13) == 0) {
-					driver.commandname ="LOCALSTORAGE_BEGIN";
-					driver.data_division_section = DD_SECTION_LL;
-					return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
-				}
-				else 
-					if (strncasecmp(yytext,"LINKAGE", 7) == 0) {
-						driver.commandname ="LINKAGE_BEGIN";
-						driver.data_division_section = DD_SECTION_LS;
-						return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
-					}
-					else 
-						if (strncasecmp(yytext,"FILE", 4) == 0) {
-							driver.commandname ="FILE_BEGIN";
-							driver.data_division_section = DD_SECTION_FS;
-							return yy::gix_esql_parser::make_FILEBEGIN(loc);
-						}		
-
-		return yy::gix_esql_parser::make_WORD(yytext, loc);	// should never happen
 }
 
 <FD_STATE>{
@@ -1173,6 +1105,88 @@ LOW_VALUE "LOW\-VALUE"
 
 		return yy::gix_esql_parser::make_HOSTVARIANTEND(loc);
     }
+
+	^[ ]*"WORKING-STORAGE"[ ]+"SECTION"[ ]*"." |
+	^[ ]*"LOCAL-STORAGE"[ ]+"SECTION"[ ]*"." |
+	^[ ]*"LINKAGE"[ ]+"SECTION"[ ]*"." |
+	^[ ]*"FILE"[ ]+"SECTION"[ ]*"." {
+			driver.startlineno = yylineno;
+			driver.endlineno = yylineno;
+			driver.host_reference_list->clear();
+			driver.res_host_reference_list->clear();	
+			driver.cursorname = "";
+			driver.sqlname = "";
+			driver.incfilename = "";
+			driver.hostreferenceCount = 0;
+			driver.command_putother = 0;
+			driver.sql_list->clear();
+
+			if (driver.data_division_section != DD_SECTION_INITIAL) {
+				switch (driver.data_division_section) {
+					case DD_SECTION_WS:
+						driver.data_division_section = DD_SECTION_INITIAL;
+						driver.commandname ="WORKING_END";
+						driver.startlineno = yylineno - 1;
+						driver.endlineno = yylineno - 1;
+						UNPUT_TOKEN();
+						SET_AT_BOL();
+						return yy::gix_esql_parser::make_WORKINGEND(loc); 
+
+					case DD_SECTION_LL:
+						driver.data_division_section = DD_SECTION_INITIAL;
+						driver.commandname ="LOCALSTORAGE_END";
+						driver.startlineno = yylineno - 1;
+						driver.endlineno = yylineno - 1;
+						UNPUT_TOKEN();
+						SET_AT_BOL();
+						return yy::gix_esql_parser::make_LOCALSTORAGEEND(loc); 
+
+					case DD_SECTION_LS:
+						driver.data_division_section = DD_SECTION_INITIAL;
+						driver.commandname ="LINKAGE_END";
+						driver.startlineno = yylineno - 1;
+						driver.endlineno = yylineno - 1;
+						UNPUT_TOKEN();
+						SET_AT_BOL();
+						return yy::gix_esql_parser::make_LINKAGEEND(loc); 
+
+					case DD_SECTION_FS:
+						driver.data_division_section = DD_SECTION_INITIAL;
+						driver.commandname ="FILE_END";
+						driver.startlineno = yylineno - 1;
+						driver.endlineno = yylineno - 1;
+						UNPUT_TOKEN();
+						SET_AT_BOL();
+						return yy::gix_esql_parser::make_FILEEND(loc); 
+				}
+			}
+
+			if (strncasecmp(yytext,"WORKING-STORAGE", 15) == 0) {
+					driver.commandname ="WORKING_BEGIN";
+					driver.data_division_section = DD_SECTION_WS;
+					return yy::gix_esql_parser::make_WORKINGBEGIN(loc); 
+				}
+				else 
+					if (strncasecmp(yytext,"LOCAL-STORAGE", 13) == 0) {
+						driver.commandname ="LOCALSTORAGE_BEGIN";
+						driver.data_division_section = DD_SECTION_LL;
+						return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
+					}
+					else 
+						if (strncasecmp(yytext,"LINKAGE", 7) == 0) {
+							driver.commandname ="LINKAGE_BEGIN";
+							driver.data_division_section = DD_SECTION_LS;
+							return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
+						}
+						else 
+							if (strncasecmp(yytext,"FILE", 4) == 0) {
+								driver.commandname ="FILE_BEGIN";
+								driver.data_division_section = DD_SECTION_FS;
+								return yy::gix_esql_parser::make_FILEBEGIN(loc);
+							}		
+
+			return yy::gix_esql_parser::make_WORD(yytext, loc);	// should never happen
+	}
 
 
     ("66"|"77"|"78"|"88")[^\.]*"." {}
