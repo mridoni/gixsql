@@ -130,6 +130,7 @@ static std::string to_std_string(connect_to_info_t *i) { char buffer [33]; sprin
 %token AS
 %token AT
 %token IS
+%token VARYING
 %token IGNORE
 %token DECLARE_VAR
 %token USING
@@ -822,6 +823,7 @@ picture_clause
 | occurs_clause
 | value_clause
 | external_clause
+| varying_clause
 ;
 
 picture_clause:
@@ -831,6 +833,33 @@ PICTURE         {  driver.build_picture( $1,driver.current_field);  }
 usage_clause:
 usage
 | USAGE _is usage
+;
+
+varying_clause:
+VARYING {
+	auto x = driver.current_field;
+	
+	uint64_t type_info = (TYPE_SQL_VARCHAR << 32) | (x->picnsize << 16);
+
+	x->sql_type = type_info;
+	x->is_varlen = true;
+	x->usage = Usage::None;
+
+	x->pictype = PIC_ALPHANUMERIC;	// Preprocessor will build the correct PIC for "SQL TYPE IS" defs
+
+	// We do not want to overwrite precision and scale as defined in the COBOL source
+	// x->picnsize = precision;
+	// x->scale = scale;
+			
+	driver.cb_set_commandname("DECLARE_VAR");
+	driver.cb_host_list_add (driver.host_reference_list, x->sname);
+	driver.put_exec_list(); 
+
+	// We need to store the variable data, so we can fix it up before the output source is generated
+	std::string src_file = driver.lexer.src_location_stack.top().filename;
+	std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
+	driver.field_sql_type_info[x->sname] = d;
+}
 ;
 
 usage:
