@@ -35,9 +35,7 @@
 #define COBOL_TYPE_UNSIGNED_BINARY		22
 #define COBOL_TYPE_SIGNED_BINARY		23
 
-// These must be in sync with the ones in SqlVar.h
-#define VARLEN_SUFFIX_DATA		"DATA"
-#define VARLEN_SUFFIX_LENGTH	"LENGTH"
+// These must be in sync with the ones in TPESQLProcessing.cpp
 #ifdef USE_VARLEN_32
 #define VARLEN_LENGTH_PIC		"9(05) BINARY"
 #define VARLEN_LENGTH_SZ		4

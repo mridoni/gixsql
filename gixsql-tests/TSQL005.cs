@@ -79,12 +79,12 @@ namespace gixsql_tests
                 "DIGIT83: +0000",
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
-                "VBFLD-DATA  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LENGTH: 0080",
+                "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
+                "VBFLD-LEN: 0080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
-                "VCFLD-DATA  : [ABCDEFGHIJK]",
-                "VCFLD-LENGTH: 0011"
+                "VCFLD-ARR  : [ABCDEFGHIJK]",
+                "VCFLD-LEN: 0011"
             });
         }
 
@@ -146,12 +146,12 @@ namespace gixsql_tests
                 "DIGIT83: +0000",
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
-                "VBFLD-DATA  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LENGTH: 0080",
+                "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
+                "VBFLD-LEN: 0080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
-                "VCFLD-DATA  : [ABCDEFGHIJK]",
-                "VCFLD-LENGTH: 0011"
+                "VCFLD-ARR  : [ABCDEFGHIJK]",
+                "VCFLD-LEN: 0011"
             });
         }
 
@@ -215,12 +215,12 @@ namespace gixsql_tests
                 "DIGIT83: +0000",
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
-                "VBFLD-DATA  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LENGTH: 0080",
+                "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
+                "VBFLD-LEN: 0080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
-                "VCFLD-DATA  : [ABCDEFGHIJK]",
-                "VCFLD-LENGTH: 0011"
+                "VCFLD-ARR  : [ABCDEFGHIJK]",
+                "VCFLD-LEN: 0011"
             });
         }
 
@@ -281,12 +281,12 @@ namespace gixsql_tests
                 "DIGIT83: +0000",
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
-                "VBFLD-DATA  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LENGTH: 0080",
+                "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
+                "VBFLD-LEN: 0080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
-                "VCFLD-DATA  : [ABCDEFGHIJK]",
-                "VCFLD-LENGTH: 0011"
+                "VCFLD-ARR  : [ABCDEFGHIJK]",
+                "VCFLD-LEN: 0011"
             });
         }
 

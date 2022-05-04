@@ -82,27 +82,27 @@
            MOVE LOW-VALUES TO SDIGIT01.
            MOVE LOW-VALUES TO SDIGIT02.
 
-           MOVE VBFLD-DATA(1:1) TO SDIGIT02.
+           MOVE VBFLD-ARR(1:1) TO SDIGIT02.
            DISPLAY 'DIGIT1 : ' NDIGIT.
 
-           MOVE VBFLD-DATA(2:1) TO SDIGIT02.
+           MOVE VBFLD-ARR(2:1) TO SDIGIT02.
            DISPLAY 'DIGIT2 : ' NDIGIT.
 
-           MOVE VBFLD-DATA(83:1) TO SDIGIT02.
+           MOVE VBFLD-ARR(83:1) TO SDIGIT02.
            DISPLAY 'DIGIT83: ' NDIGIT.
 
            DISPLAY 'BFLD        : [' BFLD ']'.
            DISPLAY 'BFLD LENGTH: ' LENGTH OF BFLD.
 
-           DISPLAY 'VBFLD-DATA  : [' VBFLD-DATA(1:VBFLD-LENGTH) ']'.
-           DISPLAY 'VBFLD-DATA  : [' VBFLD-DATA(1:88) ']'.
-           DISPLAY 'VBFLD-LENGTH: ' VBFLD-LENGTH.
+           DISPLAY 'VBFLD-ARR  : [' VBFLD-ARR(1:VBFLD-LEN) ']'.
+           DISPLAY 'VBFLD-ARR  : [' VBFLD-ARR(1:88) ']'.
+           DISPLAY 'VBFLD-LEN: ' VBFLD-LEN.
 
            DISPLAY 'CFLD        : [' CFLD ']'.
            DISPLAY 'CFLD LENGTH: ' LENGTH OF CFLD.
 
-           DISPLAY 'VCFLD-DATA  : [' VCFLD-DATA(1:VCFLD-LENGTH) ']'.
-           DISPLAY 'VCFLD-LENGTH: ' VCFLD-LENGTH.
+           DISPLAY 'VCFLD-ARR  : [' VCFLD-ARR(1:VCFLD-LEN) ']'.
+           DISPLAY 'VCFLD-LEN: ' VCFLD-LEN.
 
            EXEC SQL
               CONNECT RESET

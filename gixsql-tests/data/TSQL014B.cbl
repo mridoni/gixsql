@@ -57,12 +57,12 @@
 
          EXEC SQL AT :DBS
              SELECT lo_open(BLOBFLD,393216) INTO :DESCRIPTOR
-                    FROM TAB WHERE TABKEY = :TABKEY;
+                    FROM TAB WHERE TABKEY = :TABKEY
          END-EXEC.
 
          EXEC SQL AT :DBS
              SELECT lo_lseek (:DESCRIPTOR, :OFFSET,0) INTO :RESINT
-                    FROM TAB WHERE TABKEY = :TABKEY;
+                    FROM TAB WHERE TABKEY = :TABKEY
          END-EXEC.
 
          EXEC SQL AT :DBS
@@ -72,7 +72,7 @@
 
          EXEC SQL AT :DBS
              SELECT lo_close (:DESCRIPTOR) INTO :RESINT
-                    FROM TAB WHERE TABKEY = :TABKEY;
+                    FROM TAB WHERE TABKEY = :TABKEY
          END-EXEC.
 
          EXEC SQL CONNECT RESET END-EXEC.

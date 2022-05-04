@@ -138,8 +138,11 @@ namespace gix_ide_tests
         protected string module_src;
         protected List<string> dependencies = new List<string>();
 
-        //protected string data_source_type;
-        //protected int data_source_index;
+        protected string LastPreprocessedFile { get { return last_preprocessed_file; } }
+        protected string LastCompiledFile { get { return last_compiled_file; } }
+
+        private string last_preprocessed_file;
+        private string last_compiled_file;
 
         private List<Tuple<string, int>> data_sources = new List<Tuple<string, int>>();
 
@@ -337,6 +340,8 @@ namespace gix_ide_tests
                      return;
                 }
 
+                last_preprocessed_file = Path.Combine(Path.GetDirectoryName(module_src), pp_file);
+
                 // Compile
 
                 if (ctype == CompilerType.MSVC)
@@ -385,7 +390,9 @@ namespace gix_ide_tests
                 {
                     Assert.IsFalse(r2.Result.ExitCode == 0, $"Exit code : {r2.Result.ExitCode}");
                     Console.WriteLine("COBOL compilation failed (it was expected)");
-                } 
+                }
+
+                last_compiled_file = outfile;
             }
             finally
             {
@@ -485,6 +492,26 @@ namespace gix_ide_tests
             finally
             {
                 Environment.CurrentDirectory = cwd;
+            }
+        }
+
+        public void check_file_contains(string filename, string[] check_output_contains, bool useregex = false)
+        {
+            Assert.IsTrue(File.Exists(filename));
+            Assert.IsTrue((new FileInfo(filename)).Length > 0);
+
+            string content = File.ReadAllText(filename);
+            foreach (string t in check_output_contains)
+            {
+                if (useregex)
+                {
+                    Regex rx = new Regex(t);
+                    Assert.IsTrue(rx.IsMatch(content), "Output mismatch");
+                }
+                else
+                {
+                    Assert.IsTrue(content.Contains(t), $"Output mismatch: missing \"{t}\"");
+                }
             }
         }
 

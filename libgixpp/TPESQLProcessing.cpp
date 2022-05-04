@@ -98,9 +98,10 @@ USA.
 
 #define ERR_NOTDEF_CONVERSION -1
 
+#define DEFAULT_VARLEN_SUFFIX_DATA		"ARR"
+#define DEFAULT_VARLEN_SUFFIX_LENGTH	"LEN"
+
 // These must be in sync with the ones in SqlVar.h
-#define VARLEN_SUFFIX_DATA		"DATA"
-#define VARLEN_SUFFIX_LENGTH	"LENGTH"
 #ifdef USE_VARLEN_32
 #define VARLEN_LENGTH_PIC		"9(05) BINARY"
 #define VARLEN_PIC_SZ			5
@@ -199,6 +200,17 @@ TPESQLProcessing::TPESQLProcessing(GixPreProcessor *gpp) : ITransformationStep(g
 	opt_no_output = std::get<bool>(gpp->getOpt("no_output", false));
 	opt_emit_map_file = std::get<bool>(gpp->getOpt("emit_map_file", false));
 	opt_emit_cobol85 = std::get<bool>(gpp->getOpt("emit_cobol85", false));
+
+	auto vsfxs = std::get<std::string>(gpp->getOpt("varlen_suffixes", std::string()));
+	if (vsfxs.empty()) {
+		opt_varlen_suffix_len = DEFAULT_VARLEN_SUFFIX_LENGTH;
+		opt_varlen_suffix_data = DEFAULT_VARLEN_SUFFIX_DATA;
+	}
+	else {
+		int p = vsfxs.find(",");
+		opt_varlen_suffix_len = vsfxs.substr(0, p);
+		opt_varlen_suffix_data = vsfxs.substr(p + 1);
+	}
 
 	output_line = 0;
 	working_begin_line = 0;
@@ -1079,12 +1091,12 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 							}
 							else {
 								put_output_line(AREA_B_CPREFIX + string_format("01 %s.", var->sname));
-								put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, VARLEN_SUFFIX_LENGTH, VARLEN_LENGTH_PIC));
-								put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC X(%d).", var->sname, VARLEN_SUFFIX_DATA, cbl_int_part_len));
+								put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, opt_varlen_suffix_len, VARLEN_LENGTH_PIC));
+								put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC X(%d).", var->sname, opt_varlen_suffix_data, cbl_int_part_len));
 
 								cb_field_ptr flength = new cb_field_t();
 								flength->level = 49;
-								flength->sname = var->sname + "-" + VARLEN_SUFFIX_LENGTH;
+								flength->sname = var->sname + "-" + opt_varlen_suffix_len;
 								flength->pictype = PIC_NUMERIC;
 								flength->usage = var->usage;
 								flength->picnsize = VARLEN_PIC_SZ;
@@ -1094,7 +1106,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 								cb_field_ptr fdata = new cb_field_t();
 								fdata->level = 49;
 								fdata->sql_type = sql_type;
-								fdata->sname = var->sname + "-" + VARLEN_SUFFIX_DATA;
+								fdata->sname = var->sname + "-" + opt_varlen_suffix_data;
 								fdata->pictype = PIC_ALPHANUMERIC;
 								fdata->usage = Usage::None;
 								fdata->picnsize = cbl_int_part_len;
@@ -1490,7 +1502,7 @@ bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, int *type, int *siz
 
 		}
 		else {	// is_implicit_varlen
-			f_actual_name = f->sname + "-" + VARLEN_SUFFIX_DATA;
+			f_actual_name = f->sname + "-" + opt_varlen_suffix_data;
 		}
 
 		cb_field_ptr f_actual = main_module_driver.field_map[f_actual_name];
