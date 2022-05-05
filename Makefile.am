@@ -23,5 +23,5 @@ install-exec-hook:
 	cp $(top_srcdir)/misc/gixsql-wrapper $(prefix)/bin/gixsql && \
 		chmod 755 $(prefix)/bin/gixsql
 
-install-exec-hook:
+uninstall-exec-hook:
 	rm -f $(prefix)/bin/gixsql
