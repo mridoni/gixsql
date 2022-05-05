@@ -4,3 +4,7 @@ libgixpp/gix_esql_parser.cc
 libgixpp/gix_esql_parser.hh
 libgixpp/gix_esql_scanner.cc
 libgixpp/location.hh
+**/Makefile.in
+aclocal.m4
+configure
+config.status
