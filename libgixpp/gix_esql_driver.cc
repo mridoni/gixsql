@@ -183,7 +183,9 @@ std::vector<cb_sql_token_t> *gix_esql_driver::cb_text_list_add(std::vector<cb_sq
 
 std::vector<cb_sql_token_t> *gix_esql_driver::cb_concat_text_list(std::vector<cb_sql_token_t> *list, std::vector<cb_sql_token_t> *targetlist)
 {
-	list->insert(list->end(), targetlist->begin(), targetlist->end());
+	if (targetlist) {
+		list->insert(list->end(), targetlist->begin(), targetlist->end());
+	}
 	sql_list = list;
 	return list;
 }

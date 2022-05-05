@@ -477,10 +477,8 @@ LOW_VALUE "LOW\-VALUE"
 
 		flag_insqlstring = 1;
 
-		//driver.commandname = yytext;
 		driver.commandname = "PASSTHRU";
-					
-		
+
 		driver.sqlnum++;
 		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
 		

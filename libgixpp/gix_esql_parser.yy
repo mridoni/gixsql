@@ -513,10 +513,7 @@ EXECSQL CONNECT_RESET opt_dbid END_EXEC {
 othersql:
 execsql_with_opt_at OTHERFUNC opt_othersql_tokens END_EXEC {
 	driver.commandname = "PASSTHRU";
-	$$ = driver.cb_text_list_add (NULL, $2);
-	if ($3) {
-		$$ = driver.cb_concat_text_list ($$, $3);
-	}
+	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
 	driver.put_exec_list();
 }
 ;

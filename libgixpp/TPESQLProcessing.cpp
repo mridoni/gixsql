@@ -1518,6 +1518,7 @@ void TPESQLProcessing::process_sql_query_list()
 	for (cb_exec_sql_stmt_ptr p : *main_module_driver.exec_list) {
 		if (p->sql_list->size()) {
 			std::string sql = vector_join(*p->sql_list, ' ');
+			sql = string_replace_regex(sql, "[\\r\\n\\t]", " ");
 			ws_query_list.push_back(sql);
 		}
 	}
