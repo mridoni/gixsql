@@ -35,6 +35,7 @@ USA.
 #define ESQL_DISCONNECT					"DISCONNECT"
 #define ESQL_CLOSE						"CLOSE"
 #define ESQL_COMMIT						"COMMIT"
+#define ESQL_ROLLBACK					"ROLLBACK"
 #define ESQL_FETCH						"FETCH"
 #define ESQL_INCFILE					"INCFILE"
 #define ESQL_INCSQLCA					"INCSQLCA"
@@ -123,6 +124,7 @@ enum class ESQL_Command
 	Disconnect,
 	Close,
 	Commit,
+	Rollback,
 	Fetch,
 	Incfile,
 	IncSQLCA,
@@ -169,7 +171,8 @@ static bool check_sql_type_compatibility(uint64_t type_info, cb_field_ptr var);
 
 static std::map<std::string, ESQL_Command> ESQL_cmd_map{ { ESQL_CONNECT, ESQL_Command::Connect }, { ESQL_CONNECT_RESET, ESQL_Command::ConnectReset },
 												 { ESQL_DISCONNECT, ESQL_Command::Disconnect }, { ESQL_CLOSE, ESQL_Command::Close },
-												 { ESQL_COMMIT, ESQL_Command::Commit }, { ESQL_FETCH, ESQL_Command::Fetch },{ ESQL_DELETE, ESQL_Command::Delete },
+												 { ESQL_COMMIT, ESQL_Command::Commit }, { ESQL_ROLLBACK, ESQL_Command::Rollback }, 
+												 { ESQL_FETCH, ESQL_Command::Fetch }, { ESQL_DELETE, ESQL_Command::Delete },
 												 { ESQL_INCFILE, ESQL_Command::Incfile }, { ESQL_INCSQLCA, ESQL_Command::IncSQLCA }, { ESQL_INSERT, ESQL_Command::Insert },
 												 { ESQL_OPEN, ESQL_Command::Open }, { ESQL_SELECT, ESQL_Command::Select }, { ESQL_UPDATE, ESQL_Command::Update },
 												 { ESQL_WORKING_BEGIN, ESQL_Command::WorkingBegin }, { ESQL_WORKING_END, ESQL_Command::WorkingEnd } ,
@@ -967,6 +970,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 		case ESQL_Command::Commit:
 		{
+			// Note: RELEASE not supported, in case check the stmt->transaction_release flag
 			put_start_exec_sql(false);
 			ESQLCall fetch_call(get_call_id("Exec"), emit_static);
 			fetch_call.addParameter("SQLCA", BY_REFERENCE);
@@ -979,6 +983,23 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			put_end_exec_sql(stmt->period);
 		}
 		break;
+
+		case ESQL_Command::Rollback:
+		{
+			// Note: RELEASE not supported, in case check the stmt->transaction_release flag
+			put_start_exec_sql(false);
+			ESQLCall fetch_call(get_call_id("Exec"), emit_static);
+			fetch_call.addParameter("SQLCA", BY_REFERENCE);
+			fetch_call.addParameter(&main_module_driver, stmt->connectionId);
+			fetch_call.addParameter("\"ROLLBACK\" & x\"00\"", BY_REFERENCE);
+
+			if (!put_call(fetch_call, false))
+				return false;
+
+			put_end_exec_sql(stmt->period);
+		}
+		break;
+
 
 		case ESQL_Command::Update:
 		case ESQL_Command::Delete:

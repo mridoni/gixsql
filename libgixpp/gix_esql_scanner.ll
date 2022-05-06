@@ -410,14 +410,16 @@ LOW_VALUE "LOW\-VALUE"
 	"COMMIT"[ ]+"WORK"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE);
 
-		driver.commandname = "COMMIT_RELEASE";
+		driver.commandname = "COMMIT";
+		driver.transaction_release = true;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
 
 	"COMMIT"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE);
 
-		driver.commandname = "COMMIT_RELEASE";
+		driver.commandname = "COMMIT";
+		driver.transaction_release = true;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
 
@@ -425,6 +427,7 @@ LOW_VALUE "LOW\-VALUE"
 		__yy_push_state(ESQL_STATE);
 
 		driver.commandname = "COMMIT";
+		driver.transaction_release = false;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
      
@@ -432,20 +435,23 @@ LOW_VALUE "LOW\-VALUE"
 		__yy_push_state(ESQL_STATE);
 
 		driver.commandname = "COMMIT";
+		driver.transaction_release = false;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
      
 	"ROLLBACK"[ ]+"WORK"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE);
 
-		driver.commandname = "ROLLBACK_RELEASE";
+		driver.commandname = "ROLLBACK";
+		driver.transaction_release = true;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}
 
 	"ROLLBACK"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE);
 
-		driver.commandname = "ROLLBACK_RELEASE";
+		driver.commandname = "ROLLBACK";
+		driver.transaction_release = true;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}
 
@@ -453,6 +459,7 @@ LOW_VALUE "LOW\-VALUE"
 		__yy_push_state(ESQL_STATE);
 
 		driver.commandname = "ROLLBACK";
+		driver.transaction_release = false;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}     
 
@@ -460,6 +467,7 @@ LOW_VALUE "LOW\-VALUE"
 		__yy_push_state(ESQL_STATE);
 
 		driver.commandname = "ROLLBACK";
+		driver.transaction_release = false;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}     
 

@@ -277,9 +277,9 @@ INSERT {$$ = driver.cb_text_list_add (NULL, $1);}
 | insert INTO {$$ = driver.cb_text_list_add ($1, $2);}
 
 
-
 rollbacksql:
 execsql_with_opt_at ROLLBACK_WORK END_EXEC {
+	// The necessary fields have been populated by the lexer code
 	driver.put_exec_list();
 }
 | execsql_with_opt_at ROLLBACK_WORK TO SAVEPOINT TOKEN END_EXEC {

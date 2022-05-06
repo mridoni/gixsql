@@ -35,5 +35,20 @@ namespace gixsql_tests
             });
         }
 
+        // Standard
+        [TestMethod]
+        [CobolSource("TSQL023B.cbl")]
+        [GixSqlDataSource("pgsql", 1)]
+        public void TSQL023B_MSVC_pgsql_x64_exe_1()
+        {
+            compile(CompilerType.MSVC, "release", "x64", "exe", false, false);
+
+            check_file_contains(LastPreprocessedFile, new string[]
+            {
+
+            });
+        }
+
+
     }
 }

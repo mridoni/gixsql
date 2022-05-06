@@ -1,6 +1,6 @@
 ﻿       IDENTIFICATION DIVISION.
        
-       PROGRAM-ID. TSQL023A. 
+       PROGRAM-ID. TSQL023B. 
        
        
        ENVIRONMENT DIVISION. 
@@ -22,6 +22,8 @@
            01 INTERNAL-TXID     PIC X(100).
            01 EMPID             PIC 9(18).
            01 EMPNAME           PIC X(100).
+           
+           01 DBS               PIC X(100).
        
        EXEC SQL 
             INCLUDE SQLCA 
@@ -71,11 +73,12 @@
            END-EXEC.
       *-----------------------------------------------------------*
        DO-ROLLBACK SECTION.
-           EXEC SQL
-              ROLLBACK
-           END-EXEC.
+          EXEC SQL AT :DBS
+             ROLLBACK WORK RELEASE
+          END-EXEC.
 
        100-MAIN.
 
+ 
 
        200-END.

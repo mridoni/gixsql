@@ -58,6 +58,7 @@ gix_esql_driver::gix_esql_driver ()
 	cursorname = "";
 	sqlname = "";
 	incfilename = "";
+	transaction_release = false;
 	hostreferenceCount = 0;
 	host_reference_list = NULL;
 	res_host_reference_list = NULL;
@@ -291,6 +292,7 @@ void gix_esql_driver::put_exec_list()
 	l->commandName = commandname;
 	l->textContent = text_content;
 	l->command_putother = command_putother;
+	l->transaction_release = transaction_release;
 	l->sqlName = sqlname;
 	l->incfileName = incfilename;
 	l->statementName = statement_name;

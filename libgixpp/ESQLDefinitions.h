@@ -109,6 +109,7 @@ struct cb_exec_sql_stmt_t
 	hostref_or_literal_t *statementSource = nullptr;
 	bool startup_item;
 	bool cursor_hold;
+	bool transaction_release;
 
 	int sql_query_list_id;
 
@@ -133,6 +134,7 @@ struct cb_exec_sql_stmt_t
 		conn_use_other_db = false;
 		startup_item = false;
 		cursor_hold = false;
+		transaction_release = false;
 	}
 
 	~cb_exec_sql_stmt_t()
