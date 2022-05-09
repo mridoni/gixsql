@@ -430,10 +430,10 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 	std::string var_name = $2;
 	uint64_t type_info = $4;
 
-	uint32_t length = type_info & 0xffffffff;
-	uint16_t precision = (length >> 16);
+	uint64_t length = type_info & 0xffffffffffff;	// 48 bits
+	uint32_t precision = (length >> 16);
 	uint16_t scale = (length & 0xffff);
-	int sql_type = (type_info >> 32);
+	int sql_type = (type_info >> 60);
 
 	if (driver.field_map.find(var_name) == driver.field_map.end()) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
@@ -750,10 +750,10 @@ NUMERIC WORD opt_sql_type_def {
 
 		if ($3 != 0) {
 			uint64_t type_info = $3;
-			uint32_t length = type_info & 0xffffffff;
-			uint16_t precision = (length >> 16);
+			uint64_t length = type_info & 0xffffffffffff;	// 48 bits
+			uint32_t precision = (length >> 16);
 			uint16_t scale = (length & 0xffff);
-			int sql_type = type_info >> 32;
+			int sql_type = type_info >> 60;
 
 			x->sql_type = type_info;
 			x->is_varlen = IS_VARLEN(sql_type);
@@ -798,13 +798,13 @@ opt_sql_type_def:
 ;
 
 sql_type:
-  BINARY	{ $$ = (TYPE_SQL_BINARY << 32) + $1; }
-| VARBINARY { $$ = (TYPE_SQL_VARBINARY << 32) + $1; }
-| CHAR		{ $$ = (TYPE_SQL_CHAR << 32) + $1; }
-| VARCHAR	{ $$ = (TYPE_SQL_VARCHAR << 32) + $1; }
-| INTEGER  	{ $$ = (TYPE_SQL_INT << 32) + $1; }
-| FLOAT   	{ $$ = (TYPE_SQL_FLOAT << 32) + $1; }
-| DECIMAL  	{ $$ = (TYPE_SQL_DECIMAL << 32) + $1; }
+  BINARY	{ $$ = (TYPE_SQL_BINARY << 60) + $1; }
+| VARBINARY { $$ = (TYPE_SQL_VARBINARY << 60) + $1; }
+| CHAR		{ $$ = (TYPE_SQL_CHAR << 60) + $1; }
+| VARCHAR	{ $$ = (TYPE_SQL_VARCHAR << 60) + $1; }
+| INTEGER  	{ $$ = (TYPE_SQL_INT << 60) + $1; }
+| FLOAT   	{ $$ = (TYPE_SQL_FLOAT << 60) + $1; }
+| DECIMAL  	{ $$ = (TYPE_SQL_DECIMAL << 60) + $1; }
 ;
 
 data_description_clause_sequence:
@@ -836,7 +836,8 @@ varying_clause:
 VARYING {
 	auto x = driver.current_field;
 	
-	uint64_t type_info = (TYPE_SQL_VARCHAR << 32) | (x->picnsize << 16);
+	uint64_t type_info = (TYPE_SQL_VARCHAR << 60);
+	type_info |= (((uint64_t)x->picnsize << 16));
 
 	x->sql_type = type_info;
 	x->is_varlen = true;

@@ -36,8 +36,8 @@ int cursor_hold = 0;
 
 int find_last_space(char * s);
 int count_crlf(char *s);
-int extract_len(char * s);
-void extract_precision_scale(char * s, uint16_t *precision, uint16_t *scale);
+uint32_t extract_len(char * s);
+void extract_precision_scale(char * s, uint32_t *precision, uint16_t *scale);
 
 #ifdef _MSC_VER 
 #define strncasecmp _strnicmp
@@ -1008,14 +1008,15 @@ LOW_VALUE "LOW\-VALUE"
         return yy::gix_esql_parser::make_VARCHAR(l, loc);      
 	}
     "CHARACTER"[\-]VARYING(\([0-9]+\))?  { 
-		int l = extract_len(yytext);
+		uint32_t l = extract_len(yytext);
 		l = l << 16;
         return yy::gix_esql_parser::make_VARCHAR(l, loc);      
 	}
 
     "FLOAT"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|"REAL"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?  { 
 		uint64_t ps = 0;
-		uint16_t precision, scale;
+		uint32_t precision;
+		uint16_t scale;
 		extract_precision_scale(yytext, &precision, &scale);
 		ps = precision;
 		ps = (ps << 16) | scale;
@@ -1030,7 +1031,8 @@ LOW_VALUE "LOW\-VALUE"
 
     "DECIMAL"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|"NUMERIC"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?  { 
 		uint64_t ps = 0;
-		uint16_t precision, scale;
+		uint32_t precision;
+		uint16_t scale;
 		extract_precision_scale(yytext, &precision, &scale);
 		ps = precision;
 		ps = (ps << 16) | scale;
@@ -1307,7 +1309,8 @@ LOW_VALUE "LOW\-VALUE"
 
     "FLOAT"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|"REAL"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?  { 
 		uint64_t ps = 0;
-		uint16_t precision, scale;
+		uint32_t precision;
+		uint16_t scale;
 		extract_precision_scale(yytext, &precision, &scale);
 		ps = precision;
 		ps = (ps << 16) | scale;
@@ -1322,7 +1325,8 @@ LOW_VALUE "LOW\-VALUE"
 
     "DECIMAL"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|"NUMERIC"(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?|(\([0-9]+[ ]*(,[ ]*[0-9]+)?\))?  { 
 		uint64_t ps = 0;
-		uint16_t precision, scale;
+		uint32_t precision;
+		uint16_t scale;
 		extract_precision_scale(yytext, &precision, &scale);
 		ps = precision;
 		ps = (ps << 16) | scale;
@@ -1497,7 +1501,7 @@ int count_crlf(char *s)
 	return n;
 }
 
-int extract_len(char * s)
+uint32_t extract_len(char * s)
 {
 	std::string st = s;
 	
@@ -1513,10 +1517,10 @@ int extract_len(char * s)
 
 	st = st.substr(0, pos);
 
-	return atoi(st.c_str());
+	return (uint32_t) atoi(st.c_str());
 }
 
-void extract_precision_scale(char *s, uint16_t *precision, uint16_t *scale)
+void extract_precision_scale(char *s, uint32_t *precision, uint16_t *scale)
 {
 	*precision = 0;
 	*scale = 0;
@@ -1543,9 +1547,9 @@ void extract_precision_scale(char *s, uint16_t *precision, uint16_t *scale)
 
 	std::string sn = st.substr(0, pos);
 	trim(sn);
-	*precision = atoi(sn.c_str());
+	*precision = (uint32_t) atoi(sn.c_str());
 
 	sn = st.substr(pos + 1);
 	trim(sn);
-	*scale = atoi(sn.c_str());
+	*scale = (uint16_t) atoi(sn.c_str());
 }

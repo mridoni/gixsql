@@ -464,15 +464,16 @@ namespace gix_ide_tests
 
                 if (check_output_contains != null && check_output_contains.Length > 0)
                 {
-                    foreach (string t in check_output_contains)
+                    for (int i = 0; i < check_output_contains.Length; i ++)
                     {
+                        string t = check_output_contains[i];
                         if (useregex)
                         {
                             Regex rx = new Regex(t);
                             Assert.IsTrue(rx.IsMatch(res.Result.StandardOutput), "Output mismatch");
                         }
                         else {
-                            Assert.IsTrue(res.Result.StandardOutput.Contains(t), "Output mismatch");
+                            Assert.IsTrue(res.Result.StandardOutput.Contains(t), $"Output mismatch (index: {i}, expected: {t}");
                         }
                         b2 = true;
                     }

@@ -80,11 +80,11 @@ namespace gixsql_tests
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
                 "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LEN: 0080",
+                "VBFLD-LEN: 00080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
                 "VCFLD-ARR  : [ABCDEFGHIJK]",
-                "VCFLD-LEN: 0011"
+                "VCFLD-LEN: 00011"
             });
         }
 
@@ -282,11 +282,11 @@ namespace gixsql_tests
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
                 "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LEN: 0080",
+                "VBFLD-LEN: 00080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
                 "VCFLD-ARR  : [ABCDEFGHIJK]",
-                "VCFLD-LEN: 0011"
+                "VCFLD-LEN: 00011"
             });
         }
 

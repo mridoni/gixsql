@@ -23,7 +23,7 @@ USA.
 #include "gix_esql_driver.hh"
 #include "MapFileWriter.h"
 #include "libcpputils.h"
-
+#include "limits.h"
 #include "linq/linq.hpp"
 
 #if defined(_WIN32) && defined(_DEBUG)
@@ -104,13 +104,13 @@ USA.
 
 // These must be in sync with the ones in SqlVar.h
 #ifdef USE_VARLEN_32
-#define VARLEN_LENGTH_PIC		"9(05) BINARY"
-#define VARLEN_PIC_SZ			5
+#define VARLEN_LENGTH_PIC		"9(8) COMP-5"
+#define VARLEN_PIC_SZ			9
 #define VARLEN_LENGTH_SZ		4
 #define VARLEN_LENGTH_T			uint32_t
 #define VARLEN_BSWAP			COB_BSWAP_32
 #else
-#define VARLEN_LENGTH_PIC		"9(4) BINARY"
+#define VARLEN_LENGTH_PIC		"9(4) COMP-5"
 #define VARLEN_PIC_SZ			4
 #define VARLEN_LENGTH_SZ		2
 #define VARLEN_LENGTH_T			uint16_t
@@ -448,7 +448,7 @@ bool TPESQLProcessing::processNextFile()
 
 				// Add ESQL calls
 				if (!handle_esql_stmt(cmd, exec_sql_stmt, in_ws)) {
-					main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET);
+					main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
 					return false;
 				}
 		}
@@ -456,7 +456,7 @@ bool TPESQLProcessing::processNextFile()
 		// Special case
 		if (exec_sql_stmt->endLine == working_end_line) {
 			if (!handle_esql_stmt(ESQL_Command::WorkingEnd, find_esql_cmd(ESQL_WORKING_END, 0), 0)) {
-				main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET);
+				main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
 				return false;
 			}
 		}
@@ -1063,17 +1063,23 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				}
 
 				uint64_t type_info = var->sql_type;
-
-				uint32_t length = type_info & 0xffffffff;
-				uint16_t precision = (length >> 16);
+				uint64_t length = type_info & 0xffffffffffff;	// 48 bits
+				uint32_t precision = (length >> 16);
 				uint16_t scale = (length & 0xffff);
 
-				int sql_type = (type_info >> 32);
+#ifndef USE_VARLEN_32
+				if (precision > USHRT_MAX) {
+					std::string msg = string_format("Unsupported field length (%d > %d)", precision, USHRT_MAX);
+					main_module_driver.error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
+					return false;
+				}
+#endif
+
+				int sql_type = (type_info >> 60);
 
 				if (!check_sql_type_compatibility(type_info, var)) {
 					std::string msg = string_format("SQL type definition for %s (%s) is not compatible with the COBOL one (%s)", var->sname, "N/A", "N/A");
-					//owner->err_data.err_messages.push_back(msg);
-					main_module_driver.error(msg, ERR_INCOMPATIBLE_TYPES);
+					main_module_driver.error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
 					return false;
 				}
 
@@ -1180,7 +1186,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 						break;
 
 					default:
-						main_module_driver.error(string_format("Unsupported SQL type (%d)", sql_type), ERR_INVALID_TYPE, var->defined_at_source_file, var->defined_at_source_line);
+						main_module_driver.error(string_format("Unsupported SQL type (ID: %d)", sql_type), ERR_INVALID_TYPE, var->defined_at_source_file, var->defined_at_source_line);
 						return false;
 				}
 			}
@@ -1557,10 +1563,10 @@ bool TPESQLProcessing::fixup_declared_vars()
 		int orig_end_line = std::get<2>(d);
 		std::string orig_src_file = std::get<3>(d);
 
-		uint32_t length = type_info & 0xffffffff;
-		uint16_t precision = (length >> 16);
+		uint64_t length = type_info & 0xffffffffffff;	// 48 bits
+		uint32_t precision = (length >> 16);
 		uint16_t scale = (length & 0xffff);
-		int sql_type = (type_info >> 32);
+		int sql_type = (type_info >> 60);
 
 		if (!main_module_driver.field_exists(var_name)) {
 			if (precision == 0) {
