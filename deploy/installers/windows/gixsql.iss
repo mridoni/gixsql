@@ -1,9 +1,9 @@
 #define QTDIR GetEnv('QTDIR')
 #define WORKSPACE GetEnv('WORKSPACE')
 #define GIX_REVISION GetEnv('GIX_REVISION')
-#define VER_GIXIDEMAJ GetEnv('GIXIDEMAJ')
-#define VER_GIXIDEMIN GetEnv('GIXIDEMIN')
-#define VER_GIXIDEREL GetEnv('GIXIDEREL')
+#define VER_GIXSQLMAJ GetEnv('GIXSQLMAJ')
+#define VER_GIXSQLMIN GetEnv('GIXSQLMIN')
+#define VER_GIXSQLREL GetEnv('GIXSQLREL')
 
 #define REDIST_DIR GetEnv('REDIST_DIR')
 
@@ -25,11 +25,11 @@
 
 [Setup]
 AppName=Gix-Ide
-AppVersion={#VER_GIXIDEMAJ}.{#VER_GIXIDEMIN}.{#VER_GIXIDEREL}-{#GIX_REVISION}
+AppVersion={#VER_GIXSQLMAJ}.{#VER_GIXSQLMIN}.{#VER_GIXSQLREL}-{#GIX_REVISION}
 AppCopyright=Marco Ridoni
 DefaultDirName={pf}\GixSQL
 OutputDir={#WORKSPACE}\deploy\installers\gixsql-{#HOST_PLATFORM}
-OutputBaseFilename=gixsql-{#VER_GIXIDEMAJ}.{#VER_GIXIDEMIN}.{#VER_GIXIDEREL}-{#GIX_REVISION}-installer
+OutputBaseFilename=gixsql-{#VER_GIXSQLMAJ}.{#VER_GIXSQLMIN}.{#VER_GIXSQLREL}-{#GIX_REVISION}-installer
 ArchitecturesInstallIn64BitMode=x64
 DefaultGroupName=GixSQL
 LicenseFile={#WORKSPACE}\LICENSE
@@ -74,7 +74,7 @@ Filename: "{tmp}\redist\ms\x86\vcredist_x86_vs2013.exe"; Parameters: "/install /
 #endif
 
 [Registry]
-Root: "HKLM"; Subkey: "Software\MediumGray\gix-ide"; ValueType: string; ValueName: "version"; ValueData: "{#VER_GIXIDEMAJ}.{#VER_GIXIDEMIN}.{#VER_GIXIDEREL}-{#GIX_REVISION}"; Flags: createvalueifdoesntexist deletevalue uninsdeletekey
+Root: "HKLM"; Subkey: "Software\MediumGray\gix-ide"; ValueType: string; ValueName: "version"; ValueData: "{#VER_GIXSQLMAJ}.{#VER_GIXSQLMIN}.{#VER_GIXSQLREL}-{#GIX_REVISION}"; Flags: createvalueifdoesntexist deletevalue uninsdeletekey
 Root: "HKLM"; Subkey: "Software\MediumGray\gix-ide"; ValueType: string; ValueName: "HomeDir"; ValueData: "{app}"; Flags: createvalueifdoesntexist deletevalue uninsdeletekey
 Root: "HKA"; Subkey: "Software\MediumGray\gix-ide"; ValueType: string; ValueName: "DataDir"; ValueData: "{localappdata}\Gix"; Flags: createvalueifdoesntexist deletevalue uninsdeletekey
 Root: "HKLM"; Subkey: "Software\MediumGray\gix-ide"; Flags: uninsdeletekey
