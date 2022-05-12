@@ -1070,7 +1070,7 @@ static int setStatus(struct sqlca_t * st, IDbInterface *dbi, int err)
 			break;
 
 		default:
-			memcpy(st->sqlstate, "FFFFF", 5);
+			memcpy(st->sqlstate, "HV000", 5);
 	}
 
 	if (dbi) {
