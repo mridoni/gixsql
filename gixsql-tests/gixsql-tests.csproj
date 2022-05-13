@@ -199,6 +199,7 @@
     <EmbeddedResource Include="data\TSQL023B.cbl" />
     <EmbeddedResource Include="data\TSQL022B.cbl" />
     <EmbeddedResource Include="data\TSQL022C.cbl" />
+    <EmbeddedResource Include="data\TSQL018B.cbl" />
     <None Include="gixsql.local.runsettings" />
     <None Include="packages.config" />
   </ItemGroup>

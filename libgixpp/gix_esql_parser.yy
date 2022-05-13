@@ -68,7 +68,7 @@ static std::string to_std_string(const std::string s) { return s; }
 static std::string to_std_string(const std::vector<std::string> *slp) { if (!slp) return "(NULL-LIST)"; int n = slp->size() > 3 ? 3 : slp->size(); std::string res; for (int i = 0; i < n; i++) res += slp->at(i); return (res + " ..."); }
 static std::string to_std_string(const int i) { char buffer [33]; sprintf(buffer, "%d", i); char *res = (char*) malloc(strlen(buffer) + 1); strcpy (res, buffer); return res; }
 static std::string to_std_string(hostref_or_literal_t *hl) { return hl->name; }
-static std::string to_std_string(connect_to_info_t *i) { char buffer [33]; sprintf(buffer, "%d", i->type); char *res = (char*) malloc(strlen(buffer) + 1); strcpy (res, buffer); return res; }
+static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [33]; sprintf(buffer, "%d", i->type); char *res = (char*) malloc(strlen(buffer) + 1); strcpy (res, buffer); return res; } else return "N/A"; }
 
 }
 
@@ -521,9 +521,15 @@ execsql_with_opt_at OTHERFUNC opt_othersql_tokens END_EXEC {
 opt_othersql_tokens:
 %empty { $$ = nullptr; }
 | othersql_token opt_othersql_tokens {
+#if 0
 	$$ = driver.cb_text_list_add (NULL, $1);
 	if ($2)
 		$$ = driver.cb_concat_text_list ($$, $2);
+#else
+	// This is faster
+	$$ = ($2 != nullptr) ? $2 : new std::vector<cb_sql_token_t>();
+	$$->insert($$->begin(), $1);
+#endif
 }
 ;
 

@@ -102,6 +102,8 @@ USA.
 #define DEFAULT_VARLEN_SUFFIX_DATA		"ARR"
 #define DEFAULT_VARLEN_SUFFIX_LENGTH	"LEN"
 
+#define SQL_QUERY_BLOCK_SIZE	8191
+
 // These must be in sync with the ones in SqlVar.h
 #ifdef USE_VARLEN_32
 #define VARLEN_LENGTH_PIC		"9(8) COMP-5"
@@ -514,29 +516,48 @@ bool TPESQLProcessing::put_query_defs()
 
 		if (!opt_emit_cobol85) {
 
-			if (qry.size() >= 8192) {
-				auto stmt = main_module_driver.exec_list->at(i - 1);
-				std::string msg = string_format("Query too long (%d bytes > 8191)", qry.size());
-				main_module_driver.error(msg, ERR_QUERY_TOO_LONG, stmt->src_abs_path, stmt->startLine);
-				return false;
-			}
-
 			int pos = 0;
 			int max_sec_len = 30;
 
+			int cur_out_char = 0;
+
 			std::string s;
 
-			s = take_max(qry, 30);
-			put_output_line(code_tag + string_format("     02  FILLER PIC X(%d) VALUE \"%s\"", qry_len, s));
+			int nblocks = qry.size() / SQL_QUERY_BLOCK_SIZE;
+			int remainder = qry.size() % SQL_QUERY_BLOCK_SIZE;
 
-			while (true) {
-				s = take_max(qry, 58);
-				if (s.empty())
-					break;
 
-				put_output_line(code_tag + string_format("  &  \"%s\"", s));
+			for (int i = 0; i < nblocks; i++) {
+				std::string qry_block = take_max(qry, SQL_QUERY_BLOCK_SIZE);
+				int blen = qry_block.size();
+
+				s = take_max(qry_block, 30);
+				put_output_line(code_tag + string_format("     02  FILLER PIC X(%04d) VALUE \"%s\"", qry_block.size() + s.size(), s));
+
+				while (true) {
+					s = take_max(qry_block, 59);
+					if (s.empty())
+						break;
+
+					put_output_line(code_tag + string_format("  &  \"%s\"", s));
+				}
+				output_lines.back() += ".";
 			}
-			output_lines.back() += ".";
+
+			if (remainder > 0) {
+				std::string qry_remainder = take_max(qry, SQL_QUERY_BLOCK_SIZE);
+				s = take_max(qry_remainder, 30);
+				put_output_line(code_tag + string_format("     02  FILLER PIC X(%04d) VALUE \"%s\"", qry_remainder.size() + s.size(), s));
+
+				while (true) {
+					s = take_max(qry_remainder, 58);
+					if (s.empty())
+						break;
+
+					put_output_line(code_tag + string_format("  &  \"%s\"", s));
+				}
+				output_lines.back() += ".";
+			}
 
 			put_output_line(code_tag + std::string("     02  FILLER PIC X(1) VALUE X\"00\"."));
 		}
@@ -553,10 +574,10 @@ bool TPESQLProcessing::put_query_defs()
 					break;
 
 				s = take_max(sub_block, 34);
-				put_output_line(code_tag + string_format("  02  FILLER PIC X(%d) VALUE \"%s", sb_size, s));
+				put_output_line(code_tag + string_format("  02  FILLER PIC X(%04d) VALUE \"%s", sb_size, s));
 
 				while (true) {
-					s = take_max(sub_block, 59);
+					s = take_max(sub_block, 60);
 					if (s.empty())
 						break;
 
@@ -565,6 +586,8 @@ bool TPESQLProcessing::put_query_defs()
 
 				output_lines.back() += "\".";
 			}
+
+			put_output_line(code_tag + std::string("     02  FILLER PIC X(1) VALUE X\"00\"."));
 		}
 	}
 
