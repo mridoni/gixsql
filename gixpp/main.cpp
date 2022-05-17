@@ -37,7 +37,7 @@ USA.
 #define PATH_LIST_SEP ":"
 #endif
 
-#define GIXPP_VER "1.0.15dev3"
+#define GIXPP_VER "1.0.15"
 
 using namespace popl;
 
@@ -76,7 +76,7 @@ int main(int argc, char **argv)
 	auto opt_verbose_debug = options.add<Switch>("d", "verbose-debug", "verbose (debug)");
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
-	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for variable length fields (e.g. =LEN,ARR)");
+	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
 
 	options.parse(argc, argv);
 

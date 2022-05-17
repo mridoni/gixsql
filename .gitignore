@@ -1,4 +1,5 @@
 packages
+deploy/redist
 **/*.bak
 libgixpp/gix_esql_parser.cc
 libgixpp/gix_esql_parser.hh
