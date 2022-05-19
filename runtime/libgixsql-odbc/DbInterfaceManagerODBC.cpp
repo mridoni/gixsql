@@ -1,6 +1,6 @@
 /*
 * This file is part of Gix-IDE, an IDE and platform for GnuCOBOL
-* Copyright (C) 2021 Marco Ridoni
+* Copyright (C) 2021,2022 Marco Ridoni
 *
 * This library is free software; you can redistribute it and/or
 * modify it under the terms of the GNU Lesser General Public License
@@ -312,63 +312,65 @@ bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*
 	EXIT_ON_ERR_OR_NO_DATA(retcode);
 
 	// Bind columns in result set to buffers
-	if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO) {
-		SQLBindCol(cur_stmt_handle, 1, SQL_C_CHAR, strCatalog, STR_LEN, &lenCatalog);
-		SQLBindCol(cur_stmt_handle, 2, SQL_C_CHAR, strSchema, STR_LEN, &lenSchema);
-		SQLBindCol(cur_stmt_handle, 3, SQL_C_CHAR, strTableName, STR_LEN, &lenTableName);
-		SQLBindCol(cur_stmt_handle, 4, SQL_C_CHAR, strColumnName, STR_LEN, &lenColumnName);
-		SQLBindCol(cur_stmt_handle, 5, SQL_C_SSHORT, &DataType, 0, &lenDataType);
-		SQLBindCol(cur_stmt_handle, 6, SQL_C_CHAR, strTypeName, STR_LEN, &lenTypeName);
-		SQLBindCol(cur_stmt_handle, 7, SQL_C_SLONG, &ColumnSize, 0, &lenColumnSize);
-		SQLBindCol(cur_stmt_handle, 8, SQL_C_SLONG, &BufferLength, 0, &lenBufferLength);
-		SQLBindCol(cur_stmt_handle, 9, SQL_C_SSHORT, &DecimalDigits, 0, &lenDecimalDigits);
-		SQLBindCol(cur_stmt_handle, 10, SQL_C_SSHORT, &NumPrecRadix, 0, &lenNumPrecRadix);
-		SQLBindCol(cur_stmt_handle, 11, SQL_C_SSHORT, &Nullable, 0, &lenNullable);
-		SQLBindCol(cur_stmt_handle, 12, SQL_C_CHAR, strRemarks, REM_LEN, &lenRemarks);
-		SQLBindCol(cur_stmt_handle, 13, SQL_C_CHAR, strColumnDefault, STR_LEN, &lenColumnDefault);
-		SQLBindCol(cur_stmt_handle, 14, SQL_C_SSHORT, &SQLDataType, 0, &lenSQLDataType);
-		SQLBindCol(cur_stmt_handle, 15, SQL_C_SSHORT, &DatetimeSubtypeCode, 0, &lenDatetimeSubtypeCode);
-		SQLBindCol(cur_stmt_handle, 16, SQL_C_SLONG, &CharOctetLength, 0, &lenCharOctetLength);
-		SQLBindCol(cur_stmt_handle, 17, SQL_C_SLONG, &OrdinalPosition, 0, &lenOrdinalPosition);
-		SQLBindCol(cur_stmt_handle, 18, SQL_C_CHAR, strIsNullable, STR_LEN, &lenIsNullable);
-
-		// retrieve column data
-		while (SQL_SUCCESS == retcode) {
-			retcode = SQLFetch(cur_stmt_handle);
-
-			if (retcode)
-				break;
-
-			// Display column name, size and type
-			logger->log_debug(__FILE__, __func__, " Column Name : %s, ", strColumnName);
-			logger->log_debug(__FILE__, __func__, "Column Size : %i, ", ColumnSize);
-			logger->log_debug(__FILE__, __func__, "Data Type   : %i\n", SQLDataType);
-
-			ColumnInfo* c = new ColumnInfo();
-			c->name = string((const char*)&strColumnName);
-			c->is_nullable = Nullable;
-			c->length = ColumnSize;
-			c->base = NumPrecRadix;
-			c->decimal_digits = DecimalDigits;
-			c->type = decode_odbc_data_type(DataType);
-			c->native_type = string((const char*)&strTypeName);
-
-			vector<string>::iterator it = std::find_if(pk->columns.begin(), pk->columns.end(), [c](const string &s) { return s == c->name; });
-			c->is_pk_column = (it != pk->columns.end());
-
-
-
-			columns.push_back(c);
-		}
-
-		if (retcode > 0 && retcode != SQL_NO_DATA)
-			columns.clear();
-
-		EXIT_ON_ERR_OR_NO_DATA(retcode);
-
-		SQLFreeStmt(cur_stmt_handle, SQL_CLOSE);
-		return true;
+	if (retcode != SQL_SUCCESS && retcode != SQL_SUCCESS_WITH_INFO) {
+		return false;
 	}
+
+	SQLBindCol(cur_stmt_handle, 1, SQL_C_CHAR, strCatalog, STR_LEN, &lenCatalog);
+	SQLBindCol(cur_stmt_handle, 2, SQL_C_CHAR, strSchema, STR_LEN, &lenSchema);
+	SQLBindCol(cur_stmt_handle, 3, SQL_C_CHAR, strTableName, STR_LEN, &lenTableName);
+	SQLBindCol(cur_stmt_handle, 4, SQL_C_CHAR, strColumnName, STR_LEN, &lenColumnName);
+	SQLBindCol(cur_stmt_handle, 5, SQL_C_SSHORT, &DataType, 0, &lenDataType);
+	SQLBindCol(cur_stmt_handle, 6, SQL_C_CHAR, strTypeName, STR_LEN, &lenTypeName);
+	SQLBindCol(cur_stmt_handle, 7, SQL_C_SLONG, &ColumnSize, 0, &lenColumnSize);
+	SQLBindCol(cur_stmt_handle, 8, SQL_C_SLONG, &BufferLength, 0, &lenBufferLength);
+	SQLBindCol(cur_stmt_handle, 9, SQL_C_SSHORT, &DecimalDigits, 0, &lenDecimalDigits);
+	SQLBindCol(cur_stmt_handle, 10, SQL_C_SSHORT, &NumPrecRadix, 0, &lenNumPrecRadix);
+	SQLBindCol(cur_stmt_handle, 11, SQL_C_SSHORT, &Nullable, 0, &lenNullable);
+	SQLBindCol(cur_stmt_handle, 12, SQL_C_CHAR, strRemarks, REM_LEN, &lenRemarks);
+	SQLBindCol(cur_stmt_handle, 13, SQL_C_CHAR, strColumnDefault, STR_LEN, &lenColumnDefault);
+	SQLBindCol(cur_stmt_handle, 14, SQL_C_SSHORT, &SQLDataType, 0, &lenSQLDataType);
+	SQLBindCol(cur_stmt_handle, 15, SQL_C_SSHORT, &DatetimeSubtypeCode, 0, &lenDatetimeSubtypeCode);
+	SQLBindCol(cur_stmt_handle, 16, SQL_C_SLONG, &CharOctetLength, 0, &lenCharOctetLength);
+	SQLBindCol(cur_stmt_handle, 17, SQL_C_SLONG, &OrdinalPosition, 0, &lenOrdinalPosition);
+	SQLBindCol(cur_stmt_handle, 18, SQL_C_CHAR, strIsNullable, STR_LEN, &lenIsNullable);
+
+	// retrieve column data
+	while (SQL_SUCCESS == retcode) {
+		retcode = SQLFetch(cur_stmt_handle);
+
+		if (retcode)
+			break;
+
+		// Display column name, size and type
+		logger->log_debug(__FILE__, __func__, " Column Name : %s, ", strColumnName);
+		logger->log_debug(__FILE__, __func__, "Column Size : %i, ", ColumnSize);
+		logger->log_debug(__FILE__, __func__, "Data Type   : %i\n", SQLDataType);
+
+		ColumnInfo* c = new ColumnInfo();
+		c->name = string((const char*)&strColumnName);
+		c->is_nullable = Nullable;
+		c->length = ColumnSize;
+		c->base = NumPrecRadix;
+		c->decimal_digits = DecimalDigits;
+		c->type = decode_odbc_data_type(DataType);
+		c->native_type = string((const char*)&strTypeName);
+
+		vector<string>::iterator it = std::find_if(pk->columns.begin(), pk->columns.end(), [c](const string &s) { return s == c->name; });
+		c->is_pk_column = (it != pk->columns.end());
+
+
+
+		columns.push_back(c);
+	}
+
+	if (retcode > 0 && retcode != SQL_NO_DATA)
+		columns.clear();
+
+	EXIT_ON_ERR_OR_NO_DATA(retcode);
+
+	SQLFreeStmt(cur_stmt_handle, SQL_CLOSE);
+	return true;
 }
 
 bool DbInterfaceODBC::getIndexes(string schema, string tabl, vector<IndexInfo*>& idxs)
