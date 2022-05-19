@@ -1428,10 +1428,6 @@ LOW_VALUE "LOW\-VALUE"
      
 	//Ignore 
 }
-
-(\r\n|\n) { 
-
-}
  
 . {
 	if (strlen(yytext) == 1 && yytext[0] == '.') {
