@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	int rc = -1;
 
 	GixPreProcessor gp;
-	CopyResolver copy_resolver;
+	
 
 
 	// Do processing here
@@ -113,6 +113,8 @@ int main(int argc, char **argv)
 					return 1;
 				}
 			}
+
+			CopyResolver copy_resolver(filename_get_dir(filename_absolute_path(opt_infile->value())));
 
 			copy_resolver.setVerbose(opt_verbose->is_set());
 

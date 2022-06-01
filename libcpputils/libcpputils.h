@@ -104,6 +104,7 @@ bool file_exists(const std::string& filename);
 
 std::string filename_change_ext(const std::string &filename, const std::string &ext);
 std::string filename_get_name(const std::string &filename);
+std::string filename_get_dir(const std::string &filename);
 std::string filename_absolute_path(const std::string &filename);
 std::string filename_absolute_path(const std::filesystem::path &filepath);
 std::string filename_clean_path(const std::string &filepath);

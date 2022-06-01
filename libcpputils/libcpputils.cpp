@@ -353,6 +353,12 @@ std::string filename_get_name(const std::string &filename)
 	return fp.filename().string();
 }
 
+std::string filename_get_dir(const std::string& filename)
+{
+	std::filesystem::path fp(filename);
+	return fp.parent_path().string();
+}
+
 std::string filename_absolute_path(const std::filesystem::path &filepath)
 {
 	return std::filesystem::absolute(filepath).string();
