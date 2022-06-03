@@ -370,7 +370,7 @@ int DbInterfacePGSQL::exec_params(string query, int nParams, int *paramTypes, ve
 
 	resaddr = PQexecParams(connaddr, q.c_str(), nParams, NULL, pvals, paramLengths, paramFormats, 0);
 
-	free(pvals);
+	delete[] pvals;
 
 	last_rc = PQresultStatus(resaddr);
 	last_error = PQresultErrorMessage(resaddr);
