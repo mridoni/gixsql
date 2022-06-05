@@ -306,6 +306,7 @@ void gix_esql_driver::put_exec_list()
 
 	l->conninfo = conninfo;
 	l->connectionId = connectionid;
+	l->whenever_data = whenever_data;
 
 	host_reference_list = new std::vector<cb_hostreference_ptr>();
 	res_host_reference_list = new std::vector<cb_res_hostreference_ptr>();

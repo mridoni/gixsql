@@ -31,6 +31,7 @@ USA.
 #include "ESQLCall.h"
 
 class gix_esql_driver;
+struct esql_whenever_clause_handler_t;
 
 enum class ESQL_Command;
 
@@ -125,6 +126,9 @@ private:
 	void add_dependency(const std::string &parent, const std::string &dep_path);
 
 	bool is_current_file_included();
+
+	void put_whenever_handler(bool terminate_with_period);
+	void put_whenever_clause_handler(esql_whenever_clause_handler_t* ch);
 
 	std::stack<std::string> input_file_stack;
 	int working_begin_line;

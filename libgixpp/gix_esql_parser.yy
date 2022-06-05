@@ -137,6 +137,13 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token OPEN
 %token CLOSE
 %token FETCH
+%token WHENEVER
+%token NOT_FOUND
+%token SQLERROR
+%token SQLWARNING
+%token CONTINUE
+%token PERFORM
+%token GOTO
 %token TRAILING
 %token COMP_1
 %token COMP_2
@@ -185,6 +192,9 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 
 %type <connect_to_info_t *> opt_auth_info opt_identified_by
 
+%type <int> whenever_clause
+%type <std::string> whenever_action
+
 %nonassoc error
 
 // No %destructors are needed, since memory will be reclaimed by the
@@ -217,6 +227,7 @@ sqlvariantstates
 | preparesql
 | executesql
 | ignoresql
+| wheneversql
 | badsql
 ;
 
@@ -665,6 +676,42 @@ EXECSQL IGNORE token_list END_EXEC
 }
 ;
 
+wheneversql:
+EXECSQL WHENEVER whenever_clause whenever_action END_EXEC
+{
+	driver.whenever_data = new esql_whenever_data_t();
+	driver.whenever_data->clause = $3;
+	if ($4.empty()) {
+		driver.whenever_data->action = WHENEVER_ACTION_CONTINUE;
+	}
+	else {
+		if (starts_with ($4, "@@")) {
+			driver.whenever_data->action = WHENEVER_ACTION_PERFORM;
+			driver.whenever_data->host_label = $4.substr(2);
+		}
+		else {
+			driver.whenever_data->action = WHENEVER_ACTION_GOTO;
+			driver.whenever_data->host_label = $4;		
+		}
+	}
+
+	driver.put_exec_list();
+}
+;
+
+whenever_clause:
+NOT_FOUND		{ $$ = WHENEVER_CLAUSE_NOT_FOUND;	}
+| SQLWARNING	{ $$ = WHENEVER_CLAUSE_SQLWARNING;  }
+| SQLERROR		{ $$ = WHENEVER_CLAUSE_SQLERROR;	}
+
+;
+
+whenever_action:
+CONTINUE			{ $$ = "";			 }
+| PERFORM WORD		{ $$ = "@@" + $2;	 }
+| GOTO WORD			{ $$ = $2;			 }
+| GOTO HOSTTOKEN	{ $$ = $2.substr(1); }	/* Not actually a host token (variable), we just "borrow" its syntax in the lexer */
+;
 
 opt_using_hostref_list:
 %empty

@@ -55,7 +55,8 @@ USA.
 #define ERR_MISSING_LENGTH      19105
 #define ERR_INVALID_TYPE        19106
 #define ERR_FILE_NOT_FOUND      19107
-#define ERR_QUERY_TOO_LONG     19108
+#define ERR_QUERY_TOO_LONG      19108
+#define ERR_INVALID_DATA        19109
 
 // This is used to keep the error code from nested function
 #define ERR_ALREADY_SET         -9999
@@ -166,6 +167,7 @@ public:
     cb_field_ptr description_field;
 
     esql_connection_info_t *conninfo = nullptr;
+    esql_whenever_data_t* whenever_data = nullptr;
 
     bool has_esql_in_cbl_copybooks;
     bool procedure_division_started = false;

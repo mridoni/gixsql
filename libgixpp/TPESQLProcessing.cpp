@@ -59,6 +59,7 @@ USA.
 #define ESQL_EXEC_PREPARED				"EXECUTE_PREPARED"
 #define ESQL_EXEC_IMMEDIATE				"EXECUTE_IMMEDIATE"
 #define ESQL_PASSTHRU					"PASSTHRU"
+#define ESQL_WHENEVER					"WHENEVER"
 
 #define BEGIN_DECLARE_SECTION			"HOST_BEGIN"
 #define END_DECLARE_SECTION				"HOST_END"
@@ -146,6 +147,7 @@ enum class ESQL_Command
 	PrepareStatement,
 	ExecPrepared,
 	ExecImmediate,
+	Whenever,
 
 	// Helpers
 	StartSQL,
@@ -182,12 +184,25 @@ static std::map<std::string, ESQL_Command> ESQL_cmd_map{ { ESQL_CONNECT, ESQL_Co
 												 { ESQL_FILE_BEGIN, ESQL_Command::FileBegin }, { ESQL_FILE_END, ESQL_Command::FileEnd } ,
 												 { ESQL_PROCEDURE_DIVISION, ESQL_Command::ProcedureDivision }, { ESQL_DECLARE_TABLE, ESQL_Command::DeclareTable },
 												 { ESQL_PREPARE, ESQL_Command::PrepareStatement }, { ESQL_EXEC_PREPARED, ESQL_Command::ExecPrepared },
-												 { ESQL_EXEC_IMMEDIATE, ESQL_Command::ExecImmediate}, { ESQL_DECLARE_VAR, ESQL_Command::DeclareVar },
+												 { ESQL_EXEC_IMMEDIATE, ESQL_Command::ExecImmediate}, { ESQL_WHENEVER, ESQL_Command::Whenever}, { ESQL_DECLARE_VAR, ESQL_Command::DeclareVar },
 												 { BEGIN_DECLARE_SECTION, ESQL_Command::BeginDeclareSection}, { END_DECLARE_SECTION, ESQL_Command::EndDeclareSection },
 												 { ESQL_COMMENT, ESQL_Command::Comment } , { ESQL_IGNORE, ESQL_Command::Ignore }, { ESQL_PASSTHRU, ESQL_Command::PassThru } };
 
 #define CALL_PREFIX	"GIXSQL"
 #define TAG_PREFIX	"GIXSQL"
+
+struct esql_whenever_clause_handler_t {
+	int action = WHENEVER_ACTION_CONTINUE;
+	std::string host_label;
+};
+
+static struct esql_whenever_handler_t
+{
+	esql_whenever_clause_handler_t not_found;
+	esql_whenever_clause_handler_t sqlwarning;
+	esql_whenever_clause_handler_t sqlerror;
+} esql_whenever_handler;
+
 
 inline std::string TPESQLProcessing::get_call_id(const std::string s)
 {
@@ -650,7 +665,9 @@ bool TPESQLProcessing::put_cursor_declarations()
 			if (!put_call(cd_call, false))
 				return false;
 
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		else { // (struct sqlca_t *st, char *cname, int with_hold, char *_query)
 			ESQLCall cd_call(get_call_id("CursorDeclare"), emit_static);
@@ -660,8 +677,10 @@ bool TPESQLProcessing::put_cursor_declarations()
 			cd_call.addParameter(stmt->cursor_hold, BY_VALUE);
 			cd_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 
-			if (!put_call(cd_call, stmt->period))
+			if (!put_call(cd_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 	}
 
@@ -804,8 +823,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			connect_call.addParameter(&main_module_driver, stmt->conninfo->username);
 			connect_call.addParameter(&main_module_driver, stmt->conninfo->password);
 
-			if (!put_call(connect_call, stmt->period))
+			if (!put_call(connect_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -815,8 +836,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			connect_call.addParameter("SQLCA", BY_REFERENCE);
 			connect_call.addParameter(&main_module_driver, stmt->connectionId);
 
-			if (!put_call(connect_call, stmt->period))
+			if (!put_call(connect_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -826,8 +849,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			connect_call.addParameter("SQLCA", BY_REFERENCE);
 			connect_call.addParameter(&main_module_driver, stmt->connectionId);
 
-			if (!put_call(connect_call, stmt->period))
+			if (!put_call(connect_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -925,7 +950,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				if (!put_call(select_call, false))
 					return false;
 			}
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -936,8 +963,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			open_call.addParameter("SQLCA", BY_REFERENCE);
 			open_call.addParameter("\"" + cursor_id + "\" & x\"00\"", BY_REFERENCE);
 
-			if (!put_call(open_call, stmt->period))
+			if (!put_call(open_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -948,8 +977,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			close_call.addParameter("SQLCA", BY_REFERENCE);
 			close_call.addParameter("\"" + cursor_id + "\" & x\"00\"", BY_REFERENCE);
 
-			if (!put_call(close_call, stmt->period))
+			if (!put_call(close_call, false))
 				return false;
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -987,7 +1018,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			if (!put_call(fetch_call, false))
 				return false;
 
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -1003,7 +1036,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			if (!put_call(fetch_call, false))
 				return false;
 
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -1019,7 +1054,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			if (!put_call(fetch_call, false))
 				return false;
 
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -1062,7 +1099,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			if  (!put_call(dml_call, false))
 				return false;
 
-			put_end_exec_sql(stmt->period);
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
 		break;
 
@@ -1248,8 +1287,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					ps_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 					ps_call.addParameter(0, BY_VALUE);
 				}
-				if (!put_call(ps_call, stmt->period))
+				
+				if (!put_call(ps_call, false))
 					return false;
+
+				put_whenever_handler(stmt->period);
 			}
 			break;
 
@@ -1289,7 +1331,9 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				if (!put_call(ep_call, false))
 					return false;
 
-				put_end_exec_sql(stmt->period);
+				put_end_exec_sql(false);
+
+				put_whenever_handler(stmt->period);
 			}
 			break;
 
@@ -1321,8 +1365,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					ei_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 					ei_call.addParameter(0, BY_VALUE);
 				}
-				if (!put_call(ei_call, stmt->period))
+
+				if (!put_call(ei_call, false))
 					return false;
+
+				put_whenever_handler(stmt->period);
 			}
 			break;
 
@@ -1367,7 +1414,42 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				if (!put_call(dml_call, false))
 					return false;
 
-				put_end_exec_sql(stmt->period);
+				put_end_exec_sql(false);
+
+				put_whenever_handler(stmt->period);
+			}
+			break;
+
+		case ESQL_Command::Whenever: 
+			{
+				if (!stmt->whenever_data) {
+					main_module_driver.error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
+					return false;
+				}
+
+				esql_whenever_clause_handler_t* clause_handler = nullptr;
+
+				switch (stmt->whenever_data->clause) {
+					case WHENEVER_CLAUSE_NOT_FOUND:
+						clause_handler = &esql_whenever_handler.not_found;
+						break;
+
+					case WHENEVER_CLAUSE_SQLWARNING:
+						clause_handler = &esql_whenever_handler.sqlwarning;
+						break;
+
+					case WHENEVER_CLAUSE_SQLERROR:
+						clause_handler = &esql_whenever_handler.sqlerror;
+						break;
+				}
+
+				if (!clause_handler) {
+					main_module_driver.error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
+					return false;
+				}
+
+				clause_handler->action = stmt->whenever_data->action;
+				clause_handler->host_label = stmt->whenever_data->host_label;
 			}
 			break;
 
@@ -1820,6 +1902,63 @@ void TPESQLProcessing::add_dependency(const std::string &parent, const std::stri
 bool TPESQLProcessing::is_current_file_included()
 {
 	return input_file_stack.size() > 1;
+}
+
+void TPESQLProcessing::put_whenever_clause_handler(esql_whenever_clause_handler_t* ch)
+{
+	const char* lp = AREA_B_CPREFIX;
+
+	switch (ch->action) {
+		case WHENEVER_ACTION_CONTINUE:
+			put_output_line(lp + string_format("    CONTINUE"));
+			break;
+
+		case WHENEVER_ACTION_GOTO:
+			put_output_line(lp + string_format("    GOTO %s", ch->host_label));
+			break;
+
+		case WHENEVER_ACTION_PERFORM:
+			put_output_line(lp + string_format("    PERFORM %s", ch->host_label));
+			break;
+	}
+}
+
+void TPESQLProcessing::put_whenever_handler(bool terminate_with_period)
+{
+	const char* lp = AREA_B_CPREFIX;
+
+	// Optimization (sort of) if we have no handlers defined, we treat it as a special case
+	if (esql_whenever_handler.not_found.action == WHENEVER_ACTION_CONTINUE && 
+		esql_whenever_handler.sqlwarning.action == WHENEVER_ACTION_CONTINUE && 
+		esql_whenever_handler.sqlerror.action == WHENEVER_ACTION_CONTINUE) {
+		// We always need to output something to handle statement-terminating periods
+		// and expect the COBOL compiler to optimize this out
+		//put_output_line(lp + string_format("CONTINUE"));
+		if (terminate_with_period) {
+			output_lines.back() += ".";
+		}
+		return;
+	}
+
+	put_output_line(lp + std::string("EVALUATE TRUE"));
+
+	// Not found
+	put_output_line(lp + std::string("WHEN SQLCODE = 100"));
+	put_whenever_clause_handler(&esql_whenever_handler.not_found);
+
+	// SQLWARNING
+	put_output_line(lp + std::string("WHEN SQLCODE = 1"));
+	put_whenever_clause_handler(&esql_whenever_handler.sqlwarning);
+
+	// SQLERROR
+	put_output_line(lp + std::string("WHEN SQLCODE < 0"));
+	put_whenever_clause_handler(&esql_whenever_handler.sqlerror);
+
+	put_output_line(lp + std::string("END-EVALUATE"));
+
+	if (terminate_with_period) {
+		output_lines.back() += ".";
+	}
 }
 
 std::string TPESQLProcessing::getModuleName()
