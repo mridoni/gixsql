@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([gixsql], [1.0.15], [m.ridoni@gmail.com])
+AC_INIT([gixsql], [1.0.16dev1], [m.ridoni@gmail.com])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.9.6 -Wall -Werror dist-bzip2])
@@ -44,13 +44,19 @@ AC_CHECK_TYPES([ptrdiff_t])
 PKG_PROG_PKG_CONFIG
 
 AC_ARG_ENABLE([mysql],
-  [AS_HELP_STRING([--disable-mysql], [Enable MySQL support @<:@yes@:>@])])
+  [AS_HELP_STRING([--enable-mysql], [Enable MySQL support @<:@yes@:>@])])
 
 AC_ARG_ENABLE([odbc],
-  [AS_HELP_STRING([--disable-odbc], [Enable ODBC support @<:@yes@:>@])])
+  [AS_HELP_STRING([--enable-odbc], [Enable ODBC support @<:@yes@:>@])])
 
 AC_ARG_ENABLE([pgsql],
-  [AS_HELP_STRING([--disable-pgsql], [Enable PostgreSQL support @<:@yes@:>@])])
+  [AS_HELP_STRING([--enable-pgsql], [Enable PostgreSQL support @<:@yes@:>@])])
+
+AC_ARG_WITH([default-driver],
+	[AS_HELP_STRING([--with-default-driver[=none|odbc|mysql|pgsql]],
+		[set DBMS default-driver])],
+		[],
+		[with_default_driver=none])
 
 AS_IF([test "$enable_mysql" != "no"],
   [PKG_CHECK_MODULES([MYSQL],
@@ -75,6 +81,54 @@ AS_IF([test "$enable_pgsql" != "no"],
     [AS_IF([test "$enable_pgsql" = "yes"],
       [AC_MSG_ERROR([libpq required, but not found.])],
       [enable_pgsql=no])])])
+
+
+# Check if the driver ID is valid
+AS_IF([test "$with_default_driver" == "none" || test "$with_default_driver" == "odbc" || test "$with_default_driver" == "mysql" || test "$with_default_driver" == "pgsql" ],
+		[],
+		[AC_MSG_ERROR([invalid DBMS driver id \"${with_default_driver}\".])]
+)
+
+
+num_drivers=0
+cur_driver=
+AS_IF([test "$enable_odbc" = "yes"],  [ num_drivers=$(($numdrivers+1)) ; cur_driver=odbc  ])
+AS_IF([test "$enable_mysql" = "yes"], [ num_drivers=$(($numdrivers+1)) ; cur_driver=mysql ])
+AS_IF([test "$enable_pgsql" = "yes"], [	num_drivers=$(($numdrivers+1)) ; cur_driver=pgsql ])
+
+AS_IF([test "$num_drivers" = "0" ], [ AC_MSG_ERROR([At least one DBMS driver must be enabled]) ])
+
+
+AS_IF([test x$with_default_driver != xnone ],
+  [
+	echo "setting ${with_default_driver} as default driver"
+
+	TMP_HDR=/tmp/default_driver.h
+	HDR=${srcdir}/runtime/libgixsql/default_driver.h
+	echo "#pragma once" > $TMP_HDR
+	echo "" >> $TMP_HDR
+	echo "#define GIXSQL_DEFAULT_DRIVER \"${with_default_driver}\"" >> $TMP_HDR
+	echo "" >> $TMP_HDR
+	diff $TMP_HDR $HDR > /dev/null
+	AS_IF([test "$?" != "0"], [ cp $TMP_HDR $HDR ])
+  ],
+  [
+   	AS_IF([test "$num_drivers" = "1"], [
+		echo "single-driver configuration detected, setting ${cur_driver} as default driver"
+
+		TMP_HDR=/tmp/default_driver.h
+		HDR=${srcdir}/runtime/libgixsql/default_driver.h
+		echo "#pragma once" > $TMP_HDR
+		echo "" >> $TMP_HDR
+		echo "#define GIXSQL_DEFAULT_DRIVER \"${cur_driver}\"" >> $TMP_HDR
+		echo "" >> $TMP_HDR
+		diff $TMP_HDR $HDR > /dev/null
+		AS_IF([test "$?" != "0"], [ cp $TMP_HDR $HDR ])
+	])
+  ]
+
+)
+
 
 AM_CONDITIONAL([ENABLE_MYSQL], [test "$enable_mysql" = "yes"])
 AM_CONDITIONAL([ENABLE_ODBC], [test "$enable_odbc" = "yes"])

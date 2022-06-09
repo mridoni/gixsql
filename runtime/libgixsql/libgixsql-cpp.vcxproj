@@ -507,6 +507,7 @@
     <ClInclude Include="ConnectionManager.h" />
     <ClInclude Include="CursorManager.h" />
     <ClInclude Include="DbInterfaceFactory.h" />
+    <ClInclude Include="default_driver.h" />
     <ClInclude Include="IConnection.h" />
     <ClInclude Include="IDataSourceInfo.h" />
     <ClInclude Include="ICursor.h" />

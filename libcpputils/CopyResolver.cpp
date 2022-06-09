@@ -126,6 +126,9 @@ void CopyResolver::setVerbose(bool b)
 
 bool CopyResolver::resolve_from_dir(const std::string& copy_dir, const std::string& copy_name, std::string& copy_file)
 {
+	if (copy_dir.empty())
+		return false;
+
 	for (std::string ext : copy_exts) {
 
 		std::filesystem::path the_file(copy_dir + PATH_SEPARATOR + trim_copy(copy_name));

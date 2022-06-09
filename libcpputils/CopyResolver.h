@@ -29,6 +29,7 @@ USA.
 class CopyResolver
 {
 public:
+	CopyResolver() {}
 	CopyResolver(const std::string& base_dir, const std::vector<std::string>& _copy_dirs);
 	CopyResolver(const std::string& base_dir);
 

@@ -102,6 +102,7 @@
     <ClInclude Include="ISchemaManager.h">
       <Filter>Header Files\Interfaces</Filter>
     </ClInclude>
+    <ClInclude Include="default_driver.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
