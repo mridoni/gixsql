@@ -33,7 +33,7 @@ There is no "bind" procedure in GixSQL, you will have to manually open a connect
 
 In this case the two values are retrieved from the environment variables `DBNAME` and `DBAUTH` and passed to the CONNECT function.
 
-`DATASRC` is a "connection string"-style alphanumeric field, whose format is basically
+`DATASRC` is a "connection string"-style alphanumeric field, whose standard format (see below) is basically
 
     <dbtype>://<host>[:port][/dbname][?[opt1=val1]&...]
 
@@ -54,6 +54,30 @@ or
 	CONNECT :USERNAME IDENTIFIED BY :PASSWORD USING :DATASOURCE
 
 All the identifiers for data sources, usernames and passwords can be either COBOL variables (prefixed by a semi-colon) or string literals.
+
+#### Connection string formats
+
+Starting from version 1.0.16dev1 there are three supported formats for "connection strings":
+
+1) GixSQL "standard", e.g.:
+    - `pgsql://test.test@localhost:5432/testdb1`
+    - `pgsql://localhost:5432/testdb1`
+
+2) GixSQL with "no DB driver"
+    - `localhost:5432/testdb1`
+    - `test.test@localhost:5432/testdb1`
+
+3) OCESQL-compatible
+    - `testdb1@localhost:5432`
+
+For cases 2) and 3) the DB/driver type is inferred by:
+
+- setting a compile-time constant (compile-time means "when GixSQL is compiled"):
+	 - manually in default_driver.h (e.g. #define GIXSQL_DEFAULT_DRIVER	"pgsql")
+	 - using the --with-default-driver=pgsql|odbc|mysql|none when calling configure (Linux only)
+- if this costant is missing or empty (default), the content of the environment variable `GIXSQL_DEFAULT_DRIVER` is used
+
+
 
 ### Multiple connections
 
