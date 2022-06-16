@@ -30,6 +30,12 @@ jobs:
 
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
+      
+    - name: Install dependencies Windows
+      run: vcpkg integrate install; vcpkg install libpq:x64-windows libmysql:x64-windows
+      if: matrix.os == 'windows-latest'
+      env:
+        VCPKG_ROOT: 'C:\vcpkg'      
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
