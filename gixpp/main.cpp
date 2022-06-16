@@ -37,7 +37,7 @@ USA.
 #define PATH_LIST_SEP ":"
 #endif
 
-#define GIXPP_VER "1.0.16dev1"
+#define GIXPP_VER "1.0.16dev2"
 
 using namespace popl;
 

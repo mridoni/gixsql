@@ -6,17 +6,15 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "runtime", "runtime", "{CA214231-A8B6-4FBA-B3AE-3FE5CAF64A38}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql", "runtime\libgixsql\libgixsql-cpp.vcxproj", "{F501313D-9C68-4164-80C3-E21CA3837E47}"
-	ProjectSection(ProjectDependencies) = postProject
-		{C9ED4948-CA5B-4E8A-A4A8-EF54C13B19EA} = {C9ED4948-CA5B-4E8A-A4A8-EF54C13B19EA}
-		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E} = {C8BB29A7-CC21-4811-95DE-14C24A64DF5E}
-		{63FDBCCD-8254-479C-A19F-5DAC3A0B9910} = {63FDBCCD-8254-479C-A19F-5DAC3A0B9910}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql-mysql", "runtime\libgixsql-mysql\libgixsql-mysql.vcxproj", "{63FDBCCD-8254-479C-A19F-5DAC3A0B9910}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql-odbc", "runtime\libgixsql-odbc\libgixsql-odbc.vcxproj", "{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql-pgsql", "runtime\libgixsql-pgsql\libgixsql-pgsql.vcxproj", "{C9ED4948-CA5B-4E8A-A4A8-EF54C13B19EA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{F501313D-9C68-4164-80C3-E21CA3837E47} = {F501313D-9C68-4164-80C3-E21CA3837E47}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tools", "tools", "{03E0162F-A04E-40F0-94A8-6E897A00EFB7}"
 EndProject
@@ -35,6 +33,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gixpp", "gixpp\gixpp.vcxpro
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gixsql-tests", "gixsql-tests\gixsql-tests.csproj", "{2DC3D86A-319C-4656-9CE6-A09DB069EABF}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "spdlog", "spdlog\spdlog.vcxproj", "{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -315,6 +315,40 @@ Global
 		{2DC3D86A-319C-4656-9CE6-A09DB069EABF}.Test_Release|Win32.Build.0 = Release|Any CPU
 		{2DC3D86A-319C-4656-9CE6-A09DB069EABF}.Test_Release|x64.ActiveCfg = Release|Any CPU
 		{2DC3D86A-319C-4656-9CE6-A09DB069EABF}.Test_Release|x64.Build.0 = Release|Any CPU
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|Any CPU.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|Any CPU.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|Win32.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|Win32.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|x64.ActiveCfg = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug_5.15.2|x64.Build.0 = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug|Any CPU.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug|Win32.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug|x64.ActiveCfg = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Debug|x64.Build.0 = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|Any CPU.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|Any CPU.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|Win32.ActiveCfg = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|Win32.Build.0 = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|x64.ActiveCfg = Release|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release_NoRuntime|x64.Build.0 = Release|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release|Any CPU.ActiveCfg = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release|Win32.ActiveCfg = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release|Win32.Build.0 = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release|x64.ActiveCfg = Release|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Release|x64.Build.0 = Release|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|Any CPU.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|Any CPU.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|Win32.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|Win32.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|x64.ActiveCfg = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Debug|x64.Build.0 = Debug|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|Any CPU.ActiveCfg = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|Any CPU.Build.0 = Debug|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|Win32.ActiveCfg = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|Win32.Build.0 = Release|Win32
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|x64.ActiveCfg = Release|x64
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A}.Test_Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -327,6 +361,7 @@ Global
 		{7C58891C-47A9-4269-97BE-4F3945B8F595} = {DFBBE7C7-A0DF-4483-8B6B-2EDCDC67F4EA}
 		{2D9B2EB8-CA93-410C-9359-CD44B5F9DD18} = {DFBBE7C7-A0DF-4483-8B6B-2EDCDC67F4EA}
 		{1BA5A886-6EC9-434A-8B66-AF29211B4499} = {03E0162F-A04E-40F0-94A8-6E897A00EFB7}
+		{D3FD3860-9F56-4C47-ADF6-B48D9C8BC47A} = {DFBBE7C7-A0DF-4483-8B6B-2EDCDC67F4EA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {0D846CBC-2353-409E-B512-D9DF7822A67A}

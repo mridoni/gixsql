@@ -36,7 +36,6 @@ extern "C" {
 #include <mysql.h>
 }
 
-#include "ILogger.h"
 #include "ICursor.h"
 #include "IDbInterface.h"
 #include "IDbManagerInterface.h"
@@ -72,7 +71,7 @@ public:
 	DbInterfaceMySQL();
 	~DbInterfaceMySQL();
 
-	virtual int init(ILogger *) override;
+	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
 	virtual int connect(IDataSourceInfo *, int, string) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
@@ -109,9 +108,6 @@ private:
 	MySQLCursorData cur_crsr;
 
 	IConnection *owner;
-#if _DEBUG
-	ILogger* logger;
-#endif
 
 	int last_rc;
 	string last_error;

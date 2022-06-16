@@ -24,7 +24,7 @@ USA.
 #include <vector>
 
 #include "ICursor.h"
-#include "ILogger.h"
+#include "Logger.h"
 #include "IConnection.h"
 #include "IDataSourceInfo.h"
 #include "IDbManagerInterface.h"
@@ -76,7 +76,7 @@ class ICursor;
 class IDbInterface
 {
 public:
-	virtual int init(ILogger *) = 0;
+	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
 	virtual int connect(IDataSourceInfo *, int, std::string) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
@@ -109,6 +109,6 @@ public:
 
 protected:
 	IConnection* owner;
-	ILogger* logger;
+	std::shared_ptr<spdlog::logger> lib_logger;
 };
 

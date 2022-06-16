@@ -248,7 +248,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -265,7 +265,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -289,7 +289,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -306,7 +306,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -323,7 +323,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -346,7 +346,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -365,7 +365,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -386,7 +386,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -408,7 +408,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>Win32;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL32_HOME%\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -429,7 +429,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -451,7 +451,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -473,7 +473,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;LIBOCESQLCPP_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>%PGSQL_HOME%\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)spdlog\include;%PGSQL_HOME%\include</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -493,8 +493,8 @@
     <ClCompile Include="CursorManager.cpp" />
     <ClCompile Include="DbInterfaceFactory.cpp" />
     <ClCompile Include="dllmain.cpp" />
-    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="gixsql.cpp" />
+    <ClCompile Include="Logger.cpp" />
     <ClCompile Include="platform.cpp" />
     <ClCompile Include="SqlVar.cpp" />
     <ClCompile Include="SqlVarList.cpp" />
@@ -513,7 +513,6 @@
     <ClInclude Include="ICursor.h" />
     <ClInclude Include="IDbInterface.h" />
     <ClInclude Include="IDbManagerInterface.h" />
-    <ClInclude Include="ILogger.h" />
     <ClInclude Include="ISchemaManager.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="gixsql.h" />
@@ -525,6 +524,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\spdlog\spdlog.vcxproj">
+      <Project>{d3fd3860-9f56-4c47-adf6-b48d9c8bc47a}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

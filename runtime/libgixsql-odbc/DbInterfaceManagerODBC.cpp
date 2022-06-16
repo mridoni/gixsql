@@ -62,7 +62,7 @@ int is_sql_any_success(SQLRETURN rc)
 								return false; \
 							}
 
-bool DbInterfaceODBC::getSchemas(vector<SchemaInfo*>& res)
+bool DbInterfaceODBC::getSchemas(std::vector<SchemaInfo*>& res)
 {
 	struct DataBinding* schemaResult = (struct DataBinding*)
 		malloc(NUMCOLS * sizeof(struct DataBinding));
@@ -77,8 +77,8 @@ bool DbInterfaceODBC::getSchemas(vector<SchemaInfo*>& res)
 	SQLRETURN retcode = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &cur_stmt_handle);
 	if (last_rc != SQL_SUCCESS) {
 		retrieve_odbc_error(ERR_SRC_CONN);
-		logger->log_debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
-		logger->log_error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
 		return DBERR_CONNECTION_FAILED;
 	}
 
@@ -106,7 +106,7 @@ bool DbInterfaceODBC::getSchemas(vector<SchemaInfo*>& res)
 		// index 3 - type - e.g. TABLE
 
 		if (schemaResult[1].StrLen_or_Ind != SQL_NULL_DATA) {
-			logger->log_debug(__FILE__, __func__, "Schema (%s)\n", (char*)schemaResult[1].TargetValuePtr);
+			lib_logger->debug(__FILE__, __func__, "Schema ({})\n", (char*)schemaResult[1].TargetValuePtr);
 			SchemaInfo* s = new SchemaInfo();
 			s->name = (char*)schemaResult[1].TargetValuePtr;
 			res.push_back(s);
@@ -120,7 +120,7 @@ bool DbInterfaceODBC::getSchemas(vector<SchemaInfo*>& res)
 	return true;
 }
 
-bool DbInterfaceODBC::getTables(string schema, vector<TableInfo*>& res)
+bool DbInterfaceODBC::getTables(std::string schema, std::vector<TableInfo*>& res)
 {
 	struct DataBinding* tableResult = (struct DataBinding*)
 		malloc(NUMCOLS * sizeof(struct DataBinding));
@@ -135,8 +135,8 @@ bool DbInterfaceODBC::getTables(string schema, vector<TableInfo*>& res)
 	SQLRETURN retcode = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &cur_stmt_handle);
 	if (last_rc != SQL_SUCCESS) {
 		retrieve_odbc_error(ERR_SRC_CONN);
-		logger->log_debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
-		logger->log_error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
 		return DBERR_CONNECTION_FAILED;
 	}
 
@@ -165,7 +165,7 @@ bool DbInterfaceODBC::getTables(string schema, vector<TableInfo*>& res)
 		// index 3 - type - e.g. TABLE
 
 		if (tableResult[2].StrLen_or_Ind != SQL_NULL_DATA) {
-			logger->log_debug(__FILE__, __func__, "Table (%s) = %s\n", (char*)tableResult[1].TargetValuePtr, (char*)tableResult[2].TargetValuePtr);
+			lib_logger->debug(__FILE__, __func__, "Table ({}) = {}\n", (char*)tableResult[1].TargetValuePtr, (char*)tableResult[2].TargetValuePtr);
 			TableInfo* t = new TableInfo();
 			t->schema_name = (char*)tableResult[1].TargetValuePtr;
 			t->name = (char*)tableResult[2].TargetValuePtr;
@@ -208,7 +208,7 @@ ColumnType decode_odbc_data_type(int odbc_dt)
 	}
 }
 
-bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*>& columns)
+bool DbInterfaceODBC::getColumns(std::string schema, std::string table, std::vector<ColumnInfo*>& columns)
 {
 	SQLCHAR strSchema[STR_LEN];
 	SQLCHAR strCatalog[STR_LEN];
@@ -259,8 +259,8 @@ bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*
 	SQLRETURN retcode = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &cur_stmt_handle);
 	if (last_rc != SQL_SUCCESS) {
 		retrieve_odbc_error(ERR_SRC_CONN);
-		logger->log_debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
-		logger->log_error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->debug(__FILE__, __func__, "FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
+		lib_logger->error("FATAL ERROR: Can't allocate SQL Handle for the ODBC statement");
 		return DBERR_CONNECTION_FAILED;
 	}
 
@@ -295,8 +295,8 @@ bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*
 	while ((retcode == SQL_SUCCESS) || (retcode == SQL_SUCCESS_WITH_INFO)) {
 		retcode = SQLFetch(cur_stmt_handle);
 		if (retcode == SQL_SUCCESS || retcode == SQL_SUCCESS_WITH_INFO)
-			logger->log_debug(__FILE__, __func__, "Table: %s Column: %s Key Seq: %hd \n", strPkTable, strPkCol, iKeySeq);
-		pk->columns.push_back(string((const char*)&strPkCol));
+			lib_logger->debug(__FILE__, __func__, "Table: {} Column: {} Key Seq: {} \n", strPkTable, strPkCol, iKeySeq);
+		pk->columns.push_back(std::string((const char*)&strPkCol));
 	}
 
 	retcode = SQLFreeStmt(cur_stmt_handle, SQL_CLOSE);
@@ -343,20 +343,20 @@ bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*
 			break;
 
 		// Display column name, size and type
-		logger->log_debug(__FILE__, __func__, " Column Name : %s, ", strColumnName);
-		logger->log_debug(__FILE__, __func__, "Column Size : %i, ", ColumnSize);
-		logger->log_debug(__FILE__, __func__, "Data Type   : %i\n", SQLDataType);
+		lib_logger->debug(__FILE__, __func__, " Column Name : {}, ", strColumnName);
+		lib_logger->debug(__FILE__, __func__, "Column Size : {}, ", ColumnSize);
+		lib_logger->debug(__FILE__, __func__, "Data Type   : {}", SQLDataType);
 
 		ColumnInfo* c = new ColumnInfo();
-		c->name = string((const char*)&strColumnName);
+		c->name = std::string((const char*)&strColumnName);
 		c->is_nullable = Nullable;
 		c->length = ColumnSize;
 		c->base = NumPrecRadix;
 		c->decimal_digits = DecimalDigits;
 		c->type = decode_odbc_data_type(DataType);
-		c->native_type = string((const char*)&strTypeName);
+		c->native_type = std::string((const char*)&strTypeName);
 
-		vector<string>::iterator it = std::find_if(pk->columns.begin(), pk->columns.end(), [c](const string &s) { return s == c->name; });
+		std::vector<std::string>::iterator it = std::find_if(pk->columns.begin(), pk->columns.end(), [c](const std::string &s) { return s == c->name; });
 		c->is_pk_column = (it != pk->columns.end());
 
 
@@ -373,7 +373,7 @@ bool DbInterfaceODBC::getColumns(string schema, string table, vector<ColumnInfo*
 	return true;
 }
 
-bool DbInterfaceODBC::getIndexes(string schema, string tabl, vector<IndexInfo*>& idxs)
+bool DbInterfaceODBC::getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*>& idxs)
 {
 	return false;
 }

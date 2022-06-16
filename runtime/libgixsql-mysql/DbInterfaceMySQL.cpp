@@ -32,7 +32,6 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 {
 	connaddr = nullptr;
 	last_rc = 0;
-	logger = nullptr;
 	owner = nullptr;
 }
 
@@ -40,14 +39,17 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 DbInterfaceMySQL::~DbInterfaceMySQL()
 {}
 
-int DbInterfaceMySQL::init(ILogger *_logger)
+int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	connaddr = NULL;
 	cur_crsr.clear();
 	owner = NULL;
-#if _DEBUG
-	logger = _logger;
-#endif
+
+	auto lib_sink = _logger->sinks().at(0);
+	lib_logger = std::make_shared<spdlog::logger>("libgixsql-mysql", lib_sink);
+	lib_logger->set_level(_logger->level());
+	lib_logger->info("libgixsql-mysql logger started");
+
 	return DBERR_NO_ERROR;
 }
 
@@ -58,8 +60,7 @@ int DbInterfaceMySQL::connect(IDataSourceInfo *conn_string, int autocommit, stri
 
 	connaddr = NULL;
 
-	LOG_DEBUG(__FILE__, __func__, "connstring: %s - autocommit: %d - encoding: %s\n",
-		conn_string->get().c_str(), autocommit, encoding.c_str());
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__,	conn_string->get(), autocommit, encoding);
 
 	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
 	conn = mysql_init(NULL);
@@ -173,7 +174,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParam
 {
 	string q = query;
 	MySQLCursorData *exec_data = NULL;
-	LOG_DEBUG(__FILE__, __func__, "SQL: %s\n", q.c_str());
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
 	if (!crsr) {
 		if (cur_crsr.cursor_stmt) {
@@ -223,7 +224,8 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParam
 			mysql_stmt_close(exec_data->cursor_stmt);
 			last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
 			exec_data->clear();
-			LOG_ERROR("MySQL: Error while executing query (%d): %s\n", last_rc, q.c_str());
+			lib_logger->error("MySQL: Error while executing query ({}): {}", last_rc, q);
+			
 			return DBERR_SQL_ERROR;
 		}
 
@@ -236,7 +238,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParam
 #ifdef CLIENT_SIDE_CURSOR
 			last_rc = mysql_stmt_store_result(exec_data->cursor_stmt);
 			if (last_rc) {
-				LOG_ERROR("MySQL: Error while storing resultset (%d)\n", last_rc);
+				lib_logger->error("MySQL: Error while storing resultset ({})", last_rc);
 				mysql_stmt_close(exec_data->cursor_stmt);
 				last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
 				exec_data->clear();
@@ -244,7 +246,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParam
 			}
 #endif
 			if (!exec_data->init()) {
-				LOG_ERROR("MySQL: Error while initializing cursor buffers\n");
+				lib_logger->error("MySQL: Error while initializing cursor buffers");
 				if (exec_data->cursor_stmt) {
 					mysql_stmt_close(exec_data->cursor_stmt);
 					last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
@@ -262,7 +264,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParam
 		last_rc = mysql_real_query(connaddr, q.c_str(), q.size());
 		if (last_rc) {
 			last_error = retrieve_mysql_error_message(NULL);
-			LOG_ERROR("MySQL: Error while executing query [%d : %s] - %s\n", last_rc, get_error_message(), q.c_str());
+			lib_logger->error("MySQL: Error while executing query [{} : {}] - {}", last_rc, get_error_message(), q);
 			last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
 			exec_data->clear();
 			return DBERR_SQL_ERROR;
@@ -277,7 +279,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor *crsr, const string query)
 	string q = query;
 	MySQLCursorData *exec_data = NULL;
 
-	LOG_DEBUG(__FILE__, __func__, "SQL: %s\n", q.c_str());
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#",  __FILE__, __func__, q);
 
 	if (!crsr) {
 		if (cur_crsr.cursor_stmt) {
@@ -312,7 +314,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor *crsr, const string query)
 		last_rc = mysql_stmt_execute(exec_data->cursor_stmt);
 		if (last_rc) {
 			last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
-			LOG_ERROR("MySQL: Error while executing query [%d : %s] - %s\n", last_rc, get_error_message(), q.c_str());
+			lib_logger->error("MySQL: Error while executing query [{} : {}] - {}", last_rc, get_error_message(), q);
 			mysql_stmt_close(exec_data->cursor_stmt);
 			exec_data->clear();
 			return DBERR_SQL_ERROR;
@@ -328,7 +330,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor *crsr, const string query)
 			last_rc = mysql_stmt_store_result(exec_data->cursor_stmt);
 			if (last_rc) {
 				last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
-				LOG_ERROR("MySQL: Error while storing resultset (%d) - %s\n", last_rc, last_error.c_str());
+				lib_logger->error("MySQL: Error while storing resultset ({}) - {}", last_rc, last_error);
 				mysql_stmt_close(exec_data->cursor_stmt);
 				exec_data->clear();
 				return DBERR_SQL_ERROR;
@@ -336,7 +338,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor *crsr, const string query)
 #endif
 			if (!exec_data->init()) {
 				last_error = retrieve_mysql_error_message(exec_data->cursor_stmt);
-				LOG_ERROR("MySQL: Error while initializing cursor buffers: %s\n", last_error.c_str());
+				lib_logger->error("MySQL: Error while initializing cursor buffers: {}", last_error);
 				if (exec_data->cursor_stmt) {
 					mysql_stmt_close(exec_data->cursor_stmt);
 
@@ -354,7 +356,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor *crsr, const string query)
 		last_rc = mysql_real_query(connaddr, q.c_str(), q.size());
 		if (last_rc) {
 			last_error = retrieve_mysql_error_message(NULL);
-			LOG_ERROR("MySQL: Error while executing query [%d : %s] - %s\n", last_rc, get_error_message(), q.c_str());
+			lib_logger->error("MySQL: Error while executing query [{} : {}] - {}", last_rc, get_error_message(), q);
 			exec_data->clear();
 			return DBERR_SQL_ERROR;
 		}
@@ -400,16 +402,16 @@ int DbInterfaceMySQL::exec_params(string query, int nParams, int *paramTypes, ve
 
 int DbInterfaceMySQL::close_cursor(ICursor *cursor)
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: close cursor invoked\n");
+	lib_logger->trace(FMT_FILE_FUNC "MySQL: close cursor invoked", __FILE__, __func__);
 
 	if (!cursor) {
-		LOG_ERROR("MySQL: ERROR: invalid cursor (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: invalid cursor ({})", cursor->getName());
 		return DBERR_CLOSE_CURSOR_FAILED;
 	}
 
 	MySQLCursorData *cursor_data = (MySQLCursorData *)cursor->getPrivateData();
 	if (!cursor_data) {
-		LOG_ERROR("MySQL: ERROR: closing uninitialized cursor (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: closing uninitialized cursor ({})", cursor->getName());
 		return DBERR_CLOSE_CURSOR_FAILED;
 	}
 
@@ -419,7 +421,7 @@ int DbInterfaceMySQL::close_cursor(ICursor *cursor)
 	cursor->setPrivateData(NULL);
 
 	if (rc) {
-		LOG_ERROR("MySQL: Error while closing cursor (%d) %s\n", rc, cursor->getName().c_str());
+		lib_logger->error("MySQL: Error while closing cursor ({}) {}", rc, cursor->getName());
 		return DBERR_CLOSE_CURSOR_FAILED;
 	}
 	return DBERR_NO_ERROR;
@@ -427,7 +429,7 @@ int DbInterfaceMySQL::close_cursor(ICursor *cursor)
 
 int DbInterfaceMySQL::cursor_declare(ICursor *cursor, bool with_hold, int res_type)
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: cursor declare invoked\n");
+	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
 
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
@@ -454,7 +456,7 @@ int DbInterfaceMySQL::cursor_declare(ICursor *cursor, bool with_hold, int res_ty
 
 int DbInterfaceMySQL::cursor_declare_with_params(ICursor *cursor, char **param_values, bool with_hold, int res_type)
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: cursor declare invoked\n");
+	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
@@ -479,9 +481,9 @@ int DbInterfaceMySQL::cursor_declare_with_params(ICursor *cursor, char **param_v
 
 int DbInterfaceMySQL::cursor_open(ICursor *cursor)
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: open cursor invoked\n");
+	lib_logger->trace(FMT_FILE_FUNC "MySQL: open cursor invoked", __FILE__, __func__);
 	if (!cursor) {
-		LOG_ERROR("Invalid cursor");
+		lib_logger->error("Invalid cursor");
 		return DBERR_DECLARE_CURSOR_FAILED;
 	}
 
@@ -501,27 +503,27 @@ int DbInterfaceMySQL::cursor_open(ICursor *cursor)
 
 int DbInterfaceMySQL::fetch_one(ICursor *cursor, int fetchmode)
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: fetch from cursor invoked\n");
+	lib_logger->trace(FMT_FILE_FUNC "MySQL: fetch from cursor invoked", __FILE__, __func__);
 
 	if (!cursor) {
-		LOG_ERROR("MySQL: ERROR: invalid cursor (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: invalid cursor ({})", cursor->getName());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
 	MySQLCursorData *cursor_data = (MySQLCursorData *)cursor->getPrivateData();;
 	if (!cursor_data) {
-		LOG_ERROR("MySQL: ERROR: invalid cursor data (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: invalid cursor data ({})", cursor->getName());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
 	if (!cursor_data->cursor_stmt) {
-		LOG_ERROR("MySQL: ERROR: invalid cursor resultset (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: invalid cursor resultset ({})", cursor->getName());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
 	int ncols = cursor_data->getColumnCount();
 	if (ncols <= 0) {
-		LOG_ERROR("MySQL: ERROR: invalid column count for cursor (%s)\n", cursor->getName().c_str());
+		lib_logger->error("MySQL: ERROR: invalid column count for cursor ({})", cursor->getName());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
@@ -536,14 +538,14 @@ int DbInterfaceMySQL::fetch_one(ICursor *cursor, int fetchmode)
 	int rc = mysql_stmt_bind_result(cursor_data->cursor_stmt, bound_res_cols);
 	if (rc) {
 		last_error = retrieve_mysql_error_message(cursor_data->cursor_stmt);
-		//LOG_ERROR("MySQL: Error while fetching row from cursor (%d : %s) %s\n", get_error_code(), get_error_message(), cursor->getName().c_str());
+		//LOG_ERROR("MySQL: Error while fetching row from cursor (%d : %s) %s", get_error_code(), get_error_message(), cursor->getName().c_str());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
 	last_rc = mysql_stmt_fetch(cursor_data->cursor_stmt);
 	if (last_rc) {
 		last_error = (last_rc == MYSQL_DATA_TRUNCATED) ? "Data truncated" : retrieve_mysql_error_message(cursor_data->cursor_stmt);
-		//LOG_ERROR("MySQL: Error while fetching row from cursor (%d : %s) %s\n", get_error_code(), get_error_message(), cursor->getName().c_str());
+		//LOG_ERROR("MySQL: Error while fetching row from cursor (%d : %s) %s", get_error_code(), get_error_message(), cursor->getName().c_str());
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
@@ -559,7 +561,7 @@ bool DbInterfaceMySQL::get_resultset_value(ICursor *cursor, int row, int col, ch
 		char *data = cursor_data->data_buffers.at(col);
 		unsigned long datalen = *(cursor_data->data_lengths.at(col));
 		if (datalen > bfrlen) {
-			LOG_ERROR("MySQL: ERROR: data truncated: needed %d bytes, %d allocated\n", datalen, bfrlen);	// was just a warning
+			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	// was just a warning
 			return false;
 		}
 
@@ -569,29 +571,29 @@ bool DbInterfaceMySQL::get_resultset_value(ICursor *cursor, int row, int col, ch
 		return true;
 	}
 	else {
-		LOG_ERROR("MySQL: invalid column index: %d, max: %d\n", col, cursor_data->data_buffers.size() - 1);
+		lib_logger->error("MySQL: invalid column index: {}, max: {}", col, cursor_data->data_buffers.size() - 1);
 		return false;
 	}
 }
 
 int DbInterfaceMySQL::move_to_first_record()
 {
-	LOG_DEBUG(__FILE__, __func__, "MySQL: moving to first row in resultset\n");
+	lib_logger->trace(FMT_FILE_FUNC  "MySQL: moving to first row in resultset", __FILE__, __func__);
 
 	MySQLCursorData *cursor_data = &cur_crsr;
 	if (!cursor_data) {
-		LOG_ERROR("MySQL: ERROR: invalid statement data\n");
+		lib_logger->error("MySQL: ERROR: invalid statement data");
 		return DBERR_MOVE_TO_FIRST_FAILED;
 	}
 
 	if (!cursor_data->cursor_stmt) {
-		LOG_ERROR("MySQL: ERROR: invalid statement resultset\n");
+		lib_logger->error("MySQL: ERROR: invalid statement resultset");
 		return DBERR_MOVE_TO_FIRST_FAILED;
 	}
 
 	int ncols = cursor_data->getColumnCount();
 	if (ncols <= 0) {
-		LOG_ERROR("MySQL: ERROR: invalid column count for statement\n");
+		lib_logger->error("MySQL: ERROR: invalid column count for statement");
 		return DBERR_MOVE_TO_FIRST_FAILED;
 	}
 
@@ -606,14 +608,14 @@ int DbInterfaceMySQL::move_to_first_record()
 
 	int rc = mysql_stmt_bind_result(cursor_data->cursor_stmt, bound_res_cols);
 	if (rc) {
-		LOG_ERROR("MySQL: Error while binding resultset (%d) : %s\n", get_error_code(), get_error_message());
+		lib_logger->error("MySQL: Error while binding resultset ({}) : {}", get_error_code(), get_error_message());
 		return DBERR_MOVE_TO_FIRST_FAILED;
 	}
 
 	last_rc = mysql_stmt_fetch(cursor_data->cursor_stmt);
 	if (last_rc) {
 		last_error = retrieve_mysql_error_message(cursor_data->cursor_stmt);
-		LOG_ERROR("MySQL: Error while moving to first row of current resultset (%d) : %s\n", get_error_code(), get_error_message());
+		lib_logger->error("MySQL: Error while moving to first row of current resultset ({}) : {}", get_error_code(), get_error_message());
 		return DBERR_MOVE_TO_FIRST_FAILED;
 	}
 

@@ -30,8 +30,6 @@
 
 #include "DbInterfaceODBC.h"
 
-using namespace std;
-
 DbInterfaceODBC dbi;
 
 extern "C" {
