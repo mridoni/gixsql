@@ -52,7 +52,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/build-${{env.PLATFORM_ID}}
+        ./configure --prefix=./build-${{env.PLATFORM_ID}}"
         make
         make install
 
