@@ -58,7 +58,7 @@ jobs:
       with:
         name: archive-gixsql-x64-windows-artifacts
         path: |
-          ${{env.GITHUB_WORKSPACE}}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
-          ${{env.GITHUB_WORKSPACE}}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
-          ${{env.GITHUB_WORKSPACE}}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
           
