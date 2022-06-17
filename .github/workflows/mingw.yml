@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   windows-x64-mingw:
-    name: windows-x64-msvc
+    name: windows-x64-mingw
     env:
       BUILD_CONFIGURATION: Release
       BUILD_PLATFORM: mingw64      
@@ -31,27 +31,19 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
-    - name: Restore artifacts, or setup vcpkg
-      uses: lukka/run-vcpkg@v10
-      with:
-        vcpkgGitCommitId: 3d8f78171a2a37d461077bf8d063256b63e25a4f
-
-    - name: Install dependencies Windows
-      run: |
-        vcpkg integrate install
-        vcpkg remove libmysql:${{env.PLATFORM_ID}}-windows
-        vcpkg install libpq:${{env.PLATFORM_ID}}-windows libmariadb:${{env.PLATFORM_ID}}-windows spdlog:${{env.PLATFORM_ID}}-windows-static-md
-
-    - name: Restore NuGet packages
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
-
     - name: Set up MinGW
       uses: msys2/setup-msys2@v2
       with:
         msystem: ${{env.BUILD_PLATFORM}}
         install: >-
-            mingw-w64-${{env.PLATFORM_ID}}-openssl
+            pkg-config
+            autoconf
+            make
+            automake
+            libtool
+            bison
+            flex
+            mingw-w64-${{env.PLATFORM_ID}}-gcc
             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
@@ -62,17 +54,62 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/build-${{env.PLATFORM_ID}}
+        ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
         make
-        make install
+        make install-strip
 
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
         name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
         path: |
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/libgixsql.lib
+
+  windows-x86-mingw:
+    name: windows-x86-mingw
+    env:
+      BUILD_CONFIGURATION: Release
+      BUILD_PLATFORM: mingw32      
+      PLATFORM_ID: i686    
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{env.BUILD_PLATFORM}}
+        install: >-
+            pkg-config
+            autoconf
+            make
+            automake
+            libtool
+            bison
+            flex
+            mingw-w64-${{env.PLATFORM_ID}}-gcc
+            mingw-w64-${{env.PLATFORM_ID}}-postgresql 
+            mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
+            mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
+            mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+
+    - shell: msys2 {0}
+      name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        autoreconf --install --force
+        ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
+        make
+        make install-strip
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
+        path: |
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/libgixsql.lib
+
 
   
