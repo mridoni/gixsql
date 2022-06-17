@@ -58,7 +58,7 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: archive-gixsql-${{${{env.PLATFORM_ID}}-windows-artifacts
+        name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
         path: |
           ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
           ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
@@ -101,7 +101,7 @@ jobs:
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
-        name: archive-gixsql-${{${{env.PLATFORM_ID}}-windows-artifacts
+        name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
         path: |
           ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
           ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
