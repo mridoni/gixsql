@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   windows-x64-mingw:
-    name: windows-x64-msvc
+    name: windows-x64-mingw
     env:
       BUILD_CONFIGURATION: Release
       BUILD_PLATFORM: mingw64      
@@ -30,17 +30,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
-
-    - name: Restore artifacts, or setup vcpkg
-      uses: lukka/run-vcpkg@v10
-      with:
-        vcpkgGitCommitId: 3d8f78171a2a37d461077bf8d063256b63e25a4f
-
-    - name: Install dependencies Windows
-      run: |
-        vcpkg integrate install
-        vcpkg remove libmysql:${{env.PLATFORM_ID}}-windows
-        vcpkg install libpq:${{env.PLATFORM_ID}}-windows libmariadb:${{env.PLATFORM_ID}}-windows spdlog:${{env.PLATFORM_ID}}-windows-static-md
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
