@@ -35,7 +35,9 @@ jobs:
       uses: lukka/run-vcpkg@v10
         
     - name: Install dependencies Windows
-      run: vcpkg integrate install; vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows
+      run: |
+        vcpkg integrate install
+        vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows
       env:
         VCPKG_ROOT: 'C:\vcpkg'      
 
