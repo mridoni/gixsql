@@ -33,6 +33,8 @@ jobs:
       
     - name: Restore artifacts, or setup vcpkg (do not install any package)
       uses: lukka/run-vcpkg@v10
+      with:
+        vcpkgGitCommitId: master
         
     - name: Install dependencies Windows
       run: |
