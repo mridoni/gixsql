@@ -41,8 +41,9 @@ jobs:
             make
             automake
             libtool
+            bison
+            flex
             mingw-w64-x86_64-gcc
-            mingw-w64-${{env.PLATFORM_ID}}-openssl
             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
@@ -62,8 +63,8 @@ jobs:
       with:
         name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
         path: |
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
-          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
+          ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/libgixsql.lib
+
 
   
