@@ -1,0 +1,78 @@
+name: MinGW
+
+on:
+  workflow_dispatch
+  
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+env:
+  # Path to the solution file relative to the root of the project.
+  SOLUTION_FILE_PATH: gixsql.sln
+
+  # Configuration type to build.
+  # You can convert this to a build matrix if you need coverage of multiple configuration types.
+  # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+  VCPKG_ROOT: 'D:\a\gixsql\gixsql\vcpkg'    
+
+permissions:
+  contents: read
+
+jobs:
+  windows-x64-mingw:
+    name: windows-x64-msvc
+    env:
+      BUILD_CONFIGURATION: Release
+      BUILD_PLATFORM: mingw64      
+      PLATFORM_ID: x86_64    
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Restore artifacts, or setup vcpkg
+      uses: lukka/run-vcpkg@v10
+      with:
+        vcpkgGitCommitId: 3d8f78171a2a37d461077bf8d063256b63e25a4f
+
+    - name: Install dependencies Windows
+      run: |
+        vcpkg integrate install
+        vcpkg remove libmysql:${{env.PLATFORM_ID}}-windows
+        vcpkg install libpq:${{env.PLATFORM_ID}}-windows libmariadb:${{env.PLATFORM_ID}}-windows spdlog:${{env.PLATFORM_ID}}-windows-static-md
+
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Set up MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{env.BUILD_PLATFORM}}
+        install: >-
+            mingw-w64-${{env.PLATFORM_ID}}-openssl
+            mingw-w64-${{env.PLATFORM_ID}}-postgresql 
+            mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
+            mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
+            mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+
+    - shell: msys2 {0}
+      name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        autoreconf --install --force
+        ./configure --prefix=${{ github.workspace }}/build-${{env.PLATFORM_ID}}
+        make
+        make install
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: archive-gixsql-${{env.PLATFORM_ID}}-windows-artifacts
+        path: |
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+
+  
