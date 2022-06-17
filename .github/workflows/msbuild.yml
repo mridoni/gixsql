@@ -40,7 +40,8 @@ jobs:
     - name: Install dependencies Windows
       run: |
         vcpkg integrate install
-        vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows 
+        vcpkg remove libmysql:x64-windows
+        vcpkg install libpq:x64-windows libmariadb:x64-windows spdlog:x64-windows-static-md
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
