@@ -27,7 +27,7 @@ jobs:
       BUILD_CONFIGURATION: Release
       BUILD_PLATFORM: mingw64      
       PLATFORM_ID: x86_64    
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
 
@@ -54,7 +54,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         autoreconf --install --force
-        ./configure --prefix=$(cygpath "${{env.GITHUB_WORKSPACE}}/build-${{env.PLATFORM_ID}}")
+        ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
         make
         make install
 
