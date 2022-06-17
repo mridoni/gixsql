@@ -40,6 +40,9 @@ jobs:
       with:
         msystem: ${{env.BUILD_PLATFORM}}
         install: >-
+            autoconf
+            automake
+            mingw-w64-x86_64-gcc
             mingw-w64-${{env.PLATFORM_ID}}-openssl
             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
