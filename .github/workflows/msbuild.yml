@@ -31,9 +31,11 @@ jobs:
     - name: Add MSBuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
       
+    - name: Restore artifacts, or setup vcpkg (do not install any package)
+      uses: lukka/run-vcpkg@v10
+        
     - name: Install dependencies Windows
-      run: vcpkg integrate install; vcpkg install libpq:x64-windows libmysql:x64-windows
-      if: matrix.os == 'windows-latest'
+      run: vcpkg integrate install; vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows
       env:
         VCPKG_ROOT: 'C:\vcpkg'      
 
