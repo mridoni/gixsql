@@ -43,7 +43,7 @@ jobs:
             libtool
             bison
             flex
-            mingw-w64-x86_64-gcc
+            mingw-w64-${{env.PLATFORM_ID}}-gcc
             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
