@@ -17,6 +17,7 @@ env:
   # https://docs.github.com/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
   BUILD_CONFIGURATION: Release
   BUILD_PLATFORM: x64
+  VCPKG_ROOT: 'C:\vcpkg'    
 
 permissions:
   contents: read
@@ -39,9 +40,7 @@ jobs:
     - name: Install dependencies Windows
       run: |
         vcpkg integrate install
-        vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows
-      env:
-        VCPKG_ROOT: 'C:\vcpkg'      
+        vcpkg install libpq:x64-windows libmysql:x64-windows spdlog:x64-windows 
 
     - name: Restore NuGet packages
       working-directory: ${{env.GITHUB_WORKSPACE}}
