@@ -52,3 +52,13 @@ jobs:
       # Add additional options to the MSBuild command line here (like platform or verbosity level).
       # See https://docs.microsoft.com/visualstudio/msbuild/msbuild-command-line-reference
       run: msbuild /m /p:Platform=${{env.BUILD_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+      
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: archive-gixsql-x64-windows-artifacts
+        path: |
+          ${{env.GITHUB_WORKSPACE}}/${{BUILD_PLATFORM}}/${{BUILD_CONFIGURATION}}/*.dll
+          ${{env.GITHUB_WORKSPACE}}/${{BUILD_PLATFORM}}/${{BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{env.GITHUB_WORKSPACE}}/${{BUILD_PLATFORM}}/${{BUILD_CONFIGURATION}}/*.exe
+          
