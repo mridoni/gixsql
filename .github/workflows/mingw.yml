@@ -36,6 +36,7 @@ jobs:
       with:
         msystem: ${{env.BUILD_PLATFORM}}
         install: >-
+            pkg-config
             autoconf
             automake
             libtool
