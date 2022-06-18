@@ -176,7 +176,6 @@ AC_FUNC_MALLOC
 AC_CHECK_FUNCS([localeconv memmove memset select strcasecmp strdup strndup strrchr strstr strtoull])
 
 AC_CONFIG_FILES([Makefile
-                 spdlog/Makefile
                  libcpputils/Makefile
                  libgixpp/Makefile
                  gixpp/Makefile

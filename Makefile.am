@@ -1,6 +1,6 @@
 ## Process this file with automake to generate Makefile.in
 ACLOCAL_AMFLAGS = -I m4
-SUBDIRS = spdlog libcpputils libgixpp gixpp runtime/libgixsql
+SUBDIRS = libcpputils libgixpp gixpp runtime/libgixsql
 EXTRA_DIST = copy/SQLCA.cpy misc/gixsql-wrapper
 CLEANFILES = *~
 
