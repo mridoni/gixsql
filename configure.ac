@@ -63,6 +63,15 @@ case "${host_os}" in
         ;;
 esac
 
+# By default, libtool for mingw refuses to link static libs into a dll for
+# fear of mixing pic/non-pic objects, and import/export complications. Since
+# we have those under control, re-enable that functionality.
+case $host in
+  *mingw*)
+     lt_cv_deplibs_check_method="pass_all"
+  ;;
+esac
+
 # Pass the conditionals to automake
 AM_CONDITIONAL([BUILD_LINUX], [test "$build_linux" = "yes"])
 AM_CONDITIONAL([BUILD_WINDOWS], [test "$build_windows" = "yes"])
