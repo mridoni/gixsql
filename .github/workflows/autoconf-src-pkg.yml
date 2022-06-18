@@ -24,9 +24,9 @@ jobs:
 
     - name: Set up dependencies
       run: |
-        apt install libmysqlclient-dev libpq-dev unixodbc-dev flex
+        sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev flex
         wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.6+dfsg-1_amd64.deb
-        dpkg -i bison_3.7.6+dfsg-1_amd64.deb
+        sudo dpkg -i bison_3.7.6+dfsg-1_amd64.deb
 
     - name: Build source package
       working-directory: ${{env.GITHUB_WORKSPACE}}
