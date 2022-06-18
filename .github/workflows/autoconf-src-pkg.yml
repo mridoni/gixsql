@@ -1,0 +1,43 @@
+name: autoconf-src-pkg
+
+on:
+  workflow_dispatch
+  
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+env:
+  GIXSQL_VERSION: 1.0.16dev2
+
+permissions:
+  contents: read
+
+jobs:
+  autoconf-src-pkg:
+    name: autoconf-src-pkg
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up dependencies
+      run: |
+        apt install libmysqlclient-dev libpq-dev unixodbc-dev flex
+        wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.6+dfsg-1_amd64.deb
+        dpkg -i bison_3.7.6+dfsg-1_amd64.deb
+
+    - name: Build source package
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        autoreconf --install --force
+        ./configure
+        make distcheck
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
+        path: gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
+
