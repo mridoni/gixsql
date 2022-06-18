@@ -20,7 +20,7 @@ AM_PROG_AR
 AC_PROG_YACC
 AC_PROG_LEX
 
-LT_INIT
+LT_INIT(win32-dll)
 AC_SUBST([LIBTOOL_DEPS])
 
 # Checks for header files.
