@@ -69,7 +69,7 @@ esac
 case $host in
   *mingw*)
      echo "MinGW detected, setting libtool behaviour as 'pass_all'"
-     lt_cv_deplibs_check_method="pass_all"
+     export lt_cv_deplibs_check_method=pass_all
   ;;
 esac
 
