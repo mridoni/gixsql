@@ -7,5 +7,5 @@ libgixsql_la_SOURCES = Connection.cpp  ConnectionManager.cpp  Cursor.cpp  Cursor
 			SqlVarList.h ConnectionManager.h CursorManager.h DbInterfaceFactory.h IConnection.h IDataSourceInfo.h \
 			IDbManagerInterface.h ISchemaManager.h platform.h SqlVar.h utils.h default_driver.h
 
-libgixsql_la_CXXFLAGS = -std=c++17 -I $(top_srcdir)/spdlog/include
-libgixsql_la_LDFLAGS = -no-undefined -avoid-version
+libgixsql_la_CXXFLAGS = -std=c++17 -DSPDLOG_FMT_EXTERNAL 
+libgixsql_la_LDFLAGS =  -lfmt -lspdlog -no-undefined -avoid-version
