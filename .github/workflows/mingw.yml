@@ -36,7 +36,7 @@ jobs:
       with:
         msystem: ${{env.BUILD_PLATFORM}}
         install: >-
-            pkg-config
+            mingw-w64-${{env.PLATFORM_ID}}-pkg-config
             autoconf
             make
             automake
@@ -53,6 +53,7 @@ jobs:
       name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
+        echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
         autoreconf --install --force
         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
         make
@@ -81,7 +82,7 @@ jobs:
       with:
         msystem: ${{env.BUILD_PLATFORM}}
         install: >-
-            pkg-config
+            mingw-w64-${{env.PLATFORM_ID}}-pkg-config
             autoconf
             make
             automake
@@ -98,6 +99,7 @@ jobs:
       name: Build
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
+        echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
         autoreconf --install --force
         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
         make

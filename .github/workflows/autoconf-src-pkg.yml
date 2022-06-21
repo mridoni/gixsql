@@ -10,6 +10,8 @@ on:
 
 env:
   GIXSQL_VERSION: 1.0.16dev2
+  BISON_URL: http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
+  BISON_PKG: bison_3.7.5+dfsg-1_amd64.deb
 
 permissions:
   contents: read
@@ -24,9 +26,9 @@ jobs:
 
     - name: Set up dependencies
       run: |
-        apt install libmysqlclient-dev libpq-dev unixodbc-dev flex
-        wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.6+dfsg-1_amd64.deb
-        dpkg -i bison_3.7.6+dfsg-1_amd64.deb
+        sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev flex libspdlog-dev
+        wget ${{ env.BISON_URL }}
+        sudo dpkg -i ${{ env.BISON_PKG }}
 
     - name: Build source package
       working-directory: ${{env.GITHUB_WORKSPACE}}
