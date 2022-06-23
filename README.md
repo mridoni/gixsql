@@ -3,6 +3,8 @@
 
 GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access ODBC, MySQL and PostgreSQL databases.
 
+_**For updated news and current developments [look here](https://mridoni.github.io/) on my development blog.**_
+
 It originated as a (private) fork of [ocesql](https://github.com/GitMensch/Open-COBOL-ESQL) but has been almost completely rewritten: while the semantics related to the GnuCOBOL interface are similar and several support functions have been kept, the parser, scanner and library frameworks have been developed in C++ and have a different organization, with dynamically loadable modules as "database drivers".
 
 The core of GixSQL has been incorporated in a more generic "preprocessing library" (libgixpp) that is used in [Gix-IDE](https://github.com/mridoni/gix) to parse COBOL files and derive some metadata used for navigation and debugging.
