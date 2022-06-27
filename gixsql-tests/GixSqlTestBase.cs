@@ -213,6 +213,9 @@ namespace gix_ide_tests
                 data_sources.Add(new Tuple<string, int>(ga.type, ga.index));
                 Assert.IsTrue(data_source_init(data_sources.Count - 1));
             }
+
+            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_LEVEL", "trace");
+            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_FILE", Path.Combine(TestTempDir, "gisql-" + this.GetType().Name + ".log"));
         }
 
         protected DbConnection GetConnection(int ds_index = 0)

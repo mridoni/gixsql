@@ -76,8 +76,8 @@ For cases 2) and 3) the DB/driver type is inferred by:
 
 - setting a compile-time constant (compile-time means "when GixSQL is compiled"):
 	 - manually in default_driver.h (e.g. #define GIXSQL_DEFAULT_DRIVER	"pgsql")
-	 - using the --with-default-driver=pgsql|odbc|mysql|none when calling configure (Linux only)
-- if this costant is missing or empty (default), the content of the environment variable `GIXSQL_DEFAULT_DRIVER` is used
+	 - using the --with-default-driver=pgsql|odbc|mysql|none when calling configure (Linux/MinGW only)
+- if this costant is missing or empty (default), the content of the environment variable `GIXSQL_DEFAULT_DRIVER` is used. If no default driver is available (either set by the user or provided by the compile-time configuration) and none has been specified in the user-supplied connection string, the library will return an error.
 
 
 
@@ -230,7 +230,15 @@ Notes:
 	
 ### Logging
 
-In case of errors or to log what is happening you may want to enable logging using the environment variables `GIXSQL_DEBUG_LOG-ON=1` (which defaults to 0=OFF) and `GIXSQL_DEBUG_LOG` (defaults to "gixsql.log" in your temp directory). While the logging mechanism will be extended in the future, for now this only works for debug builds of GixSQL.
+Starting from version 1.0.16 GixSQL supports an improved logging engine, based on [spdlog](https://github.com/gabime/spdlog). Logging options can be controlled by using two environment variables:
+
+- **GIXSQL_DEBUG_LOG_LEVEL**  
+Sets the debug level. It can be `off` (default), `critical`, `error`, `warn`, `info`, `debug` or `trace`. Be aware that the `trace` option: 1) exposes a lot of internal information, including possibly sensitive data. 2) causes a slowdown of about 30%.
+
+- **GIXSQL_DEBUG_LOG_FILE**  
+Specifies the file where the debug output (if any) is written. Defaults to "gixsql.log"
+
+*Pre -v1.0.16*: you can use the environment variables `GIXSQL_DEBUG_LOG-ON=1` (which defaults to 0=OFF) and `GIXSQL_DEBUG_LOG` (defaults to "gixsql.log" in your temp directory). This mechanism has been removed in v1.0.16+
 
 ### Examples
 
@@ -243,8 +251,8 @@ If you want to manually precompile COBOL programs for ESQL, you can use the prep
 
 ```text
     gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
-    Version: 1.0.15
-    libgixpp version: 1.0.15
+    Version: 1.0.16
+    libgixpp version: 1.0.16
     
     Options:
       -h, --help                  displays help on commandline options
@@ -368,7 +376,17 @@ Keep pressing 'y' to advance in the loop and display all the three records in th
 
 ### Windows (Visual Studio)
 
-For now you will have to clone the whole repository or the source package that includes the IDE. In the top-level directory, beside the main solution file for Gix-IDE (`gix-ide.sln`) you will find a second solution file (`gixsql.sln`). You can use Visual Studio 2019 to build it, but first you likely will have to adjust the include and library definitions for the PostgreSQL and MySQL client libraries (32/and or 64 bit). The preprocessor (`gixpp`) and the main library (`libgixsql`) do not have any specific dependency.
+After cloning or downloading the repository you will find a solution file (`gixsql.sln`). You can use Visual Studio 2019 to build it, but first you  will likely have to check the include and library definitions for the PostgreSQL and MySQL client libraries (32/and or 64 bit). The preprocessor (`gixpp`) does not have any specific dependency, while the main runtime library (`libgixsql`)  - starting from v1.0.18 - depends on [spdlog](https://github.com/gabime/spdlog) and [fmt](https://github.com/fmtlib/fmt).
+
+The solution file is already set up to build with libraries from [vcpkg](https://vcpkg.io/en/index.html), so you can simply do:
+
+`vcpkg install libpq:x64-windows libmariadb:x64-windows fmt:x64-windows-static-md spdlog:x64-windows-static-md`
+
+for x64, or :
+
+`vcpkg install libpq:x86-windows libmariadb:x86-windows fmt:x86-windows-static-md spdlog:x86-windows-static-md`
+
+in case you wanto to build a 32-bit version.
 
 ### Linux
 
@@ -376,27 +394,29 @@ For now you will have to clone the whole repository or the source package that i
 
 You will need the development packages for the DBMS client libraries, e.g.:
 
-	apt install libmysqlclient-dev libpq-dev unixodbc-dev flex
+	apt install libmariadb-dev libpq-dev unixodbc-dev flex
 
-You will also need a modern enough version of bison. If you are using Ubuntu 20.04, you can download it from Debian's repositories and install it over the current one:
+*(it is still possibile to use libmysqlclient-dev, should you prefer it).*
 
-	wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.6+dfsg-1_amd64.deb
+You will also need a modern enough version of bison (3.7+). If you do not already have it installed and you are using Ubuntu 20.04, you can download it from Debian's repositories and install it over the current one:
+
+	wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
 
 and
 
-	sudo dpkg -i bison_3.7.6+dfsg-1_amd64.deb
+	sudo dpkg -i bison_3.7.5+dfsg-1_amd64.deb
 
 Download the .tar.gz.package from the Releases page, e.g.
 
-	gixsql-1.0.8-xxxx.tar.gz
+	gixsql-1.0.16-xxxx.tar.gz
 
 Untar the package:
 
-	tar xzvf gixsql-1.0.8-1541.tar.gz
+	tar xzvf gixsql-1.0.16-641.tar.gz
 
 cd to the directory created by the tar command and run configure (in this case we will install to /opt/gixsql)
 
-	cd gixsql-1.0.8-1541
+	cd gixsql-1.0.16-641
 	./configure --prefix=/opt/gixsql
 
 By default configure tries to build all the drivers. If you nly need one, you can disable the others. For instance, to build only the PostgreSQL driver:
@@ -411,9 +431,13 @@ It should compile all the libraries, then the preprocessing library and the prep
 
 	sudo make install
 	
-### Windows (MinGW)
-Currently there are no specific Makefiles/autoconf scripts for MinGW x86/x64, they will be provided in a future release, but you can try to use the configure script.
+### Windows (MinGW/MSYS2)
 
+Starting from v1.0.16, the `configure` script can also be used to build with MSYS2 (MinGW32/64). You will need to install the following packages with `pacman`:
+
+`pacman -S mingw-w64-x64-pkg-config autoconf make automake libtool bison flex mingw-w64-x64-gcc mingw-w64-x64-postgresql mingw-w64-x64-libmariadbclient mingw-w64-x64-unixodbc mingw-w64-x64-spdlog `
+
+Reasonably up-to-date installs of MinGW already have a correct version of `bison`.
 
 ### Using GixSQL from Gix-IDE
 When you create a project in Gix-IDE, you are asked whether you want to enable it for ESQL preprocessing. This is not an absolute requirement. At any point you can set the project property "Preprocess for ESQL" (under "General") to "Yes". There are several properties you can configure here that affed code generation by the preprocessor:

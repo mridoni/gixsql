@@ -7,17 +7,14 @@ namespace gixsql_tests
 {
     [TestClass]
     [HostPlatform("x64")]
-    [TestCategory("COBOL TYPEDEF handling")]
+    //[TestCategory("COBOL TYPEDEF handling")]
+    [TestCategory("Expected to fail: not implemented")]
     public class TSQL010 : GixSqlTestBase
     {
         [TestInitialize]
         public new void Begin()
         {
             base.Begin();
-
-            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_ON", "1");
-            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG", Path.Combine(TestTempDir, "gisql-debug.log"));
-            Environment.SetEnvironmentVariable("GIXSQL_ERR_LOG", Path.Combine(TestTempDir, "gisql-error.log"));
         }
 
 

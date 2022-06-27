@@ -20,7 +20,7 @@ AM_PROG_AR
 AC_PROG_YACC
 AC_PROG_LEX
 
-LT_INIT(win32-dll)
+LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
 
 # Checks for header files.
@@ -61,16 +61,6 @@ case "${host_os}" in
     *)
         AC_MSG_ERROR(["OS $host_os is not supported"])
         ;;
-esac
-
-# By default, libtool for mingw refuses to link static libs into a dll for
-# fear of mixing pic/non-pic objects, and import/export complications. Since
-# we have those under control, re-enable that functionality.
-case $host in
-  *mingw*)
-     echo "MinGW detected, setting libtool behaviour as 'pass_all'"
-     export lt_cv_deplibs_check_method='pass_all'
-  ;;
 esac
 
 # Pass the conditionals to automake

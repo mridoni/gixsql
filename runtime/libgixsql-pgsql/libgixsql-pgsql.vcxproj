@@ -238,8 +238,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fmt.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\installed\x86-windows\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>fmtd.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\installed\x86-windows\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|Win32'">
@@ -254,8 +254,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fmt.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\installed\x86-windows\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>fmtd.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\installed\x86-windows\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_5.15.2|Win32'">
@@ -286,8 +286,8 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fmt.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\installed\x64-windows\lib;$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>fmtd.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\installed\x64-windows\lib;$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
@@ -302,8 +302,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>fmt.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\lib;$(VCPKG_ROOT)\installed\x64-windows\lib;$(OutDir)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>fmtd.lib;libpq.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\installed\x64-windows\lib;$(OutDir)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug_5.15.2|x64'">
