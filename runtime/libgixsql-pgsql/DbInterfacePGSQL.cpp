@@ -87,6 +87,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, int autocommit, std::s
 		return DBERR_CONNECTION_FAILED;
 	}
 	else if (PQstatus(conn) != CONNECTION_OK) {
+		last_error = PQerrorMessage(conn);
 		lib_logger->error("libpq: {}", last_error);
 		PQfinish(conn);
 		return DBERR_CONNECTION_FAILED;
