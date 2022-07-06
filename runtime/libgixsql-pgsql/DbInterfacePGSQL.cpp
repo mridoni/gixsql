@@ -72,12 +72,19 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, int autocommit, std::s
 	last_rc = 0;
 	last_error = "";
 	last_state = "";
+	
+	
+	std::string dbName = conn_info->getDbName();
+	std::string host = conn_info->getHost();
+	int port = conn_info->getPort();
+	std::string user = conn_info->getUsername();
+	std::string password = conn_info->getPassword();
 
-	connstr = (conn_info->getDbName().empty() ? "" : "dbname=" + conn_info->getDbName() + " ") +
-		(conn_info->getHost().empty() ? "" : "host=" + conn_info->getHost() + " ") +
-		(conn_info->getPort() == 0 ? "" : "port=" + std::to_string(conn_info->getPort()) + " ") +
-		(conn_info->getUsername().empty() ? "" : "user=" + conn_info->getUsername() + " ") +
-		(conn_info->getPassword().empty() ? "" : "password=" + conn_info->getPassword() + " ");
+	connstr = (dbName.empty() ? "" : "dbname=" + dbName + " ") +
+		(host.empty() ? "" : "host=" + host + " ") +
+		(port == 0 ? "" : "port=" + std::to_string(port) + " ") +
+		(user.empty() ? "" : "user=" + user + " ") +
+		(password.empty() ? "" : "password=" + password + " ");
 
 	lib_logger->trace("libpq - connection std::string: [{}]", connstr);
 
