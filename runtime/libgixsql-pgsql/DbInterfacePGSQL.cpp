@@ -28,6 +28,31 @@ USA.
 
 #define OID_TYPEA	17
 
+std::string get_hostref_or_literal(void* data, int l)
+{
+	if (!data)
+		return std::string();
+
+	if (!l)
+		return std::string((char*)data);
+
+	if (l > 0) {
+		std::string s = std::string((char*)data, l);
+		return trim_copy(s);
+	}
+
+	// variable-length fields (negative length)
+	void* actual_data = (char*)data + VARLEN_LENGTH_SZ;
+	VARLEN_LENGTH_T* len_addr = (VARLEN_LENGTH_T*)data;
+	int actual_len = (*len_addr);
+
+	// Should we check the actual length against the defined length?
+	//...
+
+	std::string t = std::string((char*)actual_data, -l);
+	return trim_copy(t);
+}
+
 std::string pg_get_sqlstate(PGresult* r)
 {
 	char* c = PQresultErrorField(r, PG_DIAG_SQLSTATE);
@@ -48,7 +73,7 @@ int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	owner = NULL;
 	connaddr = NULL;
-	resaddr = NULL;
+	current_resultset = NULL;
 	last_rc = 0;
 	last_state = "";
 
@@ -67,26 +92,37 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, int autocommit, std::s
 	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, autocommit, encoding);
 
 	connaddr = NULL;
-	resaddr = NULL;
+	current_resultset = NULL;
 
 	last_rc = 0;
 	last_error = "";
 	last_state = "";
 
-	connstr = (conn_info->getDbName().empty() ? "" : "dbname=" + conn_info->getDbName() + " ") +
-		(conn_info->getHost().empty() ? "" : "host=" + conn_info->getHost() + " ") +
-		(conn_info->getPort() == 0 ? "" : "port=" + std::to_string(conn_info->getPort()) + " ") +
-		(conn_info->getUsername().empty() ? "" : "user=" + conn_info->getUsername() + " ") +
-		(conn_info->getPassword().empty() ? "" : "password=" + conn_info->getPassword() + " ");
 
-	lib_logger->trace("libpq - connection std::string: [{}]", connstr);
+	//connstr = (conn_info->getDbName().empty() ? "" : "dbname=" + conn_info->getDbName() + " ") +
+	//	(conn_info->getHost().empty() ? "" : "host=" + conn_info->getHost() + " ") +
+	//	(conn_info->getPort() == 0 ? "" : "port=" + std::to_string(conn_info->getPort()) + " ") +
+	//	(conn_info->getUsername().empty() ? "" : "user=" + conn_info->getUsername() + " ") +
+	//	(conn_info->getPassword().empty() ? "" : "password=" + conn_info->getPassword() + " ");
+
+	connstr = "dbname=" + (conn_info->getDbName().empty() ? "''" :  conn_info->getDbName() + " ") +
+			  "host=" + (conn_info->getHost().empty() ? "''" : conn_info->getHost() + " ") +
+			  "port=" + (conn_info->getPort() == 0 ? "''" : std::to_string(conn_info->getPort()) + " ") +
+			  "user=" + (conn_info->getUsername().empty() ? "''" : conn_info->getUsername() + " ") +
+			  "password=" + (conn_info->getPassword().empty() ? "''" : conn_info->getPassword());
+
+	lib_logger->trace("libpq - connection string: [{}]", connstr);
 
 	conn = PQconnectdb(connstr.c_str());
 
 	if (conn == NULL) {
+		last_error = "Connection failed";
+		last_rc = DBERR_CONNECTION_FAILED;
 		return DBERR_CONNECTION_FAILED;
 	}
 	else if (PQstatus(conn) != CONNECTION_OK) {
+		last_error = PQerrorMessage(conn);
+		last_rc = PQstatus(conn);
 		lib_logger->error("libpq: {}", last_error);
 		PQfinish(conn);
 		return DBERR_CONNECTION_FAILED;
@@ -135,7 +171,6 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, int autocommit, std::s
 	}
 
 	connaddr = conn;
-	resaddr = NULL;
 
 	if (owner)
 		owner->setOpened(true);
@@ -158,6 +193,9 @@ int DbInterfacePGSQL::terminate_connection()
 		PQfinish(connaddr);
 		connaddr = NULL;
 	}
+
+	if (current_resultset)
+		PQclear(current_resultset);
 
 	if (owner)
 		owner->setOpened(false);
@@ -182,10 +220,13 @@ int DbInterfacePGSQL::end_transaction(std::string completion_type)
 
 char* DbInterfacePGSQL::get_error_message()
 {
-	if (resaddr != NULL)
-		return PQresultErrorMessage(resaddr);
+	if (current_resultset != NULL)
+		return PQresultErrorMessage(current_resultset);
 	else
-		return NULL;
+		if (connaddr != NULL)
+			return PQerrorMessage(connaddr);
+		else
+			return NULL;
 }
 
 int DbInterfacePGSQL::get_error_code()
@@ -254,22 +295,22 @@ std::string pgsql_prepare(const std::string& sql)
 
 int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
 {
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare - SQL: {}", __FILE__, __func__, sql);
-	if (prepared_stmts.find(stmt_name) != prepared_stmts.end()) {
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
 
+	if (prepared_stmts.find(stmt_name) != prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
 	std::string prepared_sql = pgsql_prepare(sql);
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare - SQL(P): {}", __FILE__, __func__, prepared_sql);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 
 	PGresult* res = PQprepare(connaddr, stmt_name.c_str(), prepared_sql.c_str(), 0, nullptr);
 	last_rc = PQresultStatus(res);
 	last_error = PQresultErrorMessage(res);
 	last_state = pg_get_sqlstate(res);
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare - res: ({}) {}", __FILE__, __func__, last_rc, last_error);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({} - res: ({}) {}", __FILE__, __func__, stmt_name, last_rc, last_error);
 
 	if (last_rc != PGRES_COMMAND_OK) {
 		return DBERR_PREPARE_FAILED;
@@ -285,7 +326,7 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, stmt_name);
 
-	int nParams = (int) paramValues.size();
+	int nParams = (int)paramValues.size();
 	char** pvals = nullptr;
 
 	if (paramValues.size() > 0) {
@@ -295,14 +336,14 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 		}
 	}
 
-	if (resaddr)
-		PQclear(resaddr);
+	if (current_resultset)
+		PQclear(current_resultset);
 
-	resaddr = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
+	current_resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
 
-	last_rc = PQresultStatus(resaddr);
-	last_error = PQresultErrorMessage(resaddr);
-	last_state = pg_get_sqlstate(resaddr);
+	last_rc = PQresultStatus(current_resultset);
+	last_error = PQresultErrorMessage(current_resultset);
+	last_state = pg_get_sqlstate(current_resultset);
 
 	//if (last_rc == PGRES_COMMAND_OK) {
 	//	q = trim_copy(q);
@@ -325,23 +366,33 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 
 int DbInterfacePGSQL::exec(std::string query)
 {
+	return _pgsql_exec(nullptr, query);
+}
+
+int DbInterfacePGSQL::_pgsql_exec(ICursor *crsr, std::string query)
+{
 	std::string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
-	if (resaddr)
-		PQclear(resaddr);
+	PGresult* wk_rs = (PGresult*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset);
 
-	//resaddr = PQexec(connaddr, q.c_str());
-	resaddr = PQexecParams(connaddr, q.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+	if (wk_rs) {
+		if (wk_rs == current_resultset)
+			current_resultset = nullptr;
 
-	last_rc = PQresultStatus(resaddr);
-	last_error = PQresultErrorMessage(resaddr);
-	last_state = pg_get_sqlstate(resaddr);
+		PQclear(wk_rs);
+	}
+
+	wk_rs = PQexecParams(connaddr, q.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+
+	last_rc = PQresultStatus(wk_rs);
+	last_error = PQresultErrorMessage(wk_rs);
+	last_state = pg_get_sqlstate(wk_rs);
 
 	if (last_rc == PGRES_COMMAND_OK) {
 		q = trim_copy(q);
 		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
-			int nrows = get_num_rows();
+			int nrows = get_num_rows(wk_rs);
 			if (nrows <= 0) {
 				last_rc = 100;
 				return DBERR_SQL_ERROR;
@@ -349,8 +400,14 @@ int DbInterfacePGSQL::exec(std::string query)
 		}
 	}
 
-	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK)
+	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK) {
+		if (crsr)
+			crsr->setPrivateData(wk_rs);
+		else
+			current_resultset = wk_rs;
+
 		return DBERR_NO_ERROR;
+	}
 	else {
 		last_rc = -(10000 + last_rc);
 		return DBERR_SQL_ERROR;
@@ -358,12 +415,49 @@ int DbInterfacePGSQL::exec(std::string query)
 
 }
 
+bool DbInterfacePGSQL::retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src)
+{
+	lib_logger->trace(FMT_FILE_FUNC "Retrieving SQL source for prepared statement {}", __FILE__, __func__, prep_stmt_name);
+
+	char** pvals = new char* [1];
+	pvals[0] = (char*)prep_stmt_name.c_str();
+	std::string qry = "select statement from pg_prepared_statements where name = $1";
+	PGresult * tr = PQexecParams(connaddr, qry.c_str(), 1, NULL, pvals, NULL, NULL, 0);
+
+	delete[] pvals;
+
+	last_rc = PQresultStatus(tr);
+	last_error = PQresultErrorMessage(tr);
+	last_state = pg_get_sqlstate(tr);
+
+	if (last_rc == PGRES_TUPLES_OK) {
+		const char* res = PQgetvalue(tr, 0, 0);
+		if (!res) {
+			last_rc = PQresultStatus(tr);
+			last_error = PQresultErrorMessage(tr);
+			last_state = pg_get_sqlstate(tr);
+			return false;
+		}
+		src = res;
+		return true;
+	}
+
+	return false;
+}
 
 int DbInterfacePGSQL::exec_params(std::string query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats)
+{
+	return _pgsql_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+}
+
+
+int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats)
 {
 	std::string q = query;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+
+	PGresult* wk_rs = (PGresult*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset);
 
 	char** pvals = new char* [nParams];
 
@@ -371,21 +465,25 @@ int DbInterfacePGSQL::exec_params(std::string query, int nParams, int* paramType
 		pvals[i] = (char*)paramValues.at(i).c_str();
 	}
 
-	if (resaddr)
-		PQclear(resaddr);
+	if (wk_rs) {
+		if (wk_rs == current_resultset)
+			current_resultset = nullptr;
 
-	resaddr = PQexecParams(connaddr, q.c_str(), nParams, NULL, pvals, paramLengths, paramFormats, 0);
+		PQclear(wk_rs);
+	}
+
+	wk_rs = PQexecParams(connaddr, q.c_str(), nParams, NULL, pvals, paramLengths, paramFormats, 0);
 
 	delete[] pvals;
 
-	last_rc = PQresultStatus(resaddr);
-	last_error = PQresultErrorMessage(resaddr);
-	last_state = pg_get_sqlstate(resaddr);
+	last_rc = PQresultStatus(wk_rs);
+	last_error = PQresultErrorMessage(wk_rs);
+	last_state = pg_get_sqlstate(wk_rs);
 
 	if (last_rc == PGRES_COMMAND_OK) {
 		q = trim_copy(q);
 		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
-			int nrows = get_num_rows();
+			int nrows = get_num_rows(wk_rs);
 			if (nrows <= 0) {
 				last_rc = 100;
 				return DBERR_SQL_ERROR;
@@ -393,8 +491,14 @@ int DbInterfacePGSQL::exec_params(std::string query, int nParams, int* paramType
 		}
 	}
 
-	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK)
+	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK) {
+		if (crsr)
+			crsr->setPrivateData(wk_rs);
+		else
+			current_resultset = wk_rs;
+
 		return DBERR_NO_ERROR;
+	}
 	else {
 		last_rc = -(10000 + last_rc);
 		return DBERR_SQL_ERROR;
@@ -442,8 +546,29 @@ int DbInterfacePGSQL::cursor_open(ICursor* cursor)
 		return DBERR_OPEN_CURSOR_FAILED;
 
 	std::string sname = cursor->getName();
-	std::string squery = cursor->getQuery();
 	std::string full_query;
+
+	std::string squery = cursor->getQuery();
+	void* src_addr = nullptr;
+	int src_len = 0;
+
+	if (squery.size() == 0) {
+		cursor->getQuerySource(&src_addr, &src_len);
+		squery = get_hostref_or_literal(src_addr, src_len);
+	}
+
+	if (starts_with(squery, "@")) {
+		if (!retrieve_prepared_statement_source(squery.substr(1), squery)) {
+			// last_error, etc. set by retrieve_prepared_statement_source
+			return DBERR_OPEN_CURSOR_FAILED;
+		}
+	}
+
+	if (squery.empty()) {
+		last_rc = -1;
+		last_error = "Empty query";
+		return DBERR_OPEN_CURSOR_FAILED;
+	}
 
 	if (cursor->isWithHold()) {
 		full_query = "DECLARE " + sname + " CURSOR WITH HOLD FOR " + squery;
@@ -454,10 +579,10 @@ int DbInterfacePGSQL::cursor_open(ICursor* cursor)
 
 	// execute query
 	auto pvalues = cursor->getParameterValues();
-	int rc = exec_params(full_query, cursor->getNumParams(), NULL, pvalues, NULL, NULL);
+	int rc = _pgsql_exec_params(cursor, full_query, cursor->getNumParams(), NULL, pvalues, NULL, NULL);
 
 	cursor->setOpened(rc == DBERR_NO_ERROR);
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_DECLARE_CURSOR_FAILED;
+	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_OPEN_CURSOR_FAILED;
 }
 
 int DbInterfacePGSQL::fetch_one(ICursor* cursor, int fetchmode)
@@ -482,12 +607,11 @@ int DbInterfacePGSQL::fetch_one(ICursor* cursor, int fetchmode)
 		query = "FETCH RELATIVE 1 FROM " + sname;
 	}
 
-	last_rc = exec(query);
+	last_rc = _pgsql_exec(cursor, query);
 	if (last_rc != DBERR_NO_ERROR)
 		return DBERR_SQL_ERROR;
 
-
-	int ntuples = get_num_rows();
+	int ntuples = get_num_rows(cursor);
 	if (ntuples < 1) {
 		lib_logger->trace(FMT_FILE_FUNC "TUPLES NODATA", __FILE__, __func__);
 		return DBERR_NO_DATA;
@@ -504,19 +628,21 @@ bool DbInterfacePGSQL::get_resultset_value(ICursor* c, int row, int col, char* b
 	size_t to_length = 0;
 	*value_len = 0;
 
-	const char* res = PQgetvalue(resaddr, row, col);
+	PGresult *wk_rs = (c != nullptr) ? ((PGresult*)c->getPrivateData()) : current_resultset;
+
+	const char* res = PQgetvalue(wk_rs, row, col);
 	if (!res) {
 		return false;
 	}
 
-	auto type = PQftype(resaddr, col);
+	auto type = PQftype(wk_rs, col);
 	if (type != OID_TYPEA || !this->decode_binary) {
 		to_length = strlen(res);
 		if (to_length > bfrlen) {
 			return false;
 		}
 
-		*value_len = (int) to_length;
+		*value_len = (int)to_length;
 		memcpy(bfr, res, to_length + 1);	// copy with trailing null
 		// CHECKME: Is the data right-padded with appropriate space value later?
 		//          When yes it may be null-padded for binary (see below) there, too.
@@ -531,7 +657,7 @@ bool DbInterfacePGSQL::get_resultset_value(ICursor* c, int row, int col, char* b
 			return false;
 		}
 
-		*value_len = (int) to_length;
+		*value_len = (int)to_length;
 		memcpy(bfr, tmp_bfr, to_length);
 		if (to_length < bfrlen) {
 			memset(bfr + to_length, 0, bfrlen - to_length);
@@ -552,23 +678,40 @@ int DbInterfacePGSQL::supports_num_rows()
 	return 1;
 }
 
-int DbInterfacePGSQL::get_num_rows()
+int DbInterfacePGSQL::get_num_rows(ICursor* crsr)
 {
-	if (!resaddr)
+	PGresult* wk_rs = (PGresult*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset);
+
+	if (!wk_rs)
 		return -1;
 
-	const char* c_nrows = PQcmdTuples(resaddr);
-	if (!strlen(c_nrows))
+	char* c = PQcmdTuples(wk_rs);
+	if (!c)
 		return -1;
 
-	return atoi(c_nrows);
+	int n = atoi(c);
+	return n;
 }
 
-int DbInterfacePGSQL::get_num_fields()
+int DbInterfacePGSQL::get_num_fields(ICursor* crsr)
 {
-	if (resaddr)
-		return  PQnfields(resaddr);
+	PGresult* wk_rs = (PGresult*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset);
+
+	if (wk_rs)
+		return PQnfields(wk_rs);
 	else
 		return -1;
 }
 
+int DbInterfacePGSQL::get_num_rows(PGresult* r)
+{
+	if (!r)
+		return -1;
+
+	char* c = PQcmdTuples(r);
+	if (!c)
+		return -1;
+
+	int n = atoi(c);
+	return n;
+}

@@ -24,6 +24,8 @@
 #include <cstring>
 #include <locale.h>
 
+#include "cobol_var_types.h"
+
 #include "SqlVar.h"
 #include "utils.h"
 #include "Logger.h"

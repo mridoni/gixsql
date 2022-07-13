@@ -59,8 +59,8 @@ public:
 	virtual bool get_resultset_value(ICursor* c, int row, int col, char* bfr, int bfrlen, int *value_len);
 	virtual int move_to_first_record() override;
 	virtual int supports_num_rows() override;
-	virtual int get_num_rows() override;
-	virtual int get_num_fields() override;
+	virtual int get_num_rows(ICursor* crsr) override;
+	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;
@@ -76,7 +76,7 @@ public:
 
 private:
 	PGconn *connaddr;
-	PGresult *resaddr;
+	PGresult* current_resultset;
 
 	int last_rc;
 	std::string last_error;
@@ -86,5 +86,12 @@ private:
 	std::map<std::string, std::tuple<std::vector<std::string>, void *>> prepared_stmts;
 
 	int decode_binary = DECODE_BINARY_DEFAULT;
+
+	int _pgsql_exec(ICursor *crsr, std::string);
+	int _pgsql_exec_params(ICursor* crsr, std::string query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats);
+
+	bool retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src);
+
+	int get_num_rows(PGresult* r);
 };
 

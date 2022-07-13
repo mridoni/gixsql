@@ -47,7 +47,8 @@ public:
     }
     ~lib_load_handler()
     {
-
+        gixsql_logger->flush();
+        spdlog::shutdown();
     }
 
 private:

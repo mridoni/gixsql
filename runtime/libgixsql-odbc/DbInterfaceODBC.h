@@ -67,8 +67,8 @@ public:
 	virtual bool get_resultset_value(ICursor*, int, int, char* bfr, int bfrlen, int *value_len) override;
 	virtual int move_to_first_record() override;
 	virtual int supports_num_rows() override;
-	virtual int get_num_rows() override;
-	virtual int get_num_fields() override;
+	virtual int get_num_rows(ICursor* crsr) override;
+	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;

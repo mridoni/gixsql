@@ -61,12 +61,16 @@ USA.
 // This is used to keep the error code from nested function
 #define ERR_ALREADY_SET         -9999
 
+class TPESQLProcessing;
+
 // Conducting the whole scanning and parsing of Calc++.
 class gix_esql_driver
 {
 public:
     gix_esql_driver ();
     virtual ~gix_esql_driver ();
+
+    void setCaller(TPESQLProcessing* p);
 
 #pragma region Options
 
@@ -178,7 +182,8 @@ public:
 #pragma endregion
 
 #pragma region Management
-    GixPreProcessor *pp_inst;
+    GixPreProcessor *pp_inst = nullptr;
+    TPESQLProcessing* pp_caller = nullptr;
     
     std::map<std::string, cb_field_ptr> field_map;
     std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;

@@ -121,5 +121,32 @@ namespace gixsql_tests
             });
             Environment.SetEnvironmentVariable("GIXSQL_DEFAULT_DRIVER", null);
         }
+
+        [TestMethod]
+        [CobolSource("TSQL021C.cbl", "EMPREC.cpy")]
+        [GixSqlDataSource("pgsql", 1)]
+        public void TSQL021C_MSVC_pgsql_x64_exe()
+        {
+            compile(CompilerType.MSVC, "release", "x64", "exe");
+
+            Environment.SetEnvironmentVariable("DATASRC", get_datasource_type() + "://" + get_datasource_host());
+            Environment.SetEnvironmentVariable("DBUSR", get_datasource_usr());
+            Environment.SetEnvironmentVariable("DBPWD", get_datasource_pwd());
+            Environment.SetEnvironmentVariable("DBNAME", get_datasource_dbname());
+
+            run(CompilerType.MSVC, "release", "x64", "exe", "", false, new string[] {
+                "CONNECT 6A SQLCODE: +0000000000",
+            });
+
+            Environment.SetEnvironmentVariable("GIXSQL_DEFAULT_DRIVER", get_datasource_type());
+            Environment.SetEnvironmentVariable("DATASRC", get_datasource_host());
+            Environment.SetEnvironmentVariable("DBUSR", get_datasource_usr());
+            Environment.SetEnvironmentVariable("DBPWD", get_datasource_pwd());
+            Environment.SetEnvironmentVariable("DBNAME", get_datasource_dbname());
+
+            run(CompilerType.MSVC, "release", "x64", "exe", "", false, new string[] {
+                "CONNECT 6A SQLCODE: +0000000000",
+            });
+        }
     }
 }

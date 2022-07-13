@@ -250,30 +250,31 @@ Under the project directory (`%USERPROFILE%\Documents\Gix\Examples\TEST001` or `
 If you want to manually precompile COBOL programs for ESQL, you can use the preprocessor binary (**gixpp** or **gixpp.exe**) you will find in the **bin** folder in Gix-IDE's install directory. When you run it from the console, ensure you have the same **bin** directory in your PATH/LD_LIBRARY_PATH since it contains some libraries that are needed by **gixpp**. These are the command line options available, that correspond to those described earlier:
 
 ```text
-    gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
-    Version: 1.0.16
-    libgixpp version: 1.0.16
-    
-    Options:
-      -h, --help                  displays help on commandline options
-      -V, --version               displays version information
-      -I, --copypath arg          COPY file path list
-      -i, --infile arg            input file
-      -o, --outfile arg           output file
-      -s, --symfile arg           output symbol file
-      -e, --esql                  preprocess for ESQL
-      -p, --esql-preprocess-copy  ESQL: preprocess all included COPY files
-      -E, --esql-copy-exts arg    ESQL: copy files extension list (comma-separated)
-      -a, --esql-anon-params      ESQL: use anonymous (not numbered) parameters
-      -S, --esql-static-calls     ESQL: emit static calls
-      -g, --debug-info            generate debug info
-      -c, --consolidate           consolidate source to single-file
-      -k, --keep                  keep temporary files
-      -v, --verbose               verbose
-      -d, --verbose-debug         verbose (debug)
-      -m, --map                   emit map file
-      -C, --cobol85               emit COBOL85-compliant code
-      -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
+gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
+Version: 1.0.17
+libgixpp version: 1.0.17
+
+Options:
+  -h, --help                  displays help on commandline options
+  -V, --version               displays version information
+  -I, --copypath arg          COPY file path list
+  -i, --infile arg            input file
+  -o, --outfile arg           output file
+  -s, --symfile arg           output symbol file
+  -e, --esql                  preprocess for ESQL
+  -p, --esql-preprocess-copy  ESQL: preprocess all included COPY files
+  -E, --esql-copy-exts arg    ESQL: copy files extension list (comma-separated)
+  -a, --esql-anon-params      ESQL: use anonymous (not numbered) parameters
+  -S, --esql-static-calls     ESQL: emit static calls
+  -g, --debug-info            generate debug info
+  -c, --consolidate           consolidate source to single-file
+  -k, --keep                  keep temporary files
+  -v, --verbose               verbose
+  -d, --verbose-debug         verbose (debug)
+  -m, --map                   emit map file
+  -C, --cobol85               emit COBOL85-compliant code
+  -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
+  -L, --smart-cursor-init     use smart cursor initialization
 ```	  
 
 When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gix/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.

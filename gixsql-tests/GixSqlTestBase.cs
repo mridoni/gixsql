@@ -214,8 +214,12 @@ namespace gix_ide_tests
                 Assert.IsTrue(data_source_init(data_sources.Count - 1));
             }
 
+            string log_path = Path.Combine(TestTempDir, "gixsql-" + this.GetType().Name + ".log");
+            if (File.Exists(log_path))
+                File.Delete(log_path);
+
             Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_LEVEL", "trace");
-            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_FILE", Path.Combine(TestTempDir, "gisql-" + this.GetType().Name + ".log"));
+            Environment.SetEnvironmentVariable("GIXSQL_DEBUG_LOG_FILE", log_path);
         }
 
         protected DbConnection GetConnection(int ds_index = 0)

@@ -21,6 +21,7 @@ namespace gixsql_tests
         [TestMethod]
         [CobolSource("TSQL010A.cbl", "EMPREC.cpy")]
         [GixSqlDataSource("pgsql", 1)]
+        [Ignore]
         public void TSQL010A_MSVC_pgsql_x64_exe()
         {
             compile(CompilerType.MSVC, "release", "x64", "exe");

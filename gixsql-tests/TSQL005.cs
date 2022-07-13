@@ -76,11 +76,11 @@ namespace gixsql_tests
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
                 "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LEN: 00080",
+                "VBFLD-LEN: 0000000080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
                 "VCFLD-ARR  : [ABCDEFGHIJK]",
-                "VCFLD-LEN: 00011"
+                "VCFLD-LEN: 0000000011"
             });
         }
 
@@ -88,6 +88,7 @@ namespace gixsql_tests
         [CobolSource("TSQL005A.cbl")]
         [GixSqlDataSource("mysql", 1)]
         [TestCategory("Expected to fail: not implemented")]
+        [Ignore]
         public void TSQL005A_MSVC_mysql_x64_exe()
         {
             const int DATA_SZ = 80;
@@ -155,6 +156,7 @@ namespace gixsql_tests
         [CobolSource("TSQL005A.cbl")]
         [GixSqlDataSource("odbc", 1)]
         [TestCategory("Expected to fail: not implemented")]
+        [Ignore]
         public void TSQL005A_MSVC_odbc_x64_exe()
         {
             const int DATA_SZ = 80;
@@ -278,11 +280,11 @@ namespace gixsql_tests
                 "BFLD        : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop",
                 "BFLD LENGTH: 100",
                 "VBFLD-ARR  : [!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnop]",
-                "VBFLD-LEN: 00080",
+                "VBFLD-LEN: 0000000080",
                 "CFLD        : [ABCDEFGHIJK                                                                                         ]",
                 "CFLD LENGTH: 100",
                 "VCFLD-ARR  : [ABCDEFGHIJK]",
-                "VCFLD-LEN: 00011"
+                "VCFLD-LEN: 0000000011"
             });
         }
 

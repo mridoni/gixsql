@@ -44,24 +44,31 @@ extern "C" {
 
 using namespace std;
 
-class MySQLCursorData
+class MySQLResultsetData
 {
 public:
-	MySQLCursorData();
-	~MySQLCursorData();
+	MySQLResultsetData();
+	~MySQLResultsetData();
 
-	MYSQL_STMT* cursor_stmt = nullptr;
+
 	vector<char*> data_buffers;
 	vector<int> data_buffer_lengths;
 	vector<unsigned long *> data_lengths;
 
-	bool init();
-	void clear();
+	bool setup_buffers();
+	bool clear();
 
 	int getColumnCount();
+	void setResultsetHandle(MYSQL_STMT* m);
+	MYSQL_STMT *getResultsetHandle();
+	bool hasValidHandle();
 
 private:
+
+	MYSQL_STMT* _mysql_stmt = nullptr;
+
 	void clear_buffers();
+
 };
 
 
@@ -87,8 +94,8 @@ public:
 	virtual bool get_resultset_value(ICursor*, int, int, char* bfr, int bfrlen, int *value_len) override;
 	virtual int move_to_first_record() override;
 	virtual int supports_num_rows() override;
-	virtual int get_num_rows() override;
-	virtual int get_num_fields() override;
+	virtual int get_num_rows(ICursor* crsr) override;
+	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;
@@ -105,7 +112,7 @@ public:
 private:
 	MYSQL *connaddr;
 	
-	MySQLCursorData cur_crsr;
+	MySQLResultsetData current_resultset;
 
 	IConnection *owner;
 

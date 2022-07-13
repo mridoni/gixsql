@@ -34,6 +34,12 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "gixpp", "gixpp\gixpp.vcxpro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gixsql-tests", "gixsql-tests\gixsql-tests.csproj", "{2DC3D86A-319C-4656-9CE6-A09DB069EABF}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{52E19C91-8228-4E0B-8678-C2EB6828EB47}"
+	ProjectSection(SolutionItems) = preProject
+		ChangeLog = ChangeLog
+		checklists.txt = checklists.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_5.15.2|Any CPU = Debug_5.15.2|Any CPU

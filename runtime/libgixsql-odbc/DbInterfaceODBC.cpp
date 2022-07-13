@@ -24,6 +24,8 @@
 #include "Logger.h"
 #include "utils.h"
 
+#include "cobol_var_types.h"
+
 #include <cstring>
 
 #define ERR_SRC_ENV		1
@@ -762,14 +764,16 @@ int DbInterfaceODBC::supports_num_rows()
 	return driver_has_num_rows_support;
 }
 
-int DbInterfaceODBC::get_num_rows()
+int DbInterfaceODBC::get_num_rows(ICursor *crsr)
 {
+	SQLHANDLE* wk_rs = (SQLHANDLE*)((crsr != NULL) ? crsr->getPrivateData() : cur_stmt_handle);
+
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: getting number of rows", __FILE__, __func__);
 
 	SQLLEN NumRows = 0;
-	last_rc = SQLRowCount(cur_stmt_handle, &NumRows);
+	last_rc = SQLRowCount(wk_rs, &NumRows);
 	if (last_rc != SQL_SUCCESS) {
-		retrieve_odbc_error(ERR_SRC_STMT);
+		retrieve_odbc_error(ERR_SRC_STMT, wk_rs);
 		lib_logger->error("ODBC: Error while getting row count");
 		return DBERR_NO_DATA;
 	}
@@ -779,12 +783,14 @@ int DbInterfaceODBC::get_num_rows()
 	return (int)NumRows;
 }
 
-int DbInterfaceODBC::get_num_fields()
+int DbInterfaceODBC::get_num_fields(ICursor* crsr)
 {
+	SQLHANDLE* wk_rs = (SQLHANDLE*)((crsr != NULL) ? crsr->getPrivateData() : cur_stmt_handle);
+
 	SQLSMALLINT NumCols = 0;
-	last_rc = SQLNumResultCols(cur_stmt_handle, &NumCols);
+	last_rc = SQLNumResultCols(wk_rs, &NumCols);
 	if (last_rc != SQL_SUCCESS) {
-		retrieve_odbc_error(ERR_SRC_STMT);
+		retrieve_odbc_error(ERR_SRC_STMT, wk_rs);
 		lib_logger->error("ODBC: Error while getting column count");
 		return DBERR_NO_DATA;
 	}
@@ -851,6 +857,8 @@ int DbInterfaceODBC::cobol2odbctype(int t)
 	switch (t) {
 		case COBOL_TYPE_UNSIGNED_NUMBER:
 		case COBOL_TYPE_SIGNED_NUMBER_TC:
+		case COBOL_TYPE_SIGNED_NUMBER_TS:
+		case COBOL_TYPE_SIGNED_NUMBER_LC:
 		case COBOL_TYPE_SIGNED_NUMBER_LS:
 		case COBOL_TYPE_UNSIGNED_NUMBER_PD:
 		case COBOL_TYPE_SIGNED_NUMBER_PD:
@@ -872,6 +880,8 @@ int DbInterfaceODBC::cobol2ctype(int t)
 	switch (t) {
 		case COBOL_TYPE_UNSIGNED_NUMBER:
 		case COBOL_TYPE_SIGNED_NUMBER_TC:
+		case COBOL_TYPE_SIGNED_NUMBER_TS:
+		case COBOL_TYPE_SIGNED_NUMBER_LC:
 		case COBOL_TYPE_SIGNED_NUMBER_LS:
 		case COBOL_TYPE_UNSIGNED_NUMBER_PD:
 		case COBOL_TYPE_SIGNED_NUMBER_PD:

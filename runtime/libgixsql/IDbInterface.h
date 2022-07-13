@@ -76,6 +76,8 @@ class ICursor;
 class IDbInterface
 {
 public:
+	virtual ~IDbInterface() {}
+
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
 	virtual int connect(IDataSourceInfo *, int, std::string) = 0;
 	virtual int reset() = 0;
@@ -92,8 +94,8 @@ public:
 	virtual bool get_resultset_value(ICursor *, int, int, char* bfr, int bfrlen, int *value_len) = 0;
 	virtual int move_to_first_record() = 0;
 	virtual int supports_num_rows() = 0;
-	virtual int get_num_rows() = 0;
-	virtual int get_num_fields() = 0;
+	virtual int get_num_rows(ICursor* crsr) = 0;
+	virtual int get_num_fields(ICursor *crsr) = 0;
 	virtual char *get_error_message() = 0;
 	virtual int get_error_code() = 0;
 	virtual std::string get_state() = 0;

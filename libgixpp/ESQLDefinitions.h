@@ -220,6 +220,8 @@ struct cb_field_t
 
 	std::string defined_at_source_file;
 	int defined_at_source_line;
+
+	int group_levels_count = 0;
 };
 
 
