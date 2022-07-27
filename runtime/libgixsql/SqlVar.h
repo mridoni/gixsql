@@ -54,6 +54,9 @@ public:
 	int getType();
 	int getLength();
 
+	bool isVarLen();
+	bool isBinary();
+
 	void createCobolData(char *retstr, int datalen);
 
 	void createCobolDataLowValue();

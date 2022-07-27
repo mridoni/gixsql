@@ -37,7 +37,7 @@ USA.
 #define PATH_LIST_SEP ":"
 #endif
 
-#define GIXPP_VER "1.0.17"
+#define GIXPP_VER "1.0.18dev1"
 
 using namespace popl;
 
@@ -77,9 +77,18 @@ int main(int argc, char **argv)
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
 	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
-	auto opt_smart_crsr_init = options.add<Switch>("L", "smart-cursor-init", "use smart cursor initialization");
+	auto opt_smart_crsr_init = options.add<Switch>("L", "no-smart-cursor-init", "disable smart cursor initialization");
 
 	options.parse(argc, argv);
+
+	if (options.unknown_options().size() > 0) {
+		std::cout << options << std::endl;
+		for (auto uo : options.unknown_options()) {
+			fprintf(stderr, "ERROR: unknown option: %s\n", uo.c_str());
+		}
+		
+		return 1;
+	}
 
 	if (opt_help->is_set()) {
 		rc = 0;
@@ -144,7 +153,7 @@ int main(int argc, char **argv)
 				gp.setOpt("consolidated_map", true);
 				gp.setOpt("emit_map_file", opt_emit_map_file->is_set());
 				gp.setOpt("emit_cobol85", opt_emit_cobol85->is_set());
-				gp.setOpt("smart_crsr_init", opt_smart_crsr_init->is_set());
+				gp.setOpt("smart_crsr_init", !opt_smart_crsr_init->is_set());
 				gp.addStep(new TPESQLProcessing(&gp));
 
 				if (opt_esql_copy_exts->is_set())

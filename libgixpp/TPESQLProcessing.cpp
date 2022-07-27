@@ -443,11 +443,6 @@ bool TPESQLProcessing::processNextFile()
 
 		case ESQL_Command::ProcedureDivision:	
 
-			// Cursor initialization flags (if requested)
-			if (opt_smart_crsr_init) {
-				put_smart_crsr_init_flags();
-			}
-			
 			// PROCEDURE DIVISION can be string_split across several lines if a USING clause is added
 			for (int iline = exec_sql_stmt->startLine; iline <= exec_sql_stmt->endLine; iline++) {
 				put_output_line(input_lines.at(iline - 1));
@@ -544,11 +539,21 @@ std::string take_max(std::string& s, int n)
 	return res;
 }
 
+static int str_count(const std::string& obj, const std::string& tgt)
+{
+	int occs = 0;
+	std::string::size_type pos = 0;
+	while ((pos = obj.find(tgt, pos)) != std::string::npos) {
+		++occs;
+		pos += tgt.length();
+	}
+	return occs;
+}
+
 bool TPESQLProcessing::put_query_defs()
 {
 	if (emitted_query_defs)
 		return true;
-
 
 	for (int i = 1; i <= ws_query_list.size(); i++) {
 		std::string qry = ws_query_list.at(i - 1);
@@ -573,9 +578,10 @@ bool TPESQLProcessing::put_query_defs()
 			while (!qry.empty()) {
 				std::string block = take_max(qry, SQL_QUERY_BLOCK_SIZE);
 				int block_size = block.size();
+				int block_size_a = block_size - str_count(block, "\"\"");
 
 				std::string first_block = take_max(block, 29);
-				put_output_line(code_tag + string_format("     02  FILLER PIC X(%04d) VALUE \"%s\"", block_size, first_block));
+				put_output_line(code_tag + string_format("     02  FILLER PIC X(%04d) VALUE \"%s\"", block_size_a, first_block));
 
 				while (!block.empty()) {
 					std::string sub_block = take_max(block, 59);
@@ -833,6 +839,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		if (!put_query_defs())
 			return false;
 
+		// Cursor initialization flags (if requested)
+		if (opt_smart_crsr_init) {
+			put_smart_cursor_init_flags();
+		}
+
 		break;
 
 	case ESQL_Command::Incfile:
@@ -979,9 +990,12 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 	case ESQL_Command::Open:
 	{
-		if (opt_smart_crsr_init) {
+		bool is_crsr_startup_item = cpplinq::from(startup_items).where([stmt](cb_exec_sql_stmt_ptr p) { return p->cursorName == stmt->cursorName; }).to_vector().size() > 0;
+
+		// We need to add a check only if the cursor has been declared in the WORKING-STORAGE section
+		if (opt_smart_crsr_init && is_crsr_startup_item) {
 			std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
-			put_cursor_init_check(stmt->cursorName);
+			put_smart_cursor_init_check(stmt->cursorName);
 			put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
 		}
 
@@ -993,7 +1007,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		if (!put_call(open_call, false, 1))
 			return false;
 
-		if (opt_smart_crsr_init) {
+		if (opt_smart_crsr_init && is_crsr_startup_item) {
 			put_output_line(string_format(AREA_B_CPREFIX "END-IF"));
 		}
 
@@ -1005,7 +1019,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 	{
 		//if (opt_smart_crsr_init) {
 		//	std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
-		//	put_cursor_init_check(stmt->cursorName);
+		//	put_smart_cursor_init_check(stmt->cursorName);
 		//	put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
 		//}
 
@@ -1029,7 +1043,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 	{
 		//if (opt_smart_crsr_init) {
 		//	std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
-		//	put_cursor_init_check(stmt->cursorName);
+		//	put_smart_cursor_init_check(stmt->cursorName);
 		//	put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
 		//}
 
@@ -1280,9 +1294,18 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		}
 
 		uint64_t type_info = var->sql_type;
+
+#if 0
 		uint64_t length = type_info & 0xffffffffffff;	// 48 bits
 		uint32_t precision = (length >> 16);
 		uint16_t scale = (length & 0xffff);
+		int sql_type = (type_info >> 60);
+#else
+		uint32_t sql_type, precision;
+		uint16_t scale;
+		uint8_t flags;
+		decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+#endif
 
 #ifdef USE_VARLEN_16
 		if (precision > USHRT_MAX) {
@@ -1291,8 +1314,6 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			return false;
 		}
 #endif
-
-		int sql_type = (type_info >> 60);
 
 		if (!check_sql_type_compatibility(type_info, var)) {
 			std::string msg = string_format("SQL type definition for %s (%s) is not compatible with the COBOL one (%s)", var->sname, "N/A", "N/A");
@@ -1847,32 +1868,69 @@ bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, int* type, int* siz
 		}
 
 		cb_field_ptr f_actual = main_module_driver.field_map[f_actual_name];
-		gethostvarianttype(f_actual, type);
-		*size = f_actual->picnsize + VARLEN_LENGTH_SZ;
-		*scale = f_actual->scale;
+
+		if (f_actual) {
+			gethostvarianttype(f_actual, type);
+			*size = f_actual->picnsize + VARLEN_LENGTH_SZ;
+			*scale = f_actual->scale;
+		}
+		else {
+			*type = PIC_ALPHANUMERIC;
+			*size = f->picnsize + VARLEN_LENGTH_SZ;
+			*scale = f->scale;
+		}
+
 	}
 	return is_varlen;
+}
+
+std::string TPESQLProcessing::process_sql_query_item(const std::vector<std::string>& input_sql_list)
+{
+	bool in_single_quoted_string = false;
+	bool in_double_quoted_string = false;
+
+	std::string sql = "";
+	std::vector <std::string> items;
+
+	// We need to handle placeholders for group items passed as host variables
+	for (std::vector< std::string>::const_iterator it = input_sql_list.begin(); it != input_sql_list.end(); ++it) {
+		std::string item = *it;
+
+		if (starts_with(item, "@[") && ends_with(item, "]")) {
+			item = item.substr(2);
+			item = item.substr(0, item.length() - 1);
+		}
+
+		items.push_back(item);
+	}
+
+	for (std::vector<std::string>::const_iterator it = items.begin(); it != items.end(); ++it) {
+		std::string item = *it;
+
+		for (auto itc = item.begin(); itc != item.end(); ++itc) {
+			char c = *itc;
+			
+			if (c == '"')
+				in_double_quoted_string = !in_double_quoted_string;
+
+			if (c == '\'')
+				in_single_quoted_string = !in_single_quoted_string;
+
+			sql += c;
+		}
+		
+		if (!in_single_quoted_string && !in_double_quoted_string)
+			sql += ' ';
+	}
+	trim(sql);
+	return sql;
 }
 
 void TPESQLProcessing::process_sql_query_list()
 {
 	for (cb_exec_sql_stmt_ptr p : *main_module_driver.exec_list) {
 		if (p->sql_list->size()) {
-
-			std::string sql = "";
-
-			// We need to handle placeholders for group items passed as host variables
-			for (std::vector< std::string>::const_iterator it = p->sql_list->begin(); it != p->sql_list->end(); ++it) {
-				std::string item = *it;
-				if (starts_with(item, "@[") && ends_with(item, "]")) {
-					item = item.substr(2);
-					item = item.substr(0, item.length() - 1);
-				}
-				sql += item;
-				if (it != p->sql_list->end() - 1)
-					sql += ' ';
-			}
-
+			std::string sql = process_sql_query_item(*p->sql_list);
 			sql = string_replace_regex(sql, "[\\r\\n\\t]", " ");
 			ws_query_list.push_back(sql);
 		}
@@ -1891,10 +1949,17 @@ bool TPESQLProcessing::fixup_declared_vars()
 		int orig_end_line = std::get<2>(d);
 		std::string orig_src_file = std::get<3>(d);
 
+#if 0
 		uint64_t length = type_info & 0xffffffffffff;	// 48 bits
 		uint32_t precision = (length >> 16);
 		uint16_t scale = (length & 0xffff);
 		int sql_type = (type_info >> 60);
+#else
+		uint32_t sql_type, precision;
+		uint16_t scale;
+		uint8_t flags;
+		decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+#endif
 
 		if (!main_module_driver.field_exists(var_name)) {
 			if (precision == 0) {
@@ -2146,9 +2211,12 @@ void TPESQLProcessing::put_whenever_clause_handler(esql_whenever_clause_handler_
 	}
 }
 
-void TPESQLProcessing::put_smart_crsr_init_flags()
+void TPESQLProcessing::put_smart_cursor_init_flags()
 {
 	const char* lp = AREA_B_CPREFIX;
+
+	if (emitted_smart_cursor_init_flags)
+		return;
 	
 	put_output_line(code_tag + "*   ESQL CURSOR INIT FLAGS (START)");
 	for (cb_exec_sql_stmt_ptr stmt : startup_items) {
@@ -2156,9 +2224,11 @@ void TPESQLProcessing::put_smart_crsr_init_flags()
 		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
 	}
 	put_output_line(code_tag + "*   ESQL CURSOR INIT FLAGS (END)");
+
+	emitted_smart_cursor_init_flags = true;
 }
 
-void TPESQLProcessing::put_cursor_init_check(const std::string& crsr_name)
+void TPESQLProcessing::put_smart_cursor_init_check(const std::string& crsr_name)
 {
 	std::string cname = string_replace(crsr_name, "_", "-");
 	std::string crsr_init_var = "GIXSQL-CI-F-" + cname;

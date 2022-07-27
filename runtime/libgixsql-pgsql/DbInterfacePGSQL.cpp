@@ -98,13 +98,6 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, int autocommit, std::s
 	last_error = "";
 	last_state = "";
 
-
-	//connstr = (conn_info->getDbName().empty() ? "" : "dbname=" + conn_info->getDbName() + " ") +
-	//	(conn_info->getHost().empty() ? "" : "host=" + conn_info->getHost() + " ") +
-	//	(conn_info->getPort() == 0 ? "" : "port=" + std::to_string(conn_info->getPort()) + " ") +
-	//	(conn_info->getUsername().empty() ? "" : "user=" + conn_info->getUsername() + " ") +
-	//	(conn_info->getPassword().empty() ? "" : "password=" + conn_info->getPassword() + " ");
-
 	connstr = "dbname=" + (conn_info->getDbName().empty() ? "''" :  conn_info->getDbName() + " ") +
 			  "host=" + (conn_info->getHost().empty() ? "''" : conn_info->getHost() + " ") +
 			  "port=" + (conn_info->getPort() == 0 ? "''" : std::to_string(conn_info->getPort()) + " ") +
@@ -449,7 +442,6 @@ int DbInterfacePGSQL::exec_params(std::string query, int nParams, int* paramType
 {
 	return _pgsql_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
-
 
 int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats)
 {

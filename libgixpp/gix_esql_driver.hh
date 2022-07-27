@@ -61,6 +61,9 @@ USA.
 // This is used to keep the error code from nested function
 #define ERR_ALREADY_SET         -9999
 
+void decode_sql_type_info(uint64_t type_info, uint32_t* sql_type, uint32_t* precision, uint16_t* scale, uint8_t* flags);
+uint64_t encode_sql_type_info(uint32_t sql_type, uint32_t precision, uint16_t scale, uint8_t flags);
+
 class TPESQLProcessing;
 
 // Conducting the whole scanning and parsing of Calc++.

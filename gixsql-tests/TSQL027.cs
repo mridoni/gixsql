@@ -26,7 +26,7 @@ namespace gixsql_tests
             Environment.SetEnvironmentVariable("DATASRC_USR", get_datasource_usr());
             Environment.SetEnvironmentVariable("DATASRC_PWD", get_datasource_pwd());
 
-            compile(CompilerType.MSVC, "release", "x64", "exe", false, false, "--smart-cursor-init");
+            compile(CompilerType.MSVC, "release", "x64", "exe", false, false, "", "-g");
 
             run(CompilerType.MSVC, "release", "x64", "exe", "", false, new string[] {
                 "VM1 - VAR-RES:00000010",

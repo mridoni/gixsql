@@ -40,9 +40,9 @@ Cursor::~Cursor()
 {
 }
 
-void Cursor::setConnection(IConnection *c)
+void Cursor::setConnection(IConnection* c)
 {
-	connection = (Connection *) c;
+	connection = (Connection*)c;
 }
 
 void Cursor::setConnectionName(std::string n)
@@ -60,7 +60,7 @@ void Cursor::setQuery(std::string q)
 	query = q;
 }
 
-void Cursor::setQuerySource(void *src_addr, int src_len)
+void Cursor::setQuerySource(void* src_addr, int src_len)
 {
 	query_source_addr = src_addr;
 	query_source_len = src_len;
@@ -71,9 +71,9 @@ void Cursor::setNumParams(int np)
 	nParams = np;
 }
 
-IConnection *Cursor::getConnection()
+IConnection* Cursor::getConnection()
 {
-	return (IConnection *) connection;
+	return (IConnection*)connection;
 }
 
 std::string Cursor::getConnectionName()
@@ -91,7 +91,7 @@ std::string Cursor::getQuery()
 	return query;
 }
 
-void Cursor::getQuerySource(void **src_addr, int *src_len)
+void Cursor::getQuerySource(void** src_addr, int* src_len)
 {
 	*src_addr = query_source_addr;
 	*src_len = query_source_len;
@@ -117,11 +117,11 @@ void Cursor::setOpened(bool b)
 	is_opened = b;
 }
 
-void Cursor::setParameters(SqlVarList &l)
+void Cursor::setParameters(SqlVarList& l)
 {
-	std::vector<SqlVar *>::iterator it;
+	std::vector<SqlVar*>::iterator it;
 	for (it = l.begin(); it != l.end(); it++) {
-		SqlVar *v = (*it)->copy();
+		SqlVar* v = (*it)->copy();
 		parameter_list.push_back(v);
 	}
 }
@@ -133,9 +133,9 @@ SqlVarList& Cursor::getParameters()
 
 void Cursor::createRealDataforParameters()
 {
-	std::vector<SqlVar *>::iterator it;
+	std::vector<SqlVar*>::iterator it;
 	for (it = parameter_list.begin(); it != parameter_list.end(); it++) {
-		SqlVar *v = (*it);
+		SqlVar* v = (*it);
 		v->createRealData();
 	}
 }
@@ -160,9 +160,25 @@ std::vector<std::string> Cursor::getParameterValues()
 	std::vector<std::string> params;
 
 	createRealDataforParameters();	// Just in case
+
+#ifndef MAGIC_SPACES
 	for (int i = 0; i < parameter_list.size(); i++) {
 		params.push_back(std::string(parameter_list.at(i)->getRealData()));
 	}
+#else
+		for (int i = 0; i < parameter_list.size(); i++) {
+			SqlVar* v = parameter_list.at(i);
+			if (v->isVarLen() && !v->isBinary()) {
+				std::string s = v->getRealData();
+				rtrim(s);
+				params.push_back(s);
+			}
+			else {
+				params.push_back(v->getRealData());
+			}
+		}
+#endif
+
 	return params;
 }
 
@@ -176,17 +192,17 @@ std::vector<int> Cursor::getParameterTypes()
 	return param_types;
 }
 
-void * Cursor::getPrivateData()
+void* Cursor::getPrivateData()
 {
 	return dbi_data;
 }
 
-void Cursor::setPrivateData(void *d)
+void Cursor::setPrivateData(void* d)
 {
 	dbi_data = d;
 }
 
-void Cursor::setConnectionReference(void *d, int l)
+void Cursor::setConnectionReference(void* d, int l)
 {
 	connref_data = d;
 	connref_datalen = l;
@@ -198,8 +214,8 @@ std::string Cursor::getConnectionNameFromReference()
 		return std::string();
 
 	if (!connref_datalen)
-		return std::string((char *)connref_data);
+		return std::string((char*)connref_data);
 
-	std::string s = std::string((char *)connref_data, connref_datalen);
+	std::string s = std::string((char*)connref_data, connref_datalen);
 	return trim_copy(s);
 }

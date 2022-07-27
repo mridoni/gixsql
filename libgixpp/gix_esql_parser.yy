@@ -444,12 +444,20 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 	cb_field_ptr x;
 
 	std::string var_name = $2;
-	uint64_t type_info = $4;
 
+#if 0
+	uint64_t type_info = $4;
 	uint64_t length = type_info & 0xffffffffffff;	// 48 bits
 	uint32_t precision = (length >> 16);
 	uint16_t scale = (length & 0xffff);
 	int sql_type = (type_info >> 60);
+#else
+	uint64_t type_info = $4;
+	uint32_t sql_type, precision;
+	uint16_t scale;
+	uint8_t flags;
+	decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+#endif
 
 	if (driver.field_map.find(var_name) == driver.field_map.end()) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
@@ -831,11 +839,20 @@ NUMERIC WORD opt_sql_type_def {
 			driver.current_field = x;
 
 		if ($3 != 0) {
+
+#if 0
 			uint64_t type_info = $3;
 			uint64_t length = type_info & 0xffffffffffff;	// 48 bits
 			uint32_t precision = (length >> 16);
 			uint16_t scale = (length & 0xffff);
-			int sql_type = type_info >> 60;
+			int sql_type = (type_info >> 60);
+#else
+			uint64_t type_info = $3;
+			uint32_t sql_type, precision;
+			uint16_t scale;
+			uint8_t flags;
+			decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+#endif
 
 			x->sql_type = type_info;
 			x->is_varlen = IS_VARLEN(sql_type);
@@ -844,8 +861,8 @@ NUMERIC WORD opt_sql_type_def {
 			x->pictype = -1;	// Preprocessor will build the correct PIC for "SQL TYPE IS" defs
 
 			// We do not want to overwrite precision and scale as defined in the COBOL source
-			// x->picnsize = precision;
-			// x->scale = scale;
+			x->picnsize = precision;
+			x->scale = scale;
 			
 			driver.cb_set_commandname("DECLARE_VAR");
 			driver.cb_host_list_add (driver.host_reference_list, x->sname);
@@ -918,8 +935,12 @@ varying_clause:
 VARYING {
 	auto x = driver.current_field;
 	
+#if 0
 	uint64_t type_info = (TYPE_SQL_VARCHAR << 60);
 	type_info |= (((uint64_t)x->picnsize << 16));
+#else
+	uint64_t type_info = encode_sql_type_info(TYPE_SQL_VARCHAR, (uint32_t)x->picnsize, 0, 0);
+#endif
 
 	x->sql_type = type_info;
 	x->is_varlen = true;

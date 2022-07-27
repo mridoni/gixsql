@@ -115,6 +115,7 @@ private:
 	bool is_var_len_group(cb_field_ptr f);
 	bool get_actual_field_data(cb_field_ptr f, int *type, int *size, int *scale);
 	void process_sql_query_list();
+	std::string process_sql_query_item(const std::vector<std::string>& input_sql_list);
 	bool fixup_declared_vars();
 
 	bool write_map_file(const std::string &preprocd_file);
@@ -132,8 +133,8 @@ private:
 
 	void put_whenever_handler(bool terminate_with_period);
 	void put_whenever_clause_handler(esql_whenever_clause_handler_t* ch);
-	void put_smart_crsr_init_flags();
-	void put_cursor_init_check(const std::string& crsr_name);
+	void put_smart_cursor_init_flags();
+	void put_smart_cursor_init_check(const std::string& crsr_name);
 
 	bool put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, int *res_params_count);
 	bool put_host_parameters(const cb_exec_sql_stmt_ptr stmt);
@@ -153,5 +154,6 @@ private:
 	int current_input_line;
 
 	bool emitted_query_defs = false;
+	bool emitted_smart_cursor_init_flags = false;
 };
 

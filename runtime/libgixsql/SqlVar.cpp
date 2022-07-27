@@ -684,6 +684,16 @@ int SqlVar::getLength()
 	return length;
 }
 
+bool SqlVar::isVarLen()
+{
+	return is_variable_length;
+}
+
+bool SqlVar::isBinary()
+{
+	return is_binary;
+}
+
 void SqlVar::display_to_comp3(const char *data, bool has_sign) // , int total_len, int scale, int has_sign, uint8_t *addr
 {
 	uint8_t *addr = (uint8_t *) this->addr;

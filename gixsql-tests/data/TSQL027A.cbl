@@ -50,6 +50,9 @@
                 SELECT MAX(VAR) - MIN(VAR) FROM TAB00
        END-EXEC.
 
+       LINKAGE SECTION.
+            01 DUMMY01 PIC X(99).
+
        PROCEDURE DIVISION. 
  
        000-CONNECT.
@@ -76,6 +79,11 @@
            EXEC SQL AT :DBS
               START TRANSACTION
            END-EXEC.        
+
+           EXEC SQL AT :DBS
+               DECLARE VM4 CURSOR FOR 
+                    SELECT MAX(VAR) + MIN(VAR) FROM TAB00
+           END-EXEC.
            
            MOVE 'DROP TABLE' TO CUR-STEP.
            EXEC SQL AT :DBS
@@ -165,6 +173,25 @@
           
            EXEC SQL AT :DBS
                CLOSE VM3 
+           END-EXEC.
+
+      * VM4 : CURSOR FROM DIRECT STATEMENT (EVAL. AT OPEN)
+      * VM4 : DECLARE IN PROCEDURE DIVSION.
+
+           MOVE 'OPEN-VM4' TO CUR-STEP. 
+           EXEC SQL AT :DBS
+               OPEN VM4 
+           END-EXEC.
+          
+           EXEC SQL AT :DBS
+               FETCH VM4
+               INTO
+                 :VAR-RES
+           END-EXEC.
+           DISPLAY 'VM4 - VAR-RES:' VAR-RES.
+          
+           EXEC SQL AT :DBS
+               CLOSE VM4 
            END-EXEC.
 
       * DONE

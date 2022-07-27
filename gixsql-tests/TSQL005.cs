@@ -288,5 +288,32 @@ namespace gixsql_tests
             });
         }
 
+        [TestMethod]
+        [CobolSource("TSQL005C.cbl")]
+        [GixSqlDataSource("pgsql", 1)]
+        [TestCategory("BINARY/VARBINARY data types (magic spaces)")]
+        [Ignore]
+        public void TSQL005C_MSVC_pgsql_x64_exe()
+        {
+            const int DATA_SZ = 80;
+            const int DATA_START = 33;  // starts with "!"
+
+            byte[] data = null;
+
+            compile(CompilerType.MSVC, "release", "x64", "exe");
+
+            string datasrc = build_data_source_string(false, true, true) + "?magic_spaces=on";
+            Environment.SetEnvironmentVariable("DATASRC", datasrc);
+            Environment.SetEnvironmentVariable("DATASRC_USR", get_datasource_usr() + "." + get_datasource_pwd());
+
+            string payload = Utils.RandomString(32);
+            Environment.SetEnvironmentVariable("PAYLOAD", payload);
+
+            run(CompilerType.MSVC, "release", "x64", "exe", "", false, new string[] {
+                "VCFLD1:  [" + payload + "]",
+                "CFLD1 :  [" + payload + "                                                                    ]"
+            });
+        }
+
     }
 }
