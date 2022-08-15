@@ -53,14 +53,14 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::connect(IDataSourceInfo *conn_string, int autocommit, string encoding)
+int DbInterfaceMySQL::connect(IDataSourceInfo *conn_string, IConnectionOptions* opts)
 {
 	MYSQL *conn;
 	string connstr;
 
 	connaddr = NULL;
 
-	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__,	conn_string->get(), autocommit, encoding);
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__,	conn_string->get(), opts->autocommit, opts->client_encoding);
 
 	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
 	conn = mysql_init(NULL);
@@ -72,8 +72,8 @@ int DbInterfaceMySQL::connect(IDataSourceInfo *conn_string, int autocommit, stri
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!encoding.empty()) {
-		string qenc = "SET NAMES " + encoding;
+	if (!opts->client_encoding.empty()) {
+		string qenc = "SET NAMES " + opts->client_encoding;
 		mysql_real_query(conn, qenc.c_str(), qenc.size());
 	}
 
@@ -168,7 +168,7 @@ int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	return DBERR_SQL_ERROR;
 }
 
-int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, string query, int nParams, int *paramTypes, vector<string> &paramValues, int *paramLengths, int *paramFormats)
+int DbInterfaceMySQL::_mysql_exec_params(ICursor *crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
 	string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
@@ -371,7 +371,7 @@ int DbInterfaceMySQL::exec(string query)
 }
 
 
-int DbInterfaceMySQL::exec_params(string query, int nParams, int *paramTypes, vector<string> &paramValues, int *paramLengths, int *paramFormats)
+int DbInterfaceMySQL::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
 	return _mysql_exec_params(NULL, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
@@ -463,6 +463,8 @@ int DbInterfaceMySQL::cursor_declare_with_params(ICursor *cursor, char **param_v
 
 int DbInterfaceMySQL::cursor_open(ICursor *cursor)
 {
+	std::vector<int> empty;
+
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: open cursor invoked", __FILE__, __func__);
 	if (!cursor) {
 		lib_logger->error("Invalid cursor");
@@ -479,7 +481,7 @@ int DbInterfaceMySQL::cursor_open(ICursor *cursor)
 	if (cursor->getNumParams() > 0) {
 		vector<string> params = cursor->getParameterValues();
 
-		int rc = _mysql_exec_params(cursor, string(query), cursor->getNumParams(), NULL, params, NULL, NULL);
+		int rc = _mysql_exec_params(cursor, string(query), cursor->getNumParams(), empty, params, empty, empty);
 		return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_OPEN_CURSOR_FAILED;
 	}
 	else {
@@ -539,11 +541,11 @@ int DbInterfaceMySQL::fetch_one(ICursor *cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceMySQL::get_resultset_value(ICursor *cursor, int row, int col, char *bfr, int bfrlen, int *value_len)
+bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
 {
 	*value_len = 0;
 
-	MySQLResultsetData *wk_rs = (MySQLResultsetData *)((cursor != NULL) ? cursor->getPrivateData() : &current_resultset);
+	MySQLResultsetData *wk_rs = (MySQLResultsetData *)((context != NULL) ? ((ICursor *)context)->getPrivateData() : &current_resultset);
 
 	if (col < wk_rs->data_buffers.size()) {
 		char *data = wk_rs->data_buffers.at(col);
@@ -564,7 +566,7 @@ bool DbInterfaceMySQL::get_resultset_value(ICursor *cursor, int row, int col, ch
 	}
 }
 
-int DbInterfaceMySQL::move_to_first_record()
+int DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
 {
 	lib_logger->trace(FMT_FILE_FUNC  "MySQL: moving to first row in resultset", __FILE__, __func__);
 
@@ -617,6 +619,11 @@ int DbInterfaceMySQL::get_num_rows(ICursor* crsr)
 		return  (int)mysql_stmt_num_rows(wk_rs->getResultsetHandle());
 	else
 		return -1;
+}
+
+int DbInterfaceMySQL::has_data(ResultSetContextType resultset_context_type, void* context)
+{
+	return 0;
 }
 
 int DbInterfaceMySQL::get_num_fields(ICursor* crsr)

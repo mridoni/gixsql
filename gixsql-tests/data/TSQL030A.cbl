@@ -118,6 +118,37 @@
 
            DISPLAY SQ0002.
 
+           EXEC SQL PREPARE ST1
+                FROM
+                    "SELECT MAX(CID) FROM TAB00 WHERE
+      -              VCFLD1 NOT IN (
+      -              'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'
+      -              )"
+           END-EXEC.
+           IF SQLCODE <> 0 THEN
+              DISPLAY 'PREPARE-1 SQLCODE. ' SQLCODE
+              DISPLAY 'PREPARE-1 SQLERRMC. ' SQLERRMC
+              GO TO 100-EXIT
+           END-IF.
+
+           EXEC SQL PREPARE ST2
+                FROM
+                    "SELECT MAX(CID) FROM TAB00 WHERE
+      -              VCFLD1 NOT IN (
+      -              'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,
+      -              ' DDDD' ,'  EEEEEEEE    '
+      -              )"
+           END-EXEC.
+           IF SQLCODE <> 0 THEN
+              DISPLAY 'PREPARE-1 SQLCODE. ' SQLCODE
+              DISPLAY 'PREPARE-1 SQLERRMC. ' SQLERRMC
+              GO TO 100-EXIT
+           END-IF.
+
+           DISPLAY SQ0008.
+
+           DISPLAY SQ0009.
+
            EXEC SQL
               COMMIT
            END-EXEC.                 

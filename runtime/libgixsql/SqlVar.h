@@ -70,11 +70,14 @@ private:
 	char *realdata = nullptr; // realdata
 	unsigned int realdata_len = 0; // length of realdata (actual length of allocated buffer is always realdata_len + 1)
 
-	// Variable length (level 49) support
+	// Variable length support
 	bool is_variable_length = false;
 	
 	// Binary/VarBinary support
 	bool is_binary = false;
+
+	// auto-trim for CHAR(x) fields (i.e. gixpp with --picx-as=varchar)
+	bool is_autrotrim = false;
 
     static const char _decimal_point;
 

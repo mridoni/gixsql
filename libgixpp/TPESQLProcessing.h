@@ -65,7 +65,7 @@ public:
 private:
 
 	// ESQL options
-	bool opt_anonymous_params;
+	ESQL_ParameterStyle opt_params_style;
 	bool opt_preprocess_copy_files;
 	bool opt_emit_static_calls;
 	bool opt_emit_debug_info;
@@ -75,6 +75,7 @@ private:
 	bool opt_emit_map_file;
 	bool opt_emit_cobol85;
 	bool opt_smart_crsr_init;
+	bool opt_picx_as_varchar;
 
 	std::string opt_varlen_suffix_len;
 	std::string opt_varlen_suffix_data;

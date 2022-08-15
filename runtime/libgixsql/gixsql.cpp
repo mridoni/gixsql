@@ -73,6 +73,7 @@ static CursorManager cursor_manager;
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err);
 static bool get_autocommit(DataSourceInfo*);
+static bool get_fixup_params(DataSourceInfo*);
 static std::string get_client_encoding(DataSourceInfo*);
 static void init_sql_var_list(void);
 
@@ -117,6 +118,8 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 
 	sqlca_initialize(st);
 
+	trim(connection_id);
+
 	if (!connection_id.empty() && connection_manager.exists(connection_id)) {
 		spdlog::error("Connection already defined: {}", connection_id);
 		setStatus(st, NULL, DBERR_NO_ERROR);
@@ -139,20 +142,24 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		return RESULT_FAILED;
 	}
 
-	bool autocommit = get_autocommit(data_source);
-	std::string client_encoding = get_client_encoding(data_source);
+	std::shared_ptr<IConnectionOptions> opts(new IConnectionOptions());
+	opts->autocommit = get_autocommit(data_source);;
+	opts->fixup_parameters = get_fixup_params(data_source);
+	opts->client_encoding = get_client_encoding(data_source);
 
 	spdlog::trace(FMT_FILE_FUNC "Connection string : {}", __FILE__, __func__, data_source->get());
 	spdlog::trace(FMT_FILE_FUNC "Data source info  : {}", __FILE__, __func__, data_source->dump());
-	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, autocommit);
+	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, opts->autocommit);
+	spdlog::trace(FMT_FILE_FUNC "Fix up parameters : {}", __FILE__, __func__, opts->fixup_parameters);
+	spdlog::trace(FMT_FILE_FUNC "Client encoding   : {}", __FILE__, __func__, opts->client_encoding);
 
-	rc = dbi->connect(data_source, autocommit, client_encoding);
+	rc = dbi->connect(data_source, opts.get());
 	if (rc != DBERR_NO_ERROR) {
 		setStatus(st, dbi, DBERR_CONNECTION_FAILED);
 		return RESULT_FAILED;
 	}
 
-	if (autocommit) {
+	if (opts->autocommit) {
 		rc = dbi->begin_transaction();
 		if (rc != DBERR_NO_ERROR) {
 			setStatus(st, dbi, DBERR_BEGIN_TX_FAILED);
@@ -161,20 +168,17 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		}
 	}
 
-	auto opts = data_source->getOptions();
-
 	Connection* c = connection_manager.create();
 	c->setName(connection_id);	// it might still be empty, the connection manager will assign a default name
-	c->setAutoCommit(autocommit);
+	c->setConnectionOptions(opts.get());	// Generic/gobal connection options, separate from driver-specific options that reside only in the data source info
 	c->setConnectionInfo(data_source);
-	c->setEncoding(client_encoding);
 	c->setDbInterface(dbi);
 	c->setOpened(true);
 	connection_manager.add(c);
 
 	dbi->set_owner((IConnection*)c);
 
-	spdlog::debug(FMT_FILE_FUNC "connection success. connectId = {}, dbname = {}", __FILE__, __func__, c->getId(), connection_id);
+	spdlog::debug(FMT_FILE_FUNC "connection success. connection id# = {}, connection id = [{}]", __FILE__, __func__, c->getId(), connection_id);
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
@@ -289,7 +293,7 @@ static int _gixsqlExec(Connection* conn, struct sqlca_t* st, char* _query)
 	if (is_commit_or_rollback_statement(query)) {
 		cursor_manager.clearConnectionCursors(conn->getId(), false);
 
-		if (conn->getAutoCommit()) {
+		if (conn->getConnectionOptions()->autocommit) {
 			rc = dbi->end_transaction(query);
 			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
@@ -305,7 +309,7 @@ static int _gixsqlExec(Connection* conn, struct sqlca_t* st, char* _query)
 		rc = dbi->exec(query);
 		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-			if (is_dml_statement(query) && conn->getAutoCommit()) {
+			if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
 				rc = dbi->end_transaction("COMMIT");
 				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
@@ -356,36 +360,16 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 {
 	std::vector<std::string> params;
 	std::vector<int> param_types;
+	std::vector<int> param_lengths;
 	std::vector<SqlVar*>::iterator it;
 
 	// set parameters
-#if MAGIC_SPACES
-	if (!conn->getMagicSpaces()) {
-		for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-			params.push_back((*it)->getRealData());
-			param_types.push_back((*it)->getType());
-		}
-	}
-	else {
-		for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-			SqlVar* v = (*it);
-			if (v->isVarLen() && !v->isBinary()) {
-				std::string s = v->getRealData();
-				rtrim(s);
-				params.push_back(s);
-			}
-			else {
-				params.push_back((*it)->getRealData());
-			}
-			param_types.push_back((*it)->getType());
-		}
-	}
-#else
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
 		params.push_back((*it)->getRealData());
 		param_types.push_back((*it)->getType());
+		param_lengths.push_back((*it)->getLength());
 	}
-#endif
+
 	std::string query = _query;
 	int rc = 0;
 	IDbInterface* dbi = conn->getDbInterface();
@@ -395,7 +379,7 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 		if (is_commit_or_rollback_statement(query)) {
 			cursor_manager.clearConnectionCursors(conn->getId(), false);
 
-			if (conn->getAutoCommit()) {
+			if (conn->getConnectionOptions()->autocommit) {
 				rc = dbi->end_transaction(query);
 				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
@@ -403,15 +387,15 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 				FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
 			}
 			else {
-				rc = dbi->exec_params(query, nParams, param_types.data(), params, NULL, NULL);
+				rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
 				FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 			}
 		}
 		else {
-			rc = dbi->exec_params(query, nParams, param_types.data(), params, NULL, NULL);
+			rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
 			FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-				if (is_dml_statement(query) && conn->getAutoCommit()) {
+				if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
 					rc = dbi->end_transaction(query);
 					FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
@@ -462,41 +446,23 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	}
 
 	std::vector<std::string> params;
-	std::vector<int> empty;
+	std::vector<int> param_lengths;
+	std::vector<int> param_types;
 	std::vector<SqlVar*>::iterator it;
 
 	// set parameters
-#ifdef MAGIC_SPACES
-	if (!conn->getMagicSpaces()) {
-		for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-			params.push_back((*it)->getRealData());
-		}
-	}
-	else {
-		for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-			SqlVar* v = (*it);
-			if (v->isVarLen() && !v->isBinary()) {
-				std::string s = v->getRealData();
-				rtrim(s);
-				params.push_back(s);
-			}
-			else {
-				params.push_back(v->getRealData());
-			}
-		}
-	}
-#else
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
 		params.push_back((*it)->getRealData());
+		param_types.push_back((*it)->getType());
+		param_lengths.push_back((*it)->getLength());
 	}
-#endif
 
 	int rc = 0;
 	IDbInterface* dbi = conn->getDbInterface();
 	if (!dbi)
 		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
 
-		rc = dbi->exec_prepared(stmt_name, params, empty, empty);
+	rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 		setStatus(st, NULL, DBERR_NO_ERROR);
@@ -513,7 +479,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	if (rc != RESULT_SUCCESS)
 		return rc;
 
-	rc = dbi->move_to_first_record();
+	rc = dbi->move_to_first_record(stmt_name);
 
 	spdlog::trace(FMT_FILE_FUNC "move_to_first_record returned: {}", __FILE__, __func__, rc);
 
@@ -542,6 +508,13 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 			return RESULT_FAILED;
 		}
 	}
+	else {	// if a DB driver does not support row count, it still MUST be able to tell us if there is data in a resultset
+		if (!dbi->has_data(ResultSetContextType::CurrentResultSet, nullptr)) {
+			spdlog::error("No data");
+			setStatus(st, dbi, DBERR_NO_DATA);
+			return RESULT_FAILED;
+		}
+	}
 
 	// set result params
 	int datalen = 0;
@@ -550,7 +523,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	char* buffer = (char*)calloc(1, bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(NULL, 0, i, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, stmt_name, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			return RESULT_FAILED;
 		}
@@ -844,7 +817,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	int i = 0;
 	int datalen = 0;
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
-		if (!dbi->get_resultset_value(cursor, 0, i++, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, cursor, 0, i++, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			continue;
 		}
@@ -891,12 +864,13 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	cursor->setOpened(false);
 
-	if (cursor_manager.exists(cname))
-		cursor_manager.remove(cursor);
+	// See issue #98
+	//if (cursor_manager.exists(cname))
+	//	cursor_manager.remove(cursor);
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
 
-		setStatus(st, NULL, DBERR_NO_ERROR);
+	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -927,7 +901,7 @@ LIBGIXSQL_API int GIXSQLPrepareStatement(sqlca_t* st, void* d_connection_id, int
 
 	if (dbi->prepare(stmt_name, statement_src)) {
 		spdlog::error("Cannot prepare statement (2)");
-		setStatus(st, NULL, DBERR_SQL_ERROR);
+		setStatus(st, dbi, DBERR_SQL_ERROR);
 		return RESULT_FAILED;
 	}
 
@@ -972,7 +946,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_MOVE_TO_FIRST_FAILED)
 
-		int nfields = dbi->get_num_fields(nullptr);
+	int nfields = dbi->get_num_fields(nullptr);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
 		setStatus(st, NULL, DBERR_FIELD_COUNT_MISMATCH);
@@ -985,16 +959,24 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
 			spdlog::error("No data");
-			setStatus(st, NULL, DBERR_NO_DATA);
+			setStatus(st, dbi, DBERR_NO_DATA);
 			return RESULT_FAILED;
 		}
 
 		if (dbi->get_num_rows(nullptr) > 1) {
 			spdlog::error("Too much data");
-			setStatus(st, NULL, DBERR_TOO_MUCH_DATA);
+			setStatus(st, dbi, DBERR_TOO_MUCH_DATA);
 			return RESULT_FAILED;
 		}
 	}
+	else {	// if a DB driver does not support row count, it still MUST be able to tell us if there is data in a resultset
+		if (!dbi->has_data(ResultSetContextType::CurrentResultSet, nullptr)) {
+			spdlog::error("No data");
+			setStatus(st, dbi, DBERR_NO_DATA);
+			return RESULT_FAILED;
+		}
+	}
+
 
 	// set result params
 	int datalen = 0;
@@ -1003,7 +985,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	char* buffer = (char*)calloc(1, bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(NULL, 0, i, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, NULL, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			return RESULT_FAILED;
 		}
@@ -1130,7 +1112,6 @@ static void set_sqlerrm(struct sqlca_t* st, const char* m)
 
 static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 {
-
 	sqlca_initialize(st);
 
 	switch (err) {
@@ -1144,103 +1125,127 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 
 	case DBERR_CONNECTION_FAILED:
 		memcpy(st->sqlstate, "08001", 5);
+		set_sqlerrm(st, "Connection failed");
 		break;
 
 	case DBERR_BEGIN_TX_FAILED:
 		memcpy(st->sqlstate, "3B001", 5);
+		set_sqlerrm(st, "Start transaction failed");
 		break;
 
 	case DBERR_END_TX_FAILED:
 		memcpy(st->sqlstate, "2D521", 5);
+		set_sqlerrm(st, "End transaction failed");
 		break;
 
 	case DBERR_CONN_NOT_FOUND:
 		memcpy(st->sqlstate, "08003", 5);
+		set_sqlerrm(st, "Connection ID not found");
 		break;
 
 	case DBERR_CONN_RESET_FAILED:
 		memcpy(st->sqlstate, "08005", 5);
+		set_sqlerrm(st, "Connection reset failed");
 		break;
 
 	case DBERR_EMPTY_QUERY:
 		memcpy(st->sqlstate, "42617", 5);
+		set_sqlerrm(st, "Empty query");
 		break;
 
 	case DBERR_SQL_ERROR:
 		memcpy(st->sqlstate, "42617", 5);
+		set_sqlerrm(st, "SQL error");
 		break;
 
 	case DBERR_TOO_MANY_ARGUMENTS:
 		memcpy(st->sqlstate, "07001", 5);
+		set_sqlerrm(st, "Too many arguments");
 		break;
 
 	case DBERR_TOO_FEW_ARGUMENTS:
 		memcpy(st->sqlstate, "07001", 5);
+		set_sqlerrm(st, "Too few arguments");
 		break;
 
 	case DBERR_NO_PARAMETERS:
 		memcpy(st->sqlstate, "07002", 5);
+		set_sqlerrm(st, "No parameters found");
 		break;
 
 	case DBERR_CURSOR_EXISTS:
 		memcpy(st->sqlstate, "24502", 5);
+		set_sqlerrm(st, "Cursor exists");
 		break;
 
 	case DBERR_NO_SUCH_CURSOR:
 		memcpy(st->sqlstate, "24518", 5);
+		set_sqlerrm(st, "No such cursor");
 		break;
 
 	case DBERR_CLOSE_CURSOR_FAILED:
 		memcpy(st->sqlstate, "42887", 5);
+		set_sqlerrm(st, "Close cursor failed");
 		break;
 
 	case DBERR_DISCONNECT_FAILED:
 		memcpy(st->sqlstate, "08006", 5);
+		set_sqlerrm(st, "Disconnect failed");
 		break;
 
 	case DBERR_OUT_OF_MEMORY:
 		memcpy(st->sqlstate, "58900", 5);
+		set_sqlerrm(st, "Out of memory");
 		break;
 
 	case DBERR_DECLARE_CURSOR_FAILED:
 		memcpy(st->sqlstate, "34001", 5);
+		set_sqlerrm(st, "Declare cursor failed");
 		break;
 
 	case DBERR_OPEN_CURSOR_FAILED:
 		memcpy(st->sqlstate, "245F0", 5);
+		set_sqlerrm(st, "Open cursor failed");
 		break;
 
 	case DBERR_FETCH_ROW_FAILED:
 		memcpy(st->sqlstate, "24591", 5);
+		set_sqlerrm(st, "Fetch row failed");
 		break;
 
 	case DBERR_INVALID_COLUMN_DATA:
 		memcpy(st->sqlstate, "225FF", 5);
+		set_sqlerrm(st, "Invalid column data");
 		break;
 
 	case DBERR_CURSOR_CLOSED:
 		memcpy(st->sqlstate, "24501", 5);
+		set_sqlerrm(st, "Cursor is closed");
 		break;
 
 	case DBERR_MOVE_TO_FIRST_FAILED:
 		memcpy(st->sqlstate, "020F0", 5);
+		set_sqlerrm(st, "Move to first row failed");
 		break;
 
 	case DBERR_FIELD_COUNT_MISMATCH:
-		set_sqlerrm(st, "Field count mismatch");
 		memcpy(st->sqlstate, "42886", 5);
+		set_sqlerrm(st, "Field count mismatch");
 		break;
 
 	case DBERR_NO_DATA:
 		memcpy(st->sqlstate, "02000", 5);
+		set_sqlerrm(st, "No data");
 		break;
 
 	case DBERR_TOO_MUCH_DATA:
 		memcpy(st->sqlstate, "22537", 5);
+		set_sqlerrm(st, "Too much data");
 		break;
 
 	default:
 		memcpy(st->sqlstate, "HV000", 5);
+		set_sqlerrm(st, "General error");
 	}
 
 	if (dbi) {
@@ -1266,23 +1271,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 	else {
 		st->sqlcode = err;
 		char bfr[128];
-		switch (err) {
-		case -100:
-			sprintf(bfr, "%d : %s", err, "CONNFAIL");
-			set_sqlerrm(st, bfr);
-			break;
-
-		case -103:
-			sprintf(bfr, "%d : %s", err, "CONNNOTFOUND");
-			set_sqlerrm(st, bfr);
-			break;
-
-		case -990099:
-			sprintf(bfr, "%d : %s", err, "NOTIMPL");
-			set_sqlerrm(st, bfr);
-			break;
-
-		default:
+		if (st->sqlerrm.sqlerrmc[0] == ' ') {
 			sprintf(bfr, "%d : %s", err, err != 0 ? "Generic GIXSQL error" : "No error");
 			set_sqlerrm(st, bfr);
 		}
@@ -1315,6 +1304,28 @@ static bool get_autocommit(DataSourceInfo* ds)
 	return GIXSQL_AUTOCOMMIT_DEFAULT;
 }
 
+
+static bool get_fixup_params(DataSourceInfo* ds)
+{
+	std::map<std::string, std::string> options = ds->getOptions();
+	if (options.find("fixup_params") != options.end()) {
+		std::string o = options["fixup_params"];
+		return (o == "on" || o == "1") ? GIXSQL_FIXUP_PARAMS_ON : GIXSQL_FIXUP_PARAMS_OFF;
+	}
+
+	char* v = getenv("GIXSQL_FIXUP_PARAMS");
+	if (v) {
+		if (strcmp(v, "1") == 0 || strcasecmp(v, "ON") == 0)
+			return GIXSQL_FIXUP_PARAMS_ON;
+
+		if (strcmp(v, "0") == 0 || strcasecmp(v, "OFF") == 0)
+			return GIXSQL_FIXUP_PARAMS_OFF;
+	}
+
+	return GIXSQL_AUTOCOMMIT_DEFAULT;
+}
+
+
 static std::string get_client_encoding(DataSourceInfo* ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
@@ -1340,7 +1351,7 @@ std::string get_hostref_or_literal(void* data, int l)
 
 	if (l > 0) {
 		std::string s = std::string((char*)data, l);
-		return trim_copy(s);
+		return s;
 	}
 
 	// variable-length fields (negative length)
@@ -1352,7 +1363,7 @@ std::string get_hostref_or_literal(void* data, int l)
 	//...
 
 	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
-	return trim_copy(t);
+	return t;
 }
 
 bool prepare_statement(const std::string& s, std::string& s_out, std::vector<std::string>& params)

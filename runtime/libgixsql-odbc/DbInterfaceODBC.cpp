@@ -105,7 +105,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, int autocommit, std::string encoding)
+int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* opts)
 {
 	char dbms_name[256];
 	std::string host = conn_string->getHost();
@@ -136,7 +136,7 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, int autocommit, std::
 	}
 
 
-	if (!autocommit) {
+	if (!opts->autocommit) {
 		// try to set AUTOCOMMIT OFF
 		last_rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, 0);
 		if (last_rc != SQL_SUCCESS) {
@@ -376,14 +376,13 @@ int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::exec_params(std::string _query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats)
+int DbInterfaceODBC::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
-	return _odbc_exec_params(nullptr, _query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _odbc_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string _query, int nParams, int* paramTypes, std::vector<std::string>& paramValues, int* paramLengths, int* paramFormats)
+int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
-	std::string query = _query;
 	int rc = 0;
 	SQLHANDLE exec_handle = 0;
 	bool add_rowid_param = false;
@@ -519,7 +518,7 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string _query, int nP
 	free(pvals);
 
 	if (!crsr) {
-		std::string q = trim_copy(_query);
+		std::string q = trim_copy(query);
 		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
 			SQLLEN NumRows = 0;
 			int tmp_rc = SQLRowCount(cur_stmt_handle, &NumRows);
@@ -643,6 +642,7 @@ int DbInterfaceODBC::cursor_declare_with_params(ICursor* cursor, char** param_va
 
 int DbInterfaceODBC::cursor_open(ICursor* cursor)
 {
+	std::vector<int> empty;
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: open cursor invoked", __FILE__, __func__);
 
 	std::string query = cursor->getQuery();
@@ -654,7 +654,7 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 	if (cursor->getNumParams() > 0) {
 		std::vector<std::string> params = cursor->getParameterValues();
 		std::vector<int> param_types = cursor->getParameterTypes();
-		rc = _odbc_exec_params(cursor, std::string(query), cursor->getNumParams(), param_types.data(), params, NULL, NULL);
+		rc = _odbc_exec_params(cursor, std::string(query), cursor->getNumParams(), param_types, params, empty, empty);
 	}
 	else {
 		rc = _odbc_exec(cursor, std::string(query));
@@ -703,7 +703,7 @@ int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
 	return res;
 }
 
-bool DbInterfaceODBC::get_resultset_value(ICursor* cursor, int row, int col, char* bfr, int bfrlen, int *value_len)
+bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
 {
 	int rc = 0;
 	SQLLEN reslen;
@@ -711,12 +711,12 @@ bool DbInterfaceODBC::get_resultset_value(ICursor* cursor, int row, int col, cha
 
 	*value_len = 0;
 
-	if (cursor) {
+	if (context) {
 		save_handle = cur_stmt_handle;
-		cur_stmt_handle = cursor->getPrivateData();
+		cur_stmt_handle = ((ICursor *)context)->getPrivateData();
 	}
 
-	if (cursor && dynamic_cursor_emulation) {
+	if (context && dynamic_cursor_emulation) {
 		col += 1;
 	}
 
@@ -727,7 +727,7 @@ bool DbInterfaceODBC::get_resultset_value(ICursor* cursor, int row, int col, cha
 	}
 
 	last_rc = SQLGetData(cur_stmt_handle, col + 1, SQL_C_CHAR, bfr, bfrlen, &reslen);
-	if (cursor) {
+	if (context) {
 		cur_stmt_handle = save_handle;
 	}
 
@@ -741,7 +741,7 @@ bool DbInterfaceODBC::get_resultset_value(ICursor* cursor, int row, int col, cha
 	return bfr;
 }
 
-int DbInterfaceODBC::move_to_first_record()
+int DbInterfaceODBC::move_to_first_record(std::string stmt_name)
 {
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: moving to first row in resultset", __FILE__, __func__);
 
@@ -781,6 +781,11 @@ int DbInterfaceODBC::get_num_rows(ICursor *crsr)
 	lib_logger->debug(FMT_FILE_FUNC  "ODBC: row count: {}", __FILE__, __func__, (int)NumRows);
 
 	return (int)NumRows;
+}
+
+int DbInterfaceODBC::has_data(ResultSetContextType resultset_context_type, void* context)
+{
+	return 0;
 }
 
 int DbInterfaceODBC::get_num_fields(ICursor* crsr)

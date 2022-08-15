@@ -445,19 +445,13 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 
 	std::string var_name = $2;
 
-#if 0
-	uint64_t type_info = $4;
-	uint64_t length = type_info & 0xffffffffffff;	// 48 bits
-	uint32_t precision = (length >> 16);
-	uint16_t scale = (length & 0xffff);
-	int sql_type = (type_info >> 60);
-#else
 	uint64_t type_info = $4;
 	uint32_t sql_type, precision;
 	uint16_t scale;
 	uint8_t flags;
 	decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
-#endif
+
+	// We do NOT set FLAG_EMIT_VAR
 
 	if (driver.field_map.find(var_name) == driver.field_map.end()) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
@@ -466,9 +460,14 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 	}
 	else {
 		x = driver.field_map[var_name];
+		if (IS_VARLEN(sql_type) && !IS_BINARY(sql_type)) {
+			type_info = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_PICX_AS_VARCHAR);
+		}
+
 		x->sql_type = type_info;
 
-		x->is_varlen = IS_VARLEN(sql_type);
+		// We do not emit a variable, so varlen is always false
+		x->is_varlen = false;
 		x->usage = IS_BINARY(sql_type) ? Usage::Binary : Usage::None;
 
 		x->pictype = -1;	// Preprocessor will build the correct PIC
@@ -840,21 +839,14 @@ NUMERIC WORD opt_sql_type_def {
 
 		if ($3 != 0) {
 
-#if 0
-			uint64_t type_info = $3;
-			uint64_t length = type_info & 0xffffffffffff;	// 48 bits
-			uint32_t precision = (length >> 16);
-			uint16_t scale = (length & 0xffff);
-			int sql_type = (type_info >> 60);
-#else
 			uint64_t type_info = $3;
 			uint32_t sql_type, precision;
 			uint16_t scale;
 			uint8_t flags;
 			decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
-#endif
 
-			x->sql_type = type_info;
+			x->sql_type = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_EMIT_VAR);
+
 			x->is_varlen = IS_VARLEN(sql_type);
 			x->usage = IS_BINARY(sql_type) ? Usage::Binary : Usage::None;
 
@@ -935,12 +927,7 @@ varying_clause:
 VARYING {
 	auto x = driver.current_field;
 	
-#if 0
-	uint64_t type_info = (TYPE_SQL_VARCHAR << 60);
-	type_info |= (((uint64_t)x->picnsize << 16));
-#else
-	uint64_t type_info = encode_sql_type_info(TYPE_SQL_VARCHAR, (uint32_t)x->picnsize, 0, 0);
-#endif
+	uint64_t type_info = encode_sql_type_info(TYPE_SQL_VARCHAR, (uint32_t)x->picnsize, 0, FLAG_EMIT_VAR);
 
 	x->sql_type = type_info;
 	x->is_varlen = true;

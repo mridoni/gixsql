@@ -73,26 +73,11 @@
                      IDENTIFIED BY :DBPWD
                      AT            :DBS
                      USING         :DATASRC
-           END-EXEC.
-
-           MOVE 'START TRANSACTION' TO CUR-STEP.
-           EXEC SQL AT :DBS
-              START TRANSACTION
-           END-EXEC.        
+           END-EXEC.  
 
            EXEC SQL AT :DBS
                DECLARE VM4 CURSOR FOR 
                     SELECT MAX(VAR) + MIN(VAR) FROM TAB00
-           END-EXEC.
-           
-           MOVE 'DROP TABLE' TO CUR-STEP.
-           EXEC SQL AT :DBS
-                DROP TABLE IF EXISTS TAB00
-           END-EXEC.
-
-           MOVE 'CREATE TABLE' TO CUR-STEP.
-           EXEC SQL AT :DBS
-                CREATE TABLE TAB00 (VAR INT)
            END-EXEC.
 
            MOVE 1 TO IDX
@@ -194,12 +179,7 @@
                CLOSE VM4 
            END-EXEC.
 
-      * DONE
-
-           MOVE 'COMMIT' TO CUR-STEP.
-           EXEC SQL AT :DBS
-              COMMIT
-           END-EXEC.        
+      * DONE   
 
            MOVE 'DISCONNECT' TO CUR-STEP.
            EXEC SQL

@@ -161,23 +161,9 @@ std::vector<std::string> Cursor::getParameterValues()
 
 	createRealDataforParameters();	// Just in case
 
-#ifndef MAGIC_SPACES
 	for (int i = 0; i < parameter_list.size(); i++) {
 		params.push_back(std::string(parameter_list.at(i)->getRealData()));
 	}
-#else
-		for (int i = 0; i < parameter_list.size(); i++) {
-			SqlVar* v = parameter_list.at(i);
-			if (v->isVarLen() && !v->isBinary()) {
-				std::string s = v->getRealData();
-				rtrim(s);
-				params.push_back(s);
-			}
-			else {
-				params.push_back(v->getRealData());
-			}
-		}
-#endif
 
 	return params;
 }
@@ -190,6 +176,16 @@ std::vector<int> Cursor::getParameterTypes()
 		param_types.push_back(parameter_list.at(i)->getType());
 	}
 	return param_types;
+}
+
+std::vector<int> Cursor::getParameterLengths()
+{
+	std::vector<int> param_lengths;
+
+	for (int i = 0; i < parameter_list.size(); i++) {
+		param_lengths.push_back(parameter_list.at(i)->getLength());
+	}
+	return param_lengths;
 }
 
 void* Cursor::getPrivateData()
@@ -219,3 +215,4 @@ std::string Cursor::getConnectionNameFromReference()
 	std::string s = std::string((char*)connref_data, connref_datalen);
 	return trim_copy(s);
 }
+

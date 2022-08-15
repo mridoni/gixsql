@@ -1,7 +1,7 @@
 
 ## GixSQL
 
-GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access ODBC, MySQL and PostgreSQL databases.
+GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access PostgreSQL, ODBC, MySQL, Oracle and SQLite databases.
 
 _**For updated news and current developments [look here](https://mridoni.github.io/) on my development blog.**_
 
@@ -232,11 +232,13 @@ Notes:
 
 Starting from version 1.0.16 GixSQL supports an improved logging engine, based on [spdlog](https://github.com/gabime/spdlog). Logging options can be controlled by using two environment variables:
 
-- **GIXSQL_DEBUG_LOG_LEVEL**  
-Sets the debug level. It can be `off` (default), `critical`, `error`, `warn`, `info`, `debug` or `trace`. Be aware that the `trace` option: 1) exposes a lot of internal information, including possibly sensitive data. 2) causes a slowdown of about 30%.
+- **GIXSQL_LOG_LEVEL**  
+Sets the debug level. It can be `off`, `critical`, `error` (default), `warn`, `info`, `debug` or `trace`. Be aware that the `trace` option: 1) exposes a lot of internal information, including possibly sensitive data. 2) causes a slowdown of about 30%.
 
-- **GIXSQL_DEBUG_LOG_FILE**  
+- **GIXSQL_LOG_FILE**  
 Specifies the file where the debug output (if any) is written. Defaults to "gixsql.log"
+
+*Pre-v1.0.18* the two environment variables were named `GIXSQL_DEBUG_LOG_LEVEL` and `GIXSQL_DEBUG_LOG_FILE`. The default log level was `off`.
 
 *Pre -v1.0.16*: you can use the environment variables `GIXSQL_DEBUG_LOG-ON=1` (which defaults to 0=OFF) and `GIXSQL_DEBUG_LOG` (defaults to "gixsql.log" in your temp directory). This mechanism has been removed in v1.0.16+
 
@@ -251,8 +253,8 @@ If you want to manually precompile COBOL programs for ESQL, you can use the prep
 
 ```text
 gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
-Version: 1.0.17
-libgixpp version: 1.0.17
+Version: 1.0.18
+libgixpp version: 1.0.18
 
 Options:
   -h, --help                  displays help on commandline options
@@ -274,7 +276,8 @@ Options:
   -m, --map                   emit map file
   -C, --cobol85               emit COBOL85-compliant code
   -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
-  -L, --smart-cursor-init     use smart cursor initialization
+  -L, --no-smart-cursor-init  disable smart cursor initialization
+  -P, --picx-as arg (=char)   text field options (=char|charf|varchar)
 ```	  
 
 When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gix/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
@@ -306,7 +309,14 @@ where:
 - -ext ".,.cpy,.CPY" : look for COPY files having one of these extensions (comma-separated list)
 - -i and -o : input and output file paths
 
- 
+Another interesting option is `--picx-as`: this indicates how standard `PIC(X)` fields should be treated when sent to the DBMS. There are three possible options:
+
+- `char`: treat `PIC(X)` fields as standard `CHAR` fields (preserving trailing spaces)
+- `charf`: (synonimous for `char`)
+- `varchar`: treat `PIC(X)` fields as `VARCHAR` fields (remove trailing spaces)
+
+*Please note that this does NOT affect variable-length groups, whose data part (by default the sub-field having an `-ARR` suffix) is always output with the length specified in the corresponding length indicator field.*
+
 If all goes well, you can compile the preprocessed file `TEST001.cbsql`:
 
 
@@ -399,7 +409,11 @@ You will need the development packages for the DBMS client libraries, e.g.:
 
 *(it is still possibile to use libmysqlclient-dev, should you prefer it).*
 
-You will also need a modern enough version of bison (3.7+). If you do not already have it installed and you are using Ubuntu 20.04, you can download it from Debian's repositories and install it over the current one:
+Starting from v1.0.16 you will also need the development packages for spdlog and fmt, if not already installed:
+
+	apt install ibspdlog-dev libfmt-dev
+
+You will also need a modern enough version of bison (3.7+). If you do not already have it installed and you are using Ubuntu 20.04, you can download it from Debian's repositories and install it over the current one (or you can download and compile it from [here](https://www.gnu.org/software/bison/).
 
 	wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
 
@@ -450,3 +464,41 @@ When you create a project in Gix-IDE, you are asked whether you want to enable i
 When you run your code from the IDE, the path for the runtime libraries needed for the DBMS you chose are automatically added to your PATH. Obviously, when you are running outside the IDE, you will have to do this manually: the runtime libraries and their dependencies reside in `{gix-install-dir}\lib\{platform}\{architecture}` (**platform** can be either x64 or x86, **architecture** can either be msvc or gcc, depending on the compiler type you are using).
 
 At the moment  Gix-IDE always uses its embedded version of GixSQL. In the future this will be extended to allow for other preprocessors.
+
+### GixSQL-specific error codes
+
+When an error occurs, in the runtime libraries or in the DBMS, GixSQL does its best to return standard-compliant  `SQLSTATE` and `SQLCODE` error codes and messages. There are a few instances where an operation fails due to "internal" issues (logic errors, consistency checks, unsupported features, possible driver bugs, etc.). In these case GixSQL will use a custom error code and message for `SQLCODE` and `SQLERRM`. The table below details the internal error codes that are currently use and a brief explanation for each of them (error messages in `SQLERRM` are slightly different due to space limitation in the field).
+
+When one of these errors occur and there isn't a self-evident explanation (e.g. your program did not properly initialize a data field used for a prepared statement) you can use the logging system (see above) to try and diagnose the problem.
+
+
+| ID                          | Number | Description                                                 |
+|-----------------------------|--------|-------------------------------------------------------------|
+| DBERR_NO_ERROR              | 0      | No error occurred                                           |
+| DBERR_CONNECTION_FAILED     | -100   | Connection to the database has failed                       |
+| DBERR_BEGIN_TX_FAILED       | -101   | A transaction could not be started                          |
+| DBERR_END_TX_FAILED         | -102   | A transaction could not be ended                            |
+| DBERR_CONN_NOT_FOUND        | -103   | Connection ID not found                                     |
+| DBERR_CONN_RESET_FAILED     | -104   | Connection close failed                                     |
+| DBERR_EMPTY_QUERY           | -105   | Empty query                                                 |
+| DBERR_SQL_ERROR             | -106   | Generic SQL/driver error                                    |
+| DBERR_TOO_MANY_ARGUMENTS    | -107   | Too many arguments for a given function                     |
+| DBERR_TOO_FEW_ARGUMENTS     | -108   | Too few arguments for a given function                      |
+| DBERR_NO_PARAMETERS         | -109   | Parameters were expected but not supplied                   |
+| DBERR_CURSOR_EXISTS         | -110   | The cursor already exists                                   |
+| DBERR_NO_SUCH_CURSOR        | -111   | There is no such cursor                                     |
+| DBERR_CLOSE_CURSOR_FAILED   | -112   | Cursor could not be closed                                  |
+| DBERR_DISCONNECT_FAILED     | -113   | Could not disconnect from the DB                            |
+| DBERR_OUT_OF_MEMORY         | -114   | Out of memory                                               |
+| DBERR_DECLARE_CURSOR_FAILED | -115   | Cursor declaration failed                                   |
+| DBERR_OPEN_CURSOR_FAILED    | -116   | Cursor could not be opened                                  |
+| DBERR_FETCH_ROW_FAILED      | -117   | Could not fetch a row from the cursor                       |
+| DBERR_INVALID_COLUMN_DATA   | -118   | Column data is not valid                                    |
+| DBERR_CURSOR_CLOSED         | -119   | Cursor is closed                                            |
+| DBERR_MOVE_TO_FIRST_FAILED  | -120   | Cannot move to first row in a resultset                     |
+| DBERR_FIELD_COUNT_MISMATCH  | -121   | Result field count does not match with the one in the query |
+| DBERR_NO_DATA               | -122   | No data rows when data rows were expected                   |
+| DBERR_TOO_MUCH_DATA         | -123   | Received more data rows than expected                       |
+| DBERR_PREPARE_FAILED        | -124   | Prepare statement failed                                    |
+| DBERR_CONN_INIT_ERROR       | -201   | Connection initialization error                             |
+| DBERR_CONN_INVALID_DBTYPE   | -202   | Invalid DB type                                             |

@@ -49,7 +49,7 @@ gix_esql_driver::gix_esql_driver ()
 {
 	lexer.setDriver(this);
 	
-	opt_use_anonymous_params = false;
+	opt_params_style = ESQL_ParameterStyle::DollarPrefix;
 	opt_preprocess_copy_files = false;	// if true, copybooks outside EXEC SQL INCLUDE... are preprocessed
 	has_esql_in_cbl_copybooks = false;
 
@@ -222,10 +222,16 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 
 	int hostno = cb_search_list(text);
 
-	if (!opt_use_anonymous_params)
-		return "$" + std::to_string(hostno);
-	else
-		return "?";
+	switch (opt_params_style) {
+		case ESQL_ParameterStyle::DollarPrefix:
+			return "$" + std::to_string(hostno);
+
+		case ESQL_ParameterStyle::ColonPrefix:
+			return ":" + std::to_string(hostno);
+
+		case ESQL_ParameterStyle::Anonymous:
+			return "?";
+	}
 }
 
 std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
@@ -257,11 +263,16 @@ std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference
 	p->lineno = hostlineno;
 
 	list->push_back(p);
-
-	if (!opt_use_anonymous_params)
+	switch (opt_params_style) {
+	case ESQL_ParameterStyle::DollarPrefix:
 		return "$" + std::to_string(hostno);
-	else
+
+	case ESQL_ParameterStyle::ColonPrefix:
+		return ":" + std::to_string(hostno);
+
+	case ESQL_ParameterStyle::Anonymous:
 		return "?";
+	}
 }
 
 
@@ -277,7 +288,7 @@ void gix_esql_driver::cb_res_host_list_add(std::vector<cb_res_hostreference_ptr>
 int
 gix_esql_driver::cb_search_list(std::string text)
 {
-	if (!opt_use_anonymous_params) {
+	if (opt_params_style != ESQL_ParameterStyle::Anonymous) {
 		for (auto it = host_reference_list->begin(); it != host_reference_list->end(); ++it) {
 			if ((*it)->hostreference == text)
 				return (*it)->hostno;
