@@ -43,7 +43,10 @@ typedef unsigned char byte;
 #include "IDbInterface.h"
 #include "IDbManagerInterface.h"
 #include "IDataSourceInfo.h"
+#include "IConnectionOptions.h"
 #include "ISchemaManager.h"
+
+struct IConnectionOptions;
 
 class DbInterfaceODBC : public IDbInterface, public IDbManagerInterface
 {
@@ -52,23 +55,24 @@ public:
 	~DbInterfaceODBC();
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
-	virtual int connect(IDataSourceInfo *, int, std::string) override;
+	virtual int connect(IDataSourceInfo *, IConnectionOptions* opts) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
 	virtual int begin_transaction() override;
 	virtual int end_transaction(std::string) override;
 	virtual int exec(std::string) override;
-	virtual int exec_params(std::string query, int nParams, int *paramTypes, std::vector<std::string> &paramValues, int *paramLengths, int *paramFormats) override;
+	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
 	virtual int close_cursor(ICursor *) override;
 	virtual int cursor_declare(ICursor *, bool, int) override;
 	virtual int cursor_declare_with_params(ICursor *, char **, bool, int) override;
 	virtual int cursor_open(ICursor *) override;
 	virtual int fetch_one(ICursor *, int) override;
-	virtual bool get_resultset_value(ICursor*, int, int, char* bfr, int bfrlen, int *value_len) override;
-	virtual int move_to_first_record() override;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len) override;
+	virtual int move_to_first_record(std::string stmt_name = "") override;
 	virtual int supports_num_rows() override;
-	virtual int get_num_rows() override;
-	virtual int get_num_fields() override;
+	virtual int get_num_rows(ICursor* crsr) override;
+	virtual int has_data(ResultSetContextType resultset_context_type, void* context) override;
+	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;
@@ -106,7 +110,7 @@ private:
 
 	std::map<std::string, ICursor *> _declared_cursors;
 
-	int _odbc_exec_params(ICursor *, const std::string, int, int*, std::vector<std::string>&, int*, int*);
+	int _odbc_exec_params(ICursor *, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
 	int _odbc_exec(ICursor*, const std::string);
 };
 

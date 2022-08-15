@@ -22,32 +22,19 @@
 
 #include <stdint.h>
 
-#define COBOL_TYPE_UNSIGNED_NUMBER		1         
-#define COBOL_TYPE_SIGNED_NUMBER_TC		3        // (trailing combined)
-#define COBOL_TYPE_SIGNED_NUMBER_LS		4        // (leading separate)
-#define COBOL_TYPE_UNSIGNED_NUMBER_PD	8
-#define COBOL_TYPE_SIGNED_NUMBER_PD		9     
-#define COBOL_TYPE_ALPHANUMERIC			16
-#define COBOL_TYPE_JAPANESE				24
-#define COBOL_TYPE_MIN					0 
-#define COBOL_TYPE_MAX					29 
-
-#define COBOL_TYPE_UNSIGNED_BINARY		22
-#define COBOL_TYPE_SIGNED_BINARY		23
-
 // These must be in sync with the ones in TPESQLProcessing.cpp
-#ifdef USE_VARLEN_32
-#define VARLEN_LENGTH_PIC		"9(8) COMP-5"
-#define VARLEN_PIC_SZ			9
-#define VARLEN_LENGTH_SZ		4
-#define VARLEN_LENGTH_T			uint32_t
-#define VARLEN_BSWAP			COB_BSWAP_32
-#else
+#ifdef USE_VARLEN_16
 #define VARLEN_LENGTH_PIC		"9(4) COMP-5"
 #define VARLEN_PIC_SZ			4
 #define VARLEN_LENGTH_SZ		2
 #define VARLEN_LENGTH_T			uint16_t
 #define VARLEN_BSWAP			COB_BSWAP_16
+#else
+#define VARLEN_LENGTH_PIC		"9(8) COMP-5"
+#define VARLEN_PIC_SZ			9
+#define VARLEN_LENGTH_SZ		4
+#define VARLEN_LENGTH_T			uint32_t
+#define VARLEN_BSWAP			COB_BSWAP_32
 #endif
 
 class SqlVar
@@ -67,6 +54,9 @@ public:
 	int getType();
 	int getLength();
 
+	bool isVarLen();
+	bool isBinary();
+
 	void createCobolData(char *retstr, int datalen);
 
 	void createCobolDataLowValue();
@@ -80,11 +70,14 @@ private:
 	char *realdata = nullptr; // realdata
 	unsigned int realdata_len = 0; // length of realdata (actual length of allocated buffer is always realdata_len + 1)
 
-	// Variable length (level 49) support
+	// Variable length support
 	bool is_variable_length = false;
 	
 	// Binary/VarBinary support
 	bool is_binary = false;
+
+	// auto-trim for CHAR(x) fields (i.e. gixpp with --picx-as=varchar)
+	bool is_autrotrim = false;
 
     static const char _decimal_point;
 

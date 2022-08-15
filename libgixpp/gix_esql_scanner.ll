@@ -226,6 +226,10 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_USING(loc);
 	}
 
+	"INTO" {
+		return yy::gix_esql_parser::make_INTO(yytext, loc);
+	}
+
 	"END-EXEC"[ \r\n]*"." {
 		flag_insqlstring = 0;
 		flag_selectcommand = 0;
@@ -364,13 +368,8 @@ LOW_VALUE "LOW\-VALUE"
      
 	"DISCONNECT" {
 		__yy_push_state(ESQL_STATE);
-		flag_insqlstring = 1;
-
-		driver.commandname = yytext;
-					
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
-		
+		//flag_insqlstring = 1;
+		driver.commandname = yytext;		
 		return yy::gix_esql_parser::make_DISCONNECT(yytext, loc);
 	}
 
@@ -616,14 +615,26 @@ LOW_VALUE "LOW\-VALUE"
 
 	"IDENTIFIED"[ \r\n]+"BY" { return yy::gix_esql_parser::make_IDENTIFIED_BY(loc); }
 
-	"END-EXEC" {
+	"END-EXEC"[ \r\n]*"." {
 		flag_insqlstring = 0;
 		flag_selectcommand = 0;
 		driver.endlineno = yylineno;
+		driver.period = 1;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
+
+	"END-EXEC" {
+		flag_insqlstring = 0;
+		flag_selectcommand = 0;
+		driver.endlineno = yylineno;
+		driver.period = 0;
+		__yy_pop_state();	// Not an error, we pop twice
+		__yy_pop_state();
+		return yy::gix_esql_parser::make_END_EXEC(loc);
+	}
+
 	
 	{HOSTWORD} { 
 		return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
@@ -743,6 +754,13 @@ LOW_VALUE "LOW\-VALUE"
 			return yy::gix_esql_parser::make_INTO(yytext, loc);
 	} 
 
+	"ALL" {
+			if(flag_insqlstring && !flag_selectcommand){
+				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			}
+			return yy::gix_esql_parser::make_ALL(loc);
+	} 
+
 	"WHERE CURRENT OF" {
 		return yy::gix_esql_parser::make_WHERE_CURRENT_OF(loc);
 	}
@@ -856,6 +874,7 @@ LOW_VALUE "LOW\-VALUE"
 	"END-EXEC"[ \r\n]*"." {
 		driver.period = 1;
 		driver.endlineno = yylineno;
+		flag_insqlstring = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -863,6 +882,7 @@ LOW_VALUE "LOW\-VALUE"
 	
 	"END-EXEC" {
 		driver.endlineno = yylineno;
+		flag_insqlstring = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -1119,6 +1139,7 @@ LOW_VALUE "LOW\-VALUE"
 
 	"END-EXEC" {
 			driver.endlineno = yylineno;
+			flag_insqlstring = 0;
 			__yy_pop_state();
 			return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
@@ -1126,6 +1147,7 @@ LOW_VALUE "LOW\-VALUE"
 	"END-EXEC"[ \r\n]*"." {
 			driver.period = 1;
 			driver.endlineno = yylineno;
+			flag_insqlstring = 0;
 			__yy_pop_state();
 
 			return yy::gix_esql_parser::make_END_EXEC(loc);

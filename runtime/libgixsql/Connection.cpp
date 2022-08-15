@@ -31,8 +31,9 @@ Connection::Connection()
 
 Connection::~Connection()
 {
-	if (dbi != NULL)
+	if (dbi != NULL) {
 		DbInterfaceFactory::removeInterface(dbi);
+	}
 
 	if (conninfo && !ext_conninfo)
 		delete (conninfo);
@@ -53,6 +54,21 @@ void Connection::setName(std::string name)
 	this->name = name;
 }
 
+std::string Connection::getName()
+{
+	return name;
+}
+
+IConnectionOptions* Connection::getConnectionOptions() const
+{
+	return (IConnectionOptions *)&options;
+}
+
+void Connection::setConnectionOptions(IConnectionOptions *p)
+{
+	options = *p;
+}
+
 void Connection::setConnectionInfo(IDataSourceInfo *conn_string)
 {
 	conninfo = conn_string;
@@ -60,30 +76,10 @@ void Connection::setConnectionInfo(IDataSourceInfo *conn_string)
 		ext_conninfo = true;
 }
 
-void Connection::setAutoCommit(bool ac)
-{
-	autocommit = ac;
-}
-
 void Connection::setOpened(bool i)
 {
 	is_opened = i;
 }
-
-void Connection::setEncoding(std::string enc)
-{
-	encoding = enc;
-}
-
-//
-//bool Connection::getPreparedStatementData(std::string stmt_name, std::tuple<std::vector<std::string>, void *> &t)
-//{
-//	if (prepared_stmts.find(stmt_name) == prepared_stmts.end())
-//		return false;
-//
-//	t = prepared_stmts[stmt_name];
-//	return true;
-//}
 
 void Connection::setDbInterface(IDbInterface *_dbi)
 {
@@ -100,17 +96,7 @@ IDataSourceInfo *Connection::getConnectionInfo()
 	return conninfo;
 }
 
-std::string Connection::getEncoding()
-{
-	return encoding;
-}
-
 IDbInterface * Connection::getDbInterface()
 {
 	return dbi;
-}
-
-bool Connection::getAutoCommit()
-{
-	return autocommit;
 }

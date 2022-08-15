@@ -40,12 +40,14 @@ public:
 	virtual void setConnectionName(std::string) = 0;
 	virtual void setName(std::string) = 0;
 	virtual void setQuery(std::string) = 0;
+	virtual void setQuerySource(void *, int) = 0;
 	virtual void setNumParams(int) = 0;
 
 	virtual IConnection *getConnection() = 0;
 	virtual std::string getConnectionName() = 0;
 	virtual std::string getName() = 0;
 	virtual std::string getQuery() = 0;
+	virtual void getQuerySource(void**, int*) = 0;
 	virtual int getNumParams() = 0;
 	virtual bool isWithHold() = 0;
 	virtual bool isOpen() = 0;
@@ -53,6 +55,7 @@ public:
 
 	virtual std::vector<std::string> getParameterValues() = 0;
 	virtual std::vector<int> getParameterTypes() = 0;
+	virtual std::vector<int> getParameterLengths() = 0;
 
 	virtual void *getPrivateData() = 0;
 	virtual void setPrivateData(void *) = 0;

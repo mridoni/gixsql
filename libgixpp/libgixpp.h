@@ -1,3 +1,8 @@
 #pragma once
 
-#define LIBGIXPP_VER "1.0.16"
+#include "config.h"
+
+#define Q(x) #x
+#define QUOTE(x) Q(x)
+
+#define LIBGIXPP_VER VERSION

@@ -35,8 +35,7 @@
 #include "IConnection.h"
 #include "IDbInterface.h"
 #include "IDataSourceInfo.h"
-
-
+#include "IConnectionOptions.h"
 
 class DbInterface;
 
@@ -59,26 +58,22 @@ public:
 	int getId() override;
 	bool isOpen() override;
 	void setName(std::string) override;
-
-	bool getAutoCommit() override;
-	void setAutoCommit(bool) override;
 	
 	void setOpened(bool) override;
 	
-	std::string getEncoding() override;
-	void setEncoding(std::string) override;
+	std::string getName();
+
+	IConnectionOptions* getConnectionOptions() const override;
+	void setConnectionOptions(IConnectionOptions*) override;
 
 private:
 
 	int id;
 	std::string name;
-	IDataSourceInfo *conninfo;
-	bool autocommit;
-	bool is_opened; //open flag
-	std::string encoding;
-
+	IDataSourceInfo *conninfo = nullptr;
+	bool is_opened = false;
 	bool ext_conninfo;
-
-	IDbInterface *dbi;
+	IConnectionOptions options;
+	IDbInterface *dbi = nullptr;
 };
 

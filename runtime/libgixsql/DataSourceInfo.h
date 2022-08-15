@@ -40,7 +40,7 @@ public:
 	LIBGIXSQL_API ~DataSourceInfo();
 	LIBGIXSQL_API std::string get() override;
 
-	int init(const std::string &data_source, const std::string &username, const std::string &password) override;
+	int init(const std::string& data_source, const std::string& dbname, const std::string &username, const std::string &password) override;
 
 	void retrieve_driver_options(const std::string& data_source);
 

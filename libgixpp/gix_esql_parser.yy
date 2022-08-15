@@ -82,22 +82,22 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 */
 %token PERIOD
 %token<std::string> SELECT
-%token<std::string> SELECTFROM
+%token<std::string> SELECTFROM	"SELECT FROM"
 %token<std::string> TOKEN
-%token<std::string> HOSTTOKEN
+%token<std::string> HOSTTOKEN	"host-variable"
 %token<std::string> WORD
 %token<std::string> PICTURE
 %token<std::string> INSERT
 %token<std::string> UPDATE
 %token<std::string> DISCONNECT
-%token CONNECT_RESET
+%token CONNECT_RESET		"CONNECT RESET"
 %token<std::string> DELETE
 %token<std::string> EXECUTE
 %token<std::string> OTHERFUNC
 %token<std::string> INTO
 %token<long> NUMERIC
-%token END_EXEC
-%token EXECSQL
+%token END_EXEC			"END-EXEC"
+%token EXECSQL			"EXEC SQL"
 %token INCLUDE
 %token FROM
 %token IMMEDIATE
@@ -106,24 +106,24 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token FOR
 %token COMMA
 %token STATEMENT
-%token WORKINGBEGIN
-%token WORKINGEND
+%token WORKINGBEGIN		"Begin of WORKING-STORAGE SECTION"
+%token WORKINGEND		"End of WORLING-STORAGE SECTION"
 %token LINKAGEBEGIN
 %token LINKAGEEND
-%token LOCALSTORAGEBEGIN
-%token LOCALSTORAGEEND
+%token LOCALSTORAGEBEGIN	"Begin of LOCAL-STORAGE SECTION"
+%token LOCALSTORAGEEND		"End of LOCAL-STORAGE SECTION"
 %token FD
-%token FILEBEGIN
-%token FILEEND
-%token PROCEDURE_DIVISION
+%token FILEBEGIN		"Begin of FILE SECTION"
+%token FILEEND			"End of FILE SECTION"
+%token PROCEDURE_DIVISION	"PROCEDURE DIVISION"
 %token HOSTVARIANTBEGIN
 %token HOSTVARIANTEND
-%token INCLUDE_FILE
-%token INCLUDE_SQLCA
+%token INCLUDE_FILE		"INCLUDE file"
+%token INCLUDE_SQLCA		"INCLUDE SQLCA"
 %token SQLCA
-%token IDENTIFIED_BY
-%token COMMIT_WORK
-%token ROLLBACK_WORK
+%token IDENTIFIED_BY		"IDENTIFIED BY"
+%token COMMIT_WORK		"COMMIT"
+%token ROLLBACK_WORK		"ROLLBACK"
 %token SAVEPOINT
 %token CONNECT
 %token TO
@@ -132,23 +132,23 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token IS
 %token VARYING
 %token IGNORE
-%token DECLARE_VAR
+%token DECLARE_VAR		"EXEC SQL VAR"
 %token USING
 %token OPEN
 %token CLOSE
 %token FETCH
 %token WHENEVER
-%token NOT_FOUND
+%token NOT_FOUND		"NOT FOUND"
 %token SQLERROR
 %token SQLWARNING
 %token CONTINUE
 %token PERFORM
 %token GOTO
 %token TRAILING
-%token COMP_1
-%token COMP_2
-%token COMP_3
-%token COMP_5
+%token COMP_1			"COMP-1"
+%token COMP_2			"COMP-2"
+%token COMP_3			"COMP-3"
+%token COMP_5			"COMP-5"
 %token COMP
 %token<uint64_t> CHAR
 %token<uint64_t> VARCHAR
@@ -161,14 +161,14 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token SIGN
 %token LEADING
 %token SEPARATE
-%token SQL_TYPE_IS
+%token SQL_TYPE_IS		"SQL TYPE IS"
 %token ARE
 %token VALUE
 %token ALL
 %token OCCURS
 %token UNBOUNDED
-%token DEPENDING_ON
-%token ASCENDING_KEY_IS
+%token DEPENDING_ON		"DEPENDING ON"
+%token ASCENDING_KEY_IS		"ASCENDING KEY IS"
 %token INDEXED_BY
 %token EXTERNAL
 %token TIMES
@@ -177,12 +177,13 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token TABLE
 %token COPY
 %token COPY_FILE
-%token<int> WITH_HOLD
-%token WHERE_CURRENT_OF
+%token<int> WITH_HOLD		"WITH HOLD"
+%token WHERE_CURRENT_OF		"WHERE CURRENT OF"
 %token PREPARE
 
 %type <std::vector<std::string> *> token_list declaresql includesql incfile opt_othersql_tokens
-%type <std::vector<std::string> *> opensql selectintosql select insertsql insert updatesql cursor_declaration
+%type <std::vector<std::string> *> opensql selectintosql select insertsql insert updatesql 
+%type <std::vector<std::string> *> cursor_declaration cursor_declaration_from_select cursor_declaration_from_prepared_stmt
 %type <std::vector<std::string> *> update deletesql delete disconnect disconnectsql othersql executesql ignoresql
 %type <std::string> host_reference expr othersql_token
 
@@ -195,7 +196,7 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %type <int> whenever_clause
 %type <std::string> whenever_action
 
-%nonassoc error
+// %nonassoc error
 
 // No %destructors are needed, since memory will be reclaimed by the
 // regular destructors.
@@ -255,9 +256,13 @@ UPDATE {$$ = driver.cb_text_list_add (NULL, $1);}
 
 
 disconnectsql:
-EXECSQL disconnect opt_dbid END_EXEC
+EXECSQL disconnect ALL END_EXEC
 {
-	//$$ = driver.cb_concat_text_list ($2, $3);
+	driver.connectionid = new hostref_or_literal_t("*", true);;
+	driver.put_exec_list();
+}
+| EXECSQL disconnect opt_dbid END_EXEC
+{
 	driver.connectionid = $3;
 	driver.put_exec_list();
 }
@@ -439,12 +444,14 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 	cb_field_ptr x;
 
 	std::string var_name = $2;
-	uint64_t type_info = $4;
 
-	uint64_t length = type_info & 0xffffffffffff;	// 48 bits
-	uint32_t precision = (length >> 16);
-	uint16_t scale = (length & 0xffff);
-	int sql_type = (type_info >> 60);
+	uint64_t type_info = $4;
+	uint32_t sql_type, precision;
+	uint16_t scale;
+	uint8_t flags;
+	decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+
+	// We do NOT set FLAG_EMIT_VAR
 
 	if (driver.field_map.find(var_name) == driver.field_map.end()) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
@@ -453,9 +460,14 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 	}
 	else {
 		x = driver.field_map[var_name];
+		if (IS_VARLEN(sql_type) && !IS_BINARY(sql_type)) {
+			type_info = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_PICX_AS_VARCHAR);
+		}
+
 		x->sql_type = type_info;
 
-		x->is_varlen = IS_VARLEN(sql_type);
+		// We do not emit a variable, so varlen is always false
+		x->is_varlen = false;
 		x->usage = IS_BINARY(sql_type) ? Usage::Binary : Usage::None;
 
 		x->pictype = -1;	// Preprocessor will build the correct PIC
@@ -585,21 +597,21 @@ execsql_with_opt_at error END_EXEC
 };
 
 declaresql:
-execsql_with_opt_at DECLARE sql_declaration END_EXEC {
+execsql_with_opt_at DECLARE sql_declaration {
 	//driver.put_exec_list();
 }
 ;
 
 sql_declaration:
-  TOKEN statement_declaration	{ driver.declared_statements.push_back($1); }
-| TOKEN cursor_declaration		{ 
+  TOKEN statement_declaration END_EXEC	{ driver.declared_statements.push_back($1); }
+| TOKEN cursor_declaration END_EXEC	{ 
 	driver.cb_set_cursorname($1); 
 	if (!driver.procedure_division_started)
  		driver.put_startup_exec_list(); 
 	else
 		driver.put_exec_list();	
 }
-| TOKEN table_declaration		{ }
+| TOKEN table_declaration END_EXEC		{ }
 ;
 
 statement_declaration:
@@ -609,7 +621,23 @@ STATEMENT {
 ;
 
 cursor_declaration:
+cursor_declaration_from_select
+| cursor_declaration_from_prepared_stmt
+;
+
+cursor_declaration_from_select:
 CURSOR opt_with_hold FOR select { driver.cb_set_cursor_hold($2); }
+;
+
+cursor_declaration_from_prepared_stmt:
+CURSOR opt_with_hold FOR strliteral_or_hostref { 
+	driver.cb_set_cursor_hold($2); 
+	driver.statement_source = $4;
+	driver.commandname = "SELECT";
+	driver.sql_list->push_back("@" + unquote($4->name));
+	driver.sqlnum++;
+	driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+}
 ;
 
 table_declaration:
@@ -661,12 +689,24 @@ execsql_with_opt_at EXECUTE IMMEDIATE strliteral_or_hostref END_EXEC {
 	}
 	driver.put_exec_list();
 }
-| execsql_with_opt_at EXECUTE TOKEN opt_using_hostref_list END_EXEC {
-
+| execsql_with_opt_at EXECUTE TOKEN opt_into_hostref_list opt_using_hostref_list END_EXEC {
 	driver.commandname = "EXECUTE_PREPARED";
 	driver.statement_name = $3;
 	driver.put_exec_list();
+
+	
 }
+;
+
+opt_using_hostref_list:
+%empty
+| USING host_references { }
+;
+
+
+opt_into_hostref_list:
+%empty
+| INTO res_host_references { }
 ;
 
 ignoresql:
@@ -713,10 +753,6 @@ CONTINUE			{ $$ = "";			 }
 | GOTO HOSTTOKEN	{ $$ = $2.substr(1); }	/* Not actually a host token (variable), we just "borrow" its syntax in the lexer */
 ;
 
-opt_using_hostref_list:
-%empty
-| USING host_references { }
-;
 
 select:
 SELECT token_list{ $$ = driver.cb_concat_text_list (driver.cb_text_list_add (NULL, $1), $2);}
@@ -802,21 +838,23 @@ NUMERIC WORD opt_sql_type_def {
 			driver.current_field = x;
 
 		if ($3 != 0) {
-			uint64_t type_info = $3;
-			uint64_t length = type_info & 0xffffffffffff;	// 48 bits
-			uint32_t precision = (length >> 16);
-			uint16_t scale = (length & 0xffff);
-			int sql_type = type_info >> 60;
 
-			x->sql_type = type_info;
+			uint64_t type_info = $3;
+			uint32_t sql_type, precision;
+			uint16_t scale;
+			uint8_t flags;
+			decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
+
+			x->sql_type = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_EMIT_VAR);
+
 			x->is_varlen = IS_VARLEN(sql_type);
 			x->usage = IS_BINARY(sql_type) ? Usage::Binary : Usage::None;
 
 			x->pictype = -1;	// Preprocessor will build the correct PIC for "SQL TYPE IS" defs
 
 			// We do not want to overwrite precision and scale as defined in the COBOL source
-			// x->picnsize = precision;
-			// x->scale = scale;
+			x->picnsize = precision;
+			x->scale = scale;
 			
 			driver.cb_set_commandname("DECLARE_VAR");
 			driver.cb_host_list_add (driver.host_reference_list, x->sname);
@@ -889,8 +927,7 @@ varying_clause:
 VARYING {
 	auto x = driver.current_field;
 	
-	uint64_t type_info = (TYPE_SQL_VARCHAR << 60);
-	type_info |= (((uint64_t)x->picnsize << 16));
+	uint64_t type_info = encode_sql_type_info(TYPE_SQL_VARCHAR, (uint32_t)x->picnsize, 0, FLAG_EMIT_VAR);
 
 	x->sql_type = type_info;
 	x->is_varlen = true;

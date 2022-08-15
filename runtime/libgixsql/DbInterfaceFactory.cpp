@@ -69,6 +69,12 @@ IDbInterface *DbInterfaceFactory::getInterface(int type, const std::shared_ptr<s
 		case DB_MYSQL:
 			return load_dblib("mysql");
 
+		case DB_ORACLE:
+			return load_dblib("oracle");
+
+		case DB_SQLITE:
+			return load_dblib("sqlite");
+
 		default:
 			return NULL;
 	}
@@ -85,7 +91,13 @@ IDbInterface* DbInterfaceFactory::getInterface(std::string t, const std::shared_
 		if (t == "mysql")
 			return load_dblib("mysql");
 
-			return NULL;
+		if (t == "oracle")
+			return load_dblib("oracle");
+
+		if (t == "sqlite")
+			return load_dblib("sqlite");
+
+		return NULL;
 }
 
 IDbManagerInterface* DbInterfaceFactory::getManagerInterface(int type)
@@ -114,6 +126,7 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 	spdlog::debug(FMT_FILE_FUNC "loading DB provider: {}", __FILE__, __func__, bfr);
 
 	libHandle = LoadLibrary(bfr);
+	spdlog::trace(FMT_FILE_FUNC "library handle is: {}", __FILE__, __func__, (void *) libHandle);
 
 	if (libHandle != NULL)
 	{
@@ -185,21 +198,18 @@ int DbInterfaceFactory::removeInterface(IDbInterface *dbi)
 	if (dbi == NULL)
 		return 1;
 
-
 	if (lib_map.find(dbi) == lib_map.end())
 		return 1;
 
-	LIBHANDLE lib_ptr = lib_map[dbi];
-
-#if defined(_WIN32) || defined(_WIN64)
-	FreeLibrary(lib_ptr);
-#else
-	dlclose(lib_ptr),
-#endif
-	
 	lib_map.erase(dbi);
+	delete dbi; 
 
-	delete (dbi);
+	LIBHANDLE lib_ptr = lib_map[dbi];
+#if defined(_WIN32) || defined(_WIN64)
+	auto b = FreeLibrary(lib_ptr);
+#else
+	dlclose(lib_ptr);
+#endif
 
 	return 0;
 }

@@ -24,6 +24,7 @@
 
 #include <string>
 #include <sstream>
+#include <filesystem>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -55,7 +56,7 @@ std::string rx_escape(const std::string s)
 /*
 (?:((?:gixsql|mysql|pgsql|odbc)\:))(\/\/[A-Za-z0-9\-_]+)(:[0-9]+)?(\/[A-Za-z0-9\-_]+)?
 */
-int DataSourceInfo::init(const std::string& data_source, const std::string& username, const std::string& password)
+int DataSourceInfo::init(const std::string& data_source, const std::string& dbname, const std::string& username, const std::string& password)
 {
 	// Format: type://user.password@host[:port][/database][?default_schema=schema&par1=val&par2=val]
 	// e.g. pgsql://user.password@localhost:5432/postgres?default_schema=public&par1=val1&par2=val2
@@ -70,9 +71,20 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& user
 		this->usrpwd_sep = ".";
 	}
 
-	std::string connstring_rx_text_full = R"(^(?:((?:gixsql|mysql|pgsql|odbc)\:))(\/\/(?:(([^:]+)##GIXSQL_USRPWD_SEP##([^:]+)@)?)[A-Za-z0-9\-_\.]+)(:[0-9]+)?(\/[A-Za-z0-9\-_]+)?)";
-	std::string connstring_rx_text_dflt_drvr = R"(^((?:(([^:]+)##GIXSQL_USRPWD_SEP##([^:]+)@)?)[A-Za-z0-9\-_\.]+)(:[0-9]+)?(\/[A-Za-z0-9\-_]+)?)";
-	std::string connstring_rx_text_ocesql = R"(^((?:(([^:]+)@)?)([A-Za-z0-9\-_\.]+))(:[0-9]+)?)";
+	// Special case: it is a filename
+	if (starts_with(data_source, "sqlite://")) {
+		if (data_source.size() <= 10)
+			return 1;
+
+		this->dbtype = "sqlite";
+		this->host = data_source.substr(9);
+		this->dbname = std::filesystem::path(this->host).filename().string();
+		return 0;
+	}
+
+	std::string connstring_rx_text_full = R"(^(?:((?:gixsql|mysql|pgsql|odbc|oracle|sqlite)\:))(\/\/(?:(([^:]+)##GIXSQL_USRPWD_SEP##([^:]+)@)?)[A-Za-z0-9\-_\.]+)(:[0-9]+)?(\/[A-Za-z0-9\-_]+)?\ *)";
+	std::string connstring_rx_text_dflt_drvr = R"(^((?:(([^:]+)##GIXSQL_USRPWD_SEP##([^:]+)@)?)[A-Za-z0-9\-_\.]+)(:[0-9]+)?(\/[A-Za-z0-9\-_]+)?\ *)";
+	std::string connstring_rx_text_ocesql = R"(^((?:(([^:]+)@)?)([A-Za-z0-9\-_\.]+))(:[0-9]+)?\ *)";
 	std::string connstring_rx_text;
 
 	connstring_rx_text = string_replace(connstring_rx_text_full, "##GIXSQL_USRPWD_SEP##", rx_escape(this->usrpwd_sep));
@@ -154,6 +166,15 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& user
 			}
 		}
 	}
+
+	if (!dbname.empty()) {
+		this->dbname = dbname;
+	}
+
+	trim(this->host);
+	trim(this->dbname);
+	trim(this->username);
+	trim(this->password);
 
 	return 0;
 }
@@ -237,13 +258,13 @@ std::string DataSourceInfo::dump(bool with_password)
 #ifdef _DEBUG
 	std::string s;
 
-	s += "conn_string: " + conn_string + "\n";
-	s += "dbtype     : " + dbtype + "\n";
-	s += "host       : " + host + "\n";
-	s += "port       : " + std::to_string(port) + "\n";
-	s += "dbname     : " + dbname + "\n";
-	s += "username   : " + username + "\n";
-	s += "password   : " + password + "\n";
+	s += "{ conn_string: [" + conn_string + "], ";
+	s += "dbtype: [" + dbtype + "], ";
+	s += "host: [" + host + "], ";
+	s += "port: [" + std::to_string(port) + "], ";
+	s += "dbname: [" + dbname + "], ";
+	s += "username: [" + username + "], ";
+	s += "password: [" + password + "] }";
 
 	int i = 0;
 	for (auto it = options.begin(); it != options.end(); ++it) {
@@ -386,9 +407,14 @@ bool DataSourceInfo::retrieve_ocesql_params(const std::smatch& cm)
 	if (this->dbtype.empty())
 		return false;
 
-	this->dbname = cm[3].str();
-	this->host = cm[4].str();
-	this->port = atoi(cm[5].str().substr(1).c_str());
+	if (cm[3].matched)
+		this->dbname = cm[3].str();
+
+	if (cm[4].matched)
+		this->host = cm[4].str();
+
+	if (cm[5].matched)
+		this->port = atoi(cm[5].str().substr(1).c_str());
 
 	return true;
 }

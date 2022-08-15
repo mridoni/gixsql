@@ -30,15 +30,12 @@
 
 #include "DbInterfaceODBC.h"
 
-DbInterfaceODBC dbi;
-
 extern "C" {
 
 	LIBGIXSQL_API IDbInterface *get_dblib()
 	{
-		//IDbInterface *dbi = new DbInterfaceODBC();
-		//return dbi;
-		return &dbi;
+		IDbInterface *dbi = new DbInterfaceODBC();
+		return dbi;
 	}
 
 }

@@ -26,6 +26,7 @@
 
 #include "ConnectionManager.h"
 #include "DbInterfaceFactory.h"
+#include "utils.h"
 
 #define GIXSQL_DEFAULT_CONN_PREFIX "DEFAULT"
 
@@ -42,6 +43,7 @@ ConnectionManager::ConnectionManager()
 
 ConnectionManager::~ConnectionManager()
 {
+
 }
 
 Connection *ConnectionManager::create()
@@ -51,6 +53,8 @@ Connection *ConnectionManager::create()
 
 Connection *ConnectionManager::get(std::string name)
 {
+	trim(name);
+
 	if (name.empty())
 		return default_connection;
 
@@ -85,12 +89,21 @@ void ConnectionManager::remove(Connection *conn)
 	_connections.erase(std::remove(_connections.begin(), _connections.end(), conn), _connections.end());
 	_connection_map.erase(id);
 	_connection_name_map.erase(name);
+
+	if (conn == default_connection)
+		default_connection = nullptr;
+
 	delete (conn);
 }
 
 bool ConnectionManager::exists(std::string cname)
 {
-	return false;
+	return _connection_name_map.find(cname) != _connection_name_map.end();
+}
+
+std::vector<Connection*> ConnectionManager::list()
+{
+	return _connections;
 }
 
 

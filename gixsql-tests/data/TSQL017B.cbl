@@ -1,6 +1,6 @@
 ﻿       IDENTIFICATION DIVISION.
        
-       PROGRAM-ID. TSQL017A. 
+       PROGRAM-ID. TSQL017B. 
        
        
        ENVIRONMENT DIVISION. 
@@ -56,12 +56,6 @@
            END-EXEC.      
 
            DISPLAY 'CONNECT SQLCODE: ' SQLCODE.
-           IF SQLCODE <> 0 THEN
-              GO TO 100-EXIT
-           END-IF.
-
-           EXEC SQL AT :DBS START TRANSACTION END-EXEC.
-           DISPLAY 'START TRANSACTION SQLCODE: ' SQLCODE.
            IF SQLCODE <> 0 THEN
               GO TO 100-EXIT
            END-IF.

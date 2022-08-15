@@ -21,6 +21,7 @@
 #include <stdlib.h>
 
 #include "Logger.h"
+#include "utils.h"
 
 #include "spdlog/sinks/null_sink.h"
 
@@ -29,6 +30,8 @@ class lib_load_handler
 public:
     lib_load_handler()
     {
+        int pid = getpid();
+
         spdlog::sink_ptr gixsql_std_sink;
 
         spdlog::level::level_enum level = get_debug_log_level();
@@ -37,23 +40,32 @@ public:
         }
         else {
             std::string filename = get_debug_log_file();
+            if (filename.find("$$") != std::string::npos) {
+                filename = string_replace(filename, "$$", std::to_string(pid));
+            }
             gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename);
         }
 
         gixsql_logger = std::make_shared<spdlog::logger>("libgixsql", gixsql_std_sink);
+#ifdef _DEBUG
+        gixsql_logger->flush_on(spdlog::level::trace);
+#endif
         spdlog::set_default_logger(gixsql_logger);
         spdlog::set_level(level);
-        spdlog::info("GixSQL logger started");
+        spdlog::info("GixSQL logger started (PID: {})", pid);
+
+
     }
     ~lib_load_handler()
     {
-
+        gixsql_logger->flush();
+        spdlog::shutdown();
     }
 
 private:
 
     std::string get_debug_log_file() {
-        char* c = getenv("GIXSQL_DEBUG_LOG_FILE");
+        char* c = getenv("GIXSQL_LOG_FILE");
         if (c) {
             return c;
         }
@@ -61,7 +73,7 @@ private:
     }
 
     spdlog::level::level_enum get_debug_log_level() {
-        char* c = getenv("GIXSQL_DEBUG_LOG_LEVEL");
+        char* c = getenv("GIXSQL_LOG_LEVEL");
         if (!c) {
             return DEFAULT_GIXSQL_LOG_LEVEL;
         }
@@ -100,5 +112,3 @@ private:
 
 
 } lib_load_handler_hook;
-
-

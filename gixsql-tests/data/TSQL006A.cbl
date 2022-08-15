@@ -42,11 +42,6 @@
            ACCEPT DATASRC FROM ENVIRONMENT-VALUE.
            DISPLAY "DATASRC_USR" UPON ENVIRONMENT-NAME.
            ACCEPT DBUSR FROM ENVIRONMENT-VALUE.
-           
-           DISPLAY '***************************************'.
-           DISPLAY " DATASRC  : " DATASRC.
-           DISPLAY " AUTH     : " DBUSR.
-           DISPLAY '***************************************'.
 
            EXEC SQL
               CONNECT TO :DATASRC USER :DBUSR
@@ -60,21 +55,17 @@
 
        100-MAIN.
 
-           EXEC SQL START TRANSACTION END-EXEC.
+           MOVE 'INSERT INTO TAB1(FLD1, FLD2) VALUES(:1, :2)' 
+                  TO DYNSTMT1-ARR.
 
-
-           EXEC SQL DROP TABLE IF EXISTS TAB1 END-EXEC.
-           DISPLAY 'CONNECT DROP(1): ' SQLCODE
-
-           EXEC SQL CREATE TABLE TAB1 (FLD1 INT, FLD2 INT) END-EXEC.
-           DISPLAY 'CONNECT CREATE(1): ' SQLCODE
-
-          MOVE 'INSERT INTO TAB1(FLD1, FLD2) VALUES(?, ?)' TO DYNSTMT1.
+           MOVE FUNCTION LENGTH(FUNCTION TRIM(DYNSTMT1-ARR))
+             TO DYNSTMT1-LEN.
            
            EXEC SQL 
                PREPARE SQLSTMT1 FROM :DYNSTMT1
            END-EXEC.
            DISPLAY 'PREPARE SQLSTMT1: ' SQLCODE
+           DISPLAY 'PREPARE SQLSTMT1: ' SQLERRMC(1:SQLERRML)
 
            MOVE 1 TO T1.
            MOVE 2 TO T2.
@@ -92,7 +83,10 @@
            DISPLAY 'EXECUTE IMMEDIATE(1): ' SQLCODE
 
            MOVE 'UPDATE TAB1 SET FLD1=FLD1+100, FLD2=FLD2+300'
-      -          TO DYNSTMT1.
+      -          TO DYNSTMT1-ARR.
+
+           MOVE FUNCTION LENGTH(FUNCTION TRIM(DYNSTMT1-ARR))
+             TO DYNSTMT1-LEN.
 
            EXEC SQL EXECUTE IMMEDIATE :DYNSTMT1 END-EXEC.
            DISPLAY 'EXECUTE IMMEDIATE(2): ' SQLCODE

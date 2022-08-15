@@ -9,3 +9,4 @@ libgixpp/location.hh
 aclocal.m4
 configure
 config.status
+config.h
