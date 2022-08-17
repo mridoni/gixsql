@@ -1270,12 +1270,13 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 	}
 	else {
 		st->sqlcode = err;
+# if 0 /* currently we always set sqlerrm in the switch above */
 		char bfr[128];
 		if (st->sqlerrm.sqlerrmc[0] == ' ') {
 			sprintf(bfr, "%d : %s", err, err != 0 ? "Generic GIXSQL error" : "No error");
 			set_sqlerrm(st, bfr);
 		}
-
+#endif
 	}
 
 	if (err == DBERR_NO_DATA)
