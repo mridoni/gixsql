@@ -130,13 +130,23 @@ As a special case, if you need to declare and use field to be associated with va
 
 	     01 VBFLD SQL TYPE IS VARBINARY(100).
 
-This will get translated by the preprocessor to:
+This will treat the uynderlying (generated) field as a `VARCHAR`, applying the appropriate padding rules.
+
+You can also generate what is commonly known as a "variable-length group". If you declare a variable as:
+
+         01 VBFLD PIC X(100) VARYING.
+
+The following fields will be generated:
 
 	     01 VBFLD.
-             49 VBFLD-LENGTH PIC 9(4) BINARY.
-             49 VBFLD-DATA PIC X(100).
+             49 VBFLD-LEN PIC 9(4) BINARY.
+             49 VBFLD-ARR PIC X(100).
 
-As it is standard practice in COBOL, "level 49" fields are used to store a VARCHAR/VARBINARY field, handling separately its length in the first child data-item and the actual data in the second.
+As it is standard practice in COBOL, "level 49" fields are used to store a `VARCHAR`/`VARBINARY` field, handling separately its length in the first child data-item and the actual data in the second.
+
+The default suffixes `-LEN` and `-ARR` can be customized by using the `-Y`/`--varying` option in `gixpp`.
+
+Another `gixpp` option (`-P`/`--picx-as arg`) allows to choose the default handling for standard `PIC X` fields (as `CHAR`, with padding or as `VARCHAR`, auto-trimmed when written to the database). Please not that this does not apply to variable-length groups, whose actual length is always determin by the length indicator field.
 
 *(Note: you can select 2 or 4 bytes for the data item length indicator, the standard being 2. This option can be currently changed at compile time  only, by defining the USE_VARLEN_32 constant).*
 
