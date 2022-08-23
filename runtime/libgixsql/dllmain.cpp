@@ -25,11 +25,14 @@
 
 #include "spdlog/sinks/null_sink.h"
 
+extern int __norec_sqlcode;
+
 class lib_load_handler
 {
 public:
     lib_load_handler()
     {
+        // setup logs
         int pid = getpid();
 
         spdlog::sink_ptr gixsql_std_sink;
@@ -54,7 +57,8 @@ public:
         spdlog::set_level(level);
         spdlog::info("GixSQL logger started (PID: {})", pid);
 
-
+        // customize default values
+        setup_no_rec_code();
     }
     ~lib_load_handler()
     {
@@ -110,5 +114,17 @@ private:
                                     return DEFAULT_GIXSQL_LOG_LEVEL;
     }
 
+    void setup_no_rec_code()
+    {
+        char* c = getenv("GIXSQL_NOREC_CODE");
+        if (c ) {
+            int i = atoi(c);
+            if (i != 0 && i >= -999999999 && i <= 999999999) {
+                __norec_sqlcode = i;
+                spdlog::info("GixSQL: \"no record found\" code set to {})", __norec_sqlcode);
+            }
+
+        }
+    }
 
 } lib_load_handler_hook;

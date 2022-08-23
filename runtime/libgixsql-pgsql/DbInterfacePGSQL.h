@@ -65,10 +65,9 @@ public:
 	virtual int cursor_open(ICursor* cursor);
 	virtual int fetch_one(ICursor *, int) override;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int *value_len);
-	virtual int move_to_first_record(std::string stmt_name = "") override;
+	virtual bool move_to_first_record(std::string stmt_name = "") override;
 	virtual int supports_num_rows() override;
 	virtual int get_num_rows(ICursor* crsr) override;
-	virtual int has_data(ResultSetContextType resultset_context_type, void* context) override;
 	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
@@ -104,6 +103,9 @@ private:
 
 	int get_num_rows(PGresult* r);
 
-	bool use_native_cursors = false;
+	void pgsqlClearError();
+	void pgsqlSetError(int err_code, std::string sqlstate, std::string err_msg);
+
+	bool use_native_cursors = true;
 };
 

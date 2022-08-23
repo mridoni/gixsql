@@ -68,6 +68,8 @@ USA.
 #define FETCH_PREV_ROW	2
 #define FETCH_CUR_ROW	3
 
+#define NO_REC_CODE_DEFAULT	100
+
 #define RS_CTX_CURRENT_RESULTSET	1
 #define RS_CTX_PREPARED_STATEMENT	2
 #define RS_CTX_CURSOR				3
@@ -102,10 +104,9 @@ public:
 	virtual int cursor_open(ICursor *) = 0;
 	virtual int fetch_one(ICursor *, int) = 0;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void *context, int row, int col, char* bfr, int bfrlen, int* value_len) = 0;
-	virtual int move_to_first_record(std::string stmt_name = "") = 0;
+	virtual bool move_to_first_record(std::string stmt_name = "") = 0;
 	virtual int supports_num_rows() = 0;
 	virtual int get_num_rows(ICursor* crsr) = 0;
-	virtual int has_data(ResultSetContextType resultset_context_type, void* context) = 0;
 	virtual int get_num_fields(ICursor *crsr) = 0;
 	virtual char *get_error_message() = 0;
 	virtual int get_error_code() = 0;

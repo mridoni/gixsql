@@ -82,8 +82,8 @@ int main(int argc, char** argv)
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
 	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
-	auto opt_smart_crsr_init = options.add<Switch>("L", "no-smart-cursor-init", "disable smart cursor initialization");
 	auto opt_picx_as_varchar = options.add<Value<std::string>>("P", "picx-as", "text field options (=char|charf|varchar)", "char");
+	auto opt_no_rec_code = options.add<Value<std::string>>("", "no-rec-code", "custom code for \"no record\" condition(=nnn)");
 
 	options.parse(argc, argv);
 
@@ -167,13 +167,20 @@ int main(int argc, char** argv)
 				gp.setOpt("consolidated_map", true);
 				gp.setOpt("emit_map_file", opt_emit_map_file->is_set());
 				gp.setOpt("emit_cobol85", opt_emit_cobol85->is_set());
-				gp.setOpt("smart_crsr_init", !opt_smart_crsr_init->is_set());
 				gp.setOpt("picx_as_varchar", to_lower(opt_picx_as_varchar->value()) == "varchar");
-				gp.addStep(new TPESQLProcessing(&gp));
 
 				if (opt_esql_copy_exts->is_set())
 					copy_resolver.setExtensions(string_split(opt_esql_copy_exts->value(), ","));
 
+				if (opt_no_rec_code->is_set()) {
+					std::string c = opt_no_rec_code->value();
+					int i = atoi(c.c_str());
+					if (i != 0 && i >= -999999999 && i <= 999999999) {
+						gp.setOpt("no_rec_code", i);
+					}
+				}
+
+				gp.addStep(new TPESQLProcessing(&gp));
 			}
 
 			gp.setOpt("emit_debug_info", opt_debug_info->is_set());

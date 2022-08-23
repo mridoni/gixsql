@@ -597,7 +597,7 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 			stmt_name = to_lower(stmt_name);
 			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
-				return DBERR_SQL_ERROR;
+				return false;
 			}
 
 			wk_rs = (SQLiteStatementData*)_prepared_stmts[stmt_name];
@@ -609,7 +609,7 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 			ICursor* c = (ICursor*)context;
 			if (!c) {
 				lib_logger->error("Invalid cursor reference");
-				return DBERR_SQL_ERROR;
+				return false;
 			}
 			wk_rs = (SQLiteStatementData*)c->getPrivateData();
 		}
@@ -618,7 +618,7 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 
 	if (!wk_rs) {
 		lib_logger->error("Invalid resultset");
-		return DBERR_SQL_ERROR;
+		return false;
 	}
 
 	const unsigned char *c = sqlite3_column_text(wk_rs->statement, col);
@@ -631,67 +631,43 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 	*value_len = l;
 	memcpy(bfr, c, l);
 	bfr[l] = '\0';
-	 
-	/*
-	dpiData* col_data;
-	dpiQueryInfo col_info;
-	dpiNativeTypeNum nativeTypeNum;
-
-	rc = dpiStmt_getQueryValue(wk_rs->statement, (col + 1), &nativeTypeNum, &col_data);
-	if (dpiRetrieveError(rc) < 0) {
-		lib_logger->error("Invalid column data");
-		return DBERR_INVALID_COLUMN_DATA;
-	}
-
-	rc = dpiStmt_getQueryInfo(wk_rs->statement, (col + 1), &col_info);
-	if (dpiRetrieveError(rc) < 0) {
-		lib_logger->error("Invalid column data");
-		return DBERR_INVALID_COLUMN_DATA;
-	}
-
-	uint32_t sz = col_info.typeInfo.sizeInChars;
-
-	char* c = col_data->value.asBytes.ptr;
-	uint32_t l = col_data->value.asBytes.length;
-
-	//lib_logger->trace(FMT_FILE_FUNC "col: {}, data: {}", __FILE__, __func__, col, std::string(c, l));
-	//std::string s = fmt::format("col: {}, data: {}", col, std::string(c, l));
-	//fprintf(stderr, "%s\n", s.c_str());
-
-	if (l > bfrlen) {
-		return false;
-	}
-
-	*value_len = (int)l;
-	memcpy(bfr, c, l);
-	bfr[l] = '\0';
-	*/
 
 	return true;
 }
 
-int DbInterfaceSQLite::move_to_first_record(std::string stmt_name)
+bool DbInterfaceSQLite::move_to_first_record(std::string stmt_name)
 {
 	SQLiteStatementData* dp = nullptr;
 
 	if (stmt_name.empty()) {
-		if (!current_statement_data)
+		if (!current_statement_data) {
+			sqliteSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return DBERR_MOVE_TO_FIRST_FAILED;
+		}
 
 		dp = current_statement_data;
 	}
 	else {
 		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
-			return DBERR_MOVE_TO_FIRST_FAILED;
+			sqliteSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
+			return false;
 		}
 		dp = _prepared_stmts[stmt_name];
 	}
 
-	if (!dp || !dp->statement)
-		return DBERR_MOVE_TO_FIRST_FAILED;
+	if (!dp || !dp->statement) {
+		sqliteSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
+		return false;
+	}
 
-	return DBERR_NO_ERROR;
+	int nrows = sqlite3_data_count(dp->statement);
+	if (nrows <= 0) {
+		sqliteSetError(DBERR_NO_DATA, "02000", "No data");
+		return false;
+	}
+	
+	return true;
 }
 
 int DbInterfaceSQLite::supports_num_rows()
@@ -720,50 +696,50 @@ int DbInterfaceSQLite::get_num_rows(ICursor* crsr)
 		return -1;
 }
 
-int DbInterfaceSQLite::has_data(ResultSetContextType resultset_context_type, void* context)
-{
-	SQLiteStatementData* wk_rs = nullptr;
-
-	switch (resultset_context_type) {
-		case ResultSetContextType::CurrentResultSet:
-			wk_rs = current_statement_data;
-			break;
-
-		case ResultSetContextType::PreparedStatement:
-		{
-			if (!context)
-				return false;
-
-			std::string stmt_name = (char*)context;
-			stmt_name = to_lower(stmt_name);
-			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
-				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
-				return DBERR_SQL_ERROR;
-			}
-
-			wk_rs = (SQLiteStatementData*)_prepared_stmts[stmt_name];
-		}
-		break;
-
-		case ResultSetContextType::Cursor:
-		{
-			ICursor* c = (ICursor*)context;
-			if (!c) {
-				lib_logger->error("Invalid cursor reference");
-				return DBERR_SQL_ERROR;
-			}
-			wk_rs = (SQLiteStatementData*)c->getPrivateData();
-		}
-		break;
-	}
-
-	if (!wk_rs) {
-		lib_logger->error("Invalid resultset");
-		return DBERR_SQL_ERROR;
-	}
-
-	return sqlite3_data_count(wk_rs->statement);
-}
+//int DbInterfaceSQLite::has_data(ResultSetContextType resultset_context_type, void* context)
+//{
+//	SQLiteStatementData* wk_rs = nullptr;
+//
+//	switch (resultset_context_type) {
+//		case ResultSetContextType::CurrentResultSet:
+//			wk_rs = current_statement_data;
+//			break;
+//
+//		case ResultSetContextType::PreparedStatement:
+//		{
+//			if (!context)
+//				return false;
+//
+//			std::string stmt_name = (char*)context;
+//			stmt_name = to_lower(stmt_name);
+//			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
+//				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
+//				return DBERR_SQL_ERROR;
+//			}
+//
+//			wk_rs = (SQLiteStatementData*)_prepared_stmts[stmt_name];
+//		}
+//		break;
+//
+//		case ResultSetContextType::Cursor:
+//		{
+//			ICursor* c = (ICursor*)context;
+//			if (!c) {
+//				lib_logger->error("Invalid cursor reference");
+//				return DBERR_SQL_ERROR;
+//			}
+//			wk_rs = (SQLiteStatementData*)c->getPrivateData();
+//		}
+//		break;
+//	}
+//
+//	if (!wk_rs) {
+//		lib_logger->error("Invalid resultset");
+//		return DBERR_SQL_ERROR;
+//	}
+//
+//	return sqlite3_data_count(wk_rs->statement);
+//}
 
 int DbInterfaceSQLite::get_num_fields(ICursor* crsr)
 {
@@ -837,6 +813,13 @@ void DbInterfaceSQLite::sqliteClearError()
 	last_error = "";
 	last_rc = DBERR_NO_ERROR;
 	last_state = "00000";
+}
+
+void DbInterfaceSQLite::sqliteSetError(int err_code, std::string sqlstate, std::string err_msg)
+{
+	last_error = err_msg;
+	last_rc = err_code;
+	last_state = sqlstate;
 }
 
 SQLiteStatementData::SQLiteStatementData()

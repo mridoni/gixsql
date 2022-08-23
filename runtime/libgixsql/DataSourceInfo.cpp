@@ -76,8 +76,20 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 		if (data_source.size() <= 10)
 			return 1;
 
+		std::string sqlite_path;
+		std::string sqlite_opts;
+		std::string path_opts = data_source.substr(9);
+
+		if (path_opts.find('?') != std::string::npos) {
+			sqlite_path = path_opts;
+		}
+		else {
+			sqlite_path = path_opts.substr(0, path_opts.find('?'));
+			retrieve_driver_options(path_opts);
+		}
+
 		this->dbtype = "sqlite";
-		this->host = data_source.substr(9);
+		this->host = sqlite_path;
 		this->dbname = std::filesystem::path(this->host).filename().string();
 		return 0;
 	}
@@ -106,7 +118,7 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 			rxConnString.assign(connstring_rx_text);
 
 			// regex_match instead of regex_search is used because we need stricter matching here
-			if (!regex_match(data_source, ocematch, rxConnString)) {	
+			if (!regex_match(data_source, ocematch, rxConnString)) {
 				conn_string_type = CS_TYPE_GIXSQL_DFLT_DRVR;
 			}
 			else {
@@ -177,7 +189,7 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 	trim(this->password);
 
 	return 0;
-}
+	}
 
 void DataSourceInfo::retrieve_driver_options(const std::string& data_source)
 {

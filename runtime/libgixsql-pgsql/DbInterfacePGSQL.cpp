@@ -657,7 +657,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 			stmt_name = to_lower(stmt_name);
 			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
-				return DBERR_SQL_ERROR;
+				return false;
 			}
 
 			wk_rs = _prepared_stmts[stmt_name];
@@ -669,7 +669,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 			ICursor* c = (ICursor*)context;
 			if (!c) {
 				lib_logger->error("Invalid cursor reference");
-				return DBERR_SQL_ERROR;
+				return false;
 			}
 			wk_rs = (PGResultSetData*)c->getPrivateData();
 			row = wk_rs->current_row_index;	// we overwrite the row index
@@ -680,7 +680,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 	if (!wk_rs) {
 		lib_logger->error("Invalid resultset");
-		return DBERR_SQL_ERROR;
+		return false;
 	}
 
 	const char* res = PQgetvalue(wk_rs->resultset, row, col);
@@ -719,10 +719,35 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 	return true;
 }
 
-int DbInterfacePGSQL::move_to_first_record(std::string stmt_name)
+bool DbInterfacePGSQL::move_to_first_record(std::string stmt_name)
 {
-	// Nothing to do for PostgreSQL
-	return DBERR_NO_ERROR;
+	PGResultSetData* wk_rs = nullptr;
+
+	if (stmt_name.empty()) {
+		wk_rs = current_resultset_data;
+	}
+	else {
+		stmt_name = to_lower(stmt_name);
+		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
+			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
+			pgsqlSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
+			return false;
+		}
+
+		wk_rs = _prepared_stmts[stmt_name];
+	}
+
+	if (!wk_rs || !wk_rs->resultset) {
+		pgsqlSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
+		return false;
+	}
+
+	int nrows = get_num_rows(wk_rs->resultset);
+	if (nrows <= 0) {
+		pgsqlSetError(DBERR_NO_DATA, "02000", "No data");
+		return false;
+	}
+	return true;
 }
 
 int DbInterfacePGSQL::supports_num_rows()
@@ -745,11 +770,6 @@ int DbInterfacePGSQL::get_num_rows(ICursor* crsr)
 	return n;
 }
 
-int DbInterfacePGSQL::has_data(ResultSetContextType resultset_context_type, void* context)
-{
-	return 0;
-}
-
 int DbInterfacePGSQL::get_num_fields(ICursor* crsr)
 {
 	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
@@ -770,6 +790,20 @@ int DbInterfacePGSQL::get_num_rows(PGresult* r)
 
 	int n = atoi(c);
 	return n;
+}
+
+void DbInterfacePGSQL::pgsqlClearError()
+{
+	last_error = "";
+	last_rc = DBERR_NO_ERROR;
+	last_state = "00000";
+}
+
+void DbInterfacePGSQL::pgsqlSetError(int err_code, std::string sqlstate, std::string err_msg)
+{
+	last_error = err_msg;
+	last_rc = err_code;
+	last_state = sqlstate;
 }
 
 PGResultSetData::PGResultSetData()
@@ -815,8 +849,7 @@ static std::string pg_get_sqlstate(PGresult* r)
 	if (c)
 		return std::string(c);
 	else
-		return "";
-
+		return "00000";
 }
 
 

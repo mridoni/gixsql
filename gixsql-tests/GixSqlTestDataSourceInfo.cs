@@ -71,10 +71,24 @@ namespace gixsql_tests
                         sb["Port"] = Int32.Parse(port);
                         break;
 
+                    case "mysql":
+                        sb["Host"] = hostname;
+                        sb["Database"] = dbname;
+                        sb["UserName"] = username;
+                        sb["Password"] = password;
+                        sb["Port"] = Int32.Parse(port);
+                        break;
+
                     case "sqlite":
                         sb["Data Source"] = hostname;
                         //sb["User Id"] = username;
                         //sb["Password"] = password;
+                        break;
+
+                    case "odbc":
+                        sb["DSN"] = hostname;
+                        sb["UserName"] = username;
+                        sb["Password"] = password;
                         break;
                 }
 
@@ -168,13 +182,27 @@ namespace gixsql_tests
                         sb["Database"] = dbname;
                         sb["UserName"] = username;
                         sb["Password"] = password;
-                        sb["Port"] = Int32.Parse(port);
+                        if (!String.IsNullOrWhiteSpace(port))
+                            sb["Port"] = Int32.Parse(port);
+                        break;
+
+                    case "mysql":
+                        sb["Host"] = hostname;
+                        sb["Database"] = dbname;
+                        sb["UserName"] = username;
+                        sb["Password"] = password;
+                        if (!String.IsNullOrWhiteSpace(port))
+                            sb["Port"] = Int32.Parse(port);
+                        break;
+
+                    case "odbc":
+                        sb["DSN"] = hostname;
+                        sb["UserName"] = username;
+                        sb["Password"] = password;
                         break;
 
                     case "sqlite":
                         sb["Data Source"] = hostname;
-                        //sb["User Id"] = username;
-                        //sb["Password"] = password;
                         break;
                 }
 
@@ -196,7 +224,9 @@ namespace gixsql_tests
                                 {
 
                                     var p = cmd.CreateParameter();
-                                    p.ParameterName = kve.Key;
+                                    if (client_type != "mysql" && client_type != "odbc" )
+                                        p.ParameterName = kve.Key;
+
                                     string pt = kve.Value.Substring(0, 1);
 
                                     switch (pt)

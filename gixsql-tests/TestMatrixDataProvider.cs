@@ -50,10 +50,10 @@ namespace gixsql_tests
                                 if (xe.HasAttribute("enabled") && xe.Attributes["enabled"].Value == "false")
                                     continue;
 
-                                if (xe.HasAttribute("applies-to") && xe.Attributes["applies-to"].Value != "all" && xe.Attributes["applies-to"].Value != ds_type)
+                                if (xe.HasAttribute("applies-to") && xe.Attributes["applies-to"].Value != "all" && !xe.Attributes["applies-to"].Value.Split(',').Contains(ds_type))
                                     continue;
 
-                                if (xe.HasAttribute("not-applies-to") && xe.Attributes["not-applies-to"].Value == ds_type)
+                                if (xe.HasAttribute("not-applies-to") && xe.Attributes["not-applies-to"].Value.Split(',').Contains(ds_type))
                                     continue;
 
                                 GixSqlTestData td = new GixSqlTestData();
@@ -102,7 +102,7 @@ namespace gixsql_tests
                                 td.ExpectedToFailCobc = xe["expected-to-fail"] != null && xe["expected-to-fail"].HasAttribute("compile") ? Boolean.Parse(xe["expected-to-fail"].Attributes["compile"].InnerText) : false;
                                 td.ExpectedToFailRun = xe["expected-to-fail"] != null && xe["expected-to-fail"].HasAttribute("run") ? Boolean.Parse(xe["expected-to-fail"].Attributes["run"].InnerText) : false;
 
-                                td.AddtitionalPreProcessParams = xe["additional-preprocess-params"] != null && xe["additional-preprocess-params"].HasAttribute("value") ? xe["additional-preprocess-params"].Attributes["value"].InnerText : String.Empty;
+                                td.AdditionalPreProcessParams = xe["additional-preprocess-params"] != null && xe["additional-preprocess-params"].HasAttribute("value") ? xe["additional-preprocess-params"].Attributes["value"].InnerText : String.Empty;
                                 td.AdditionalCompileParams = xe["additional-compile-params"] != null && xe["additional-compile-params"].HasAttribute("value") ? xe["additional-compile-params"].Attributes["value"].InnerText : String.Empty;
 
                                 td.Description = xe.SelectSingleNode("description").InnerText;
@@ -317,77 +317,92 @@ namespace gixsql_tests
 
         private static void ReadConfiguration()
         {
-            var cfg = System.Environment.GetEnvironmentVariable("GIXSQL_TEST_MATRIX_CONFIG");
-
-            doc = new XmlDocument();
-            doc.Load(cfg);
-
-            foreach (var xn in doc.SelectNodes("/test-data/environment/variable"))
+            try
             {
-                XmlElement xe = (XmlElement)xn;
-                global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
-            }
 
-            foreach (var xn in doc.SelectNodes("/test-data/architectures/architecture"))
-            {
-                XmlElement xe = (XmlElement)xn;
-                available_architectures.Add(xe.Attributes["id"].Value);
-            }
 
-            foreach (var xn in doc.SelectNodes("/test-data/compiler-types/compiler-type"))
-            {
-                XmlElement xe = (XmlElement)xn;
-                available_compiler_types.Add(xe.Attributes["id"].Value);
-            }
+                var cfg = System.Environment.GetEnvironmentVariable("GIXSQL_TEST_MATRIX_CONFIG");
 
-            foreach (var xn in doc.SelectNodes("/test-data/compilers/compiler"))
-            {
-                XmlElement xe = (XmlElement)xn;
-                string compiler_type = xe.Attributes["type"].Value;
-                string compiler_arch = xe.Attributes["architecture"].Value;
-                string compiler_id = xe.Attributes["id"].Value;
-                if (!available_compiler_types.Contains(compiler_type))
-                    continue;
+                doc = new XmlDocument();
+                doc.Load(cfg);
 
-                CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
-                Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
-                available_compilers.Add(k, cc);
-            }
-
-            foreach (var xn in doc.SelectNodes("/test-data/data-source-clients/data-source-client"))
-            {
-                XmlElement xe = (XmlElement)xn;
-                Dictionary<string, string> env = new Dictionary<string, string>();
-                foreach (var xenv in xe.SelectNodes("environment/variable"))
+                foreach (var xn in doc.SelectNodes("/test-data/environment/variable"))
                 {
-                    env.Add(((XmlElement)xenv).Attributes["key"].Value, ((XmlElement)xenv).Attributes["value"].Value);
+                    XmlElement xe = (XmlElement)xn;
+                    global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
                 }
-                Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
-                GixSqlTestDataSourceClientInfo ci = new GixSqlTestDataSourceClientInfo();
-                ci.environment = env;
-                ci.provider = xe["provider"].Attributes["value"].Value;
-                if (xe["additional-preprocess-params"] != null)
+
+                foreach (var xn in doc.SelectNodes("/test-data/architectures/architecture"))
                 {
-                    ci.additional_preprocess_params = xe["additional-preprocess-params"].InnerText;
+                    XmlElement xe = (XmlElement)xn;
+                    available_architectures.Add(xe.Attributes["id"].Value);
                 }
-                available_data_source_clients.Add(k, ci);
+
+                foreach (var xn in doc.SelectNodes("/test-data/compiler-types/compiler-type"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    available_compiler_types.Add(xe.Attributes["id"].Value);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-data/compilers/compiler"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    string compiler_type = xe.Attributes["type"].Value;
+                    string compiler_arch = xe.Attributes["architecture"].Value;
+                    string compiler_id = xe.Attributes["id"].Value;
+                    if (!available_compiler_types.Contains(compiler_type))
+                        continue;
+
+                    CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
+                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    available_compilers.Add(k, cc);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-data/data-source-clients/data-source-client"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    Dictionary<string, string> env = new Dictionary<string, string>();
+                    foreach (var xenv in xe.SelectNodes("environment/variable"))
+                    {
+                        env.Add(((XmlElement)xenv).Attributes["key"].Value, ((XmlElement)xenv).Attributes["value"].Value);
+                    }
+                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    GixSqlTestDataSourceClientInfo ci = new GixSqlTestDataSourceClientInfo();
+                    ci.environment = env;
+                    ci.provider = xe["provider"].Attributes["value"].Value;
+                    XmlElement xapp = xe["additional-preprocess-params"];
+                    if (xapp != null)
+                    {
+                        if (xapp.HasAttribute("value") && !String.IsNullOrWhiteSpace(xapp.Attributes["value"].Value))
+                        {
+                            ci.additional_preprocess_params = xapp.Attributes["value"].Value;
+                        }
+                    }
+                    available_data_source_clients.Add(k, ci);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-data/data-sources/data-source"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+
+                    Tuple<string, int> k = new Tuple<string, int>(xe.Attributes["type"].Value, Int32.Parse(xe.Attributes["index"].Value));
+                    GixSqlTestDataSourceInfo ds = new GixSqlTestDataSourceInfo();
+                    ds.type = k.Item1;
+                    ds.hostname = xe["hostname"].InnerText;
+                    ds.port = xe["port"].InnerText;
+                    ds.dbname = xe["dbname"].InnerText;
+                    ds.username = xe["username"].InnerText;
+                    ds.password = xe["password"].InnerText;
+                    ds.options = xe["options"].InnerText;
+
+                    available_data_sources.Add(k, ds);
+                }
+
             }
-
-            foreach (var xn in doc.SelectNodes("/test-data/data-sources/data-source"))
+            catch (Exception ex)
             {
-                XmlElement xe = (XmlElement)xn;
 
-                Tuple<string, int> k = new Tuple<string, int>(xe.Attributes["type"].Value, Int32.Parse(xe.Attributes["index"].Value));
-                GixSqlTestDataSourceInfo ds = new GixSqlTestDataSourceInfo();
-                ds.type = k.Item1;
-                ds.hostname = xe["hostname"].InnerText;
-                ds.port = xe["port"].InnerText;
-                ds.dbname = xe["dbname"].InnerText;
-                ds.username = xe["username"].InnerText;
-                ds.password = xe["password"].InnerText;
-                ds.options = xe["options"].InnerText;
-
-                available_data_sources.Add(k, ds);
+                throw;
             }
         }
 

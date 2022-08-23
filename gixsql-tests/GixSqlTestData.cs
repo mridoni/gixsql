@@ -44,7 +44,7 @@ namespace gixsql_tests
         public string LastOutputText;
 
         public string BuildType = "exe";
-        public string AddtitionalPreProcessParams;
+        public string AdditionalPreProcessParams;
         public string AdditionalCompileParams;
 
         public override string ToString()

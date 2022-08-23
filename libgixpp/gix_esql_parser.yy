@@ -82,22 +82,22 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 */
 %token PERIOD
 %token<std::string> SELECT
-%token<std::string> SELECTFROM
+%token<std::string> SELECTFROM	"SELECT FROM"
 %token<std::string> TOKEN
-%token<std::string> HOSTTOKEN
+%token<std::string> HOSTTOKEN	"host-variable"
 %token<std::string> WORD
 %token<std::string> PICTURE
 %token<std::string> INSERT
 %token<std::string> UPDATE
 %token<std::string> DISCONNECT
-%token CONNECT_RESET
+%token CONNECT_RESET		"CONNECT RESET"
 %token<std::string> DELETE
 %token<std::string> EXECUTE
 %token<std::string> OTHERFUNC
 %token<std::string> INTO
 %token<long> NUMERIC
-%token END_EXEC
-%token EXECSQL
+%token END_EXEC			"END-EXEC"
+%token EXECSQL			"EXEC SQL"
 %token INCLUDE
 %token FROM
 %token IMMEDIATE
@@ -106,24 +106,24 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token FOR
 %token COMMA
 %token STATEMENT
-%token WORKINGBEGIN
-%token WORKINGEND
+%token WORKINGBEGIN		"Begin of WORKING-STORAGE SECTION"
+%token WORKINGEND		"End of WORLING-STORAGE SECTION"
 %token LINKAGEBEGIN
 %token LINKAGEEND
-%token LOCALSTORAGEBEGIN
-%token LOCALSTORAGEEND
+%token LOCALSTORAGEBEGIN	"Begin of LOCAL-STORAGE SECTION"
+%token LOCALSTORAGEEND		"End of LOCAL-STORAGE SECTION"
 %token FD
-%token FILEBEGIN
-%token FILEEND
-%token PROCEDURE_DIVISION
+%token FILEBEGIN		"Begin of FILE SECTION"
+%token FILEEND			"End of FILE SECTION"
+%token PROCEDURE_DIVISION	"PROCEDURE DIVISION"
 %token HOSTVARIANTBEGIN
 %token HOSTVARIANTEND
-%token INCLUDE_FILE
-%token INCLUDE_SQLCA
+%token INCLUDE_FILE		"INCLUDE file"
+%token INCLUDE_SQLCA		"INCLUDE SQLCA"
 %token SQLCA
-%token IDENTIFIED_BY
-%token COMMIT_WORK
-%token ROLLBACK_WORK
+%token IDENTIFIED_BY		"IDENTIFIED BY"
+%token COMMIT_WORK		"COMMIT"
+%token ROLLBACK_WORK		"ROLLBACK"
 %token SAVEPOINT
 %token CONNECT
 %token TO
@@ -132,23 +132,23 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token IS
 %token VARYING
 %token IGNORE
-%token DECLARE_VAR
+%token DECLARE_VAR		"EXEC SQL VAR"
 %token USING
 %token OPEN
 %token CLOSE
 %token FETCH
 %token WHENEVER
-%token NOT_FOUND
+%token NOT_FOUND		"NOT FOUND"
 %token SQLERROR
 %token SQLWARNING
 %token CONTINUE
 %token PERFORM
 %token GOTO
 %token TRAILING
-%token COMP_1
-%token COMP_2
-%token COMP_3
-%token COMP_5
+%token COMP_1			"COMP-1"
+%token COMP_2			"COMP-2"
+%token COMP_3			"COMP-3"
+%token COMP_5			"COMP-5"
 %token COMP
 %token<uint64_t> CHAR
 %token<uint64_t> VARCHAR
@@ -161,14 +161,14 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token SIGN
 %token LEADING
 %token SEPARATE
-%token SQL_TYPE_IS
+%token SQL_TYPE_IS		"SQL TYPE IS"
 %token ARE
 %token VALUE
 %token ALL
 %token OCCURS
 %token UNBOUNDED
-%token DEPENDING_ON
-%token ASCENDING_KEY_IS
+%token DEPENDING_ON		"DEPENDING ON"
+%token ASCENDING_KEY_IS		"ASCENDING KEY IS"
 %token INDEXED_BY
 %token EXTERNAL
 %token TIMES
@@ -177,8 +177,8 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token TABLE
 %token COPY
 %token COPY_FILE
-%token<int> WITH_HOLD
-%token WHERE_CURRENT_OF
+%token<int> WITH_HOLD		"WITH HOLD"
+%token WHERE_CURRENT_OF		"WHERE CURRENT OF"
 %token PREPARE
 
 %type <std::vector<std::string> *> token_list declaresql includesql incfile opt_othersql_tokens
@@ -578,17 +578,25 @@ EXECSQL INCLUDE INCLUDE_SQLCA END_EXEC{
 	driver.lexer.pushNewFile("SQLCA", &driver, true, true);
 }
 
+// execsql_with_opt_at     SELECT      token_list      INTO     res_host_references     SELECTFROM     token_list     END_EXEC 
+
 selectintosql:
-execsql_with_opt_at SELECT token_list INTO res_host_references SELECTFROM token_list END_EXEC  {
+execsql_with_opt_at SELECT token_list opt_into_clause SELECTFROM token_list END_EXEC  {
 	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
-	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, $6));
-	driver.cb_concat_text_list($$, $7);
+	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, $5));
+	driver.cb_concat_text_list($$, $6);
 	driver.put_exec_list();
 }
-| execsql_with_opt_at SELECT token_list INTO res_host_references END_EXEC  {
+| execsql_with_opt_at SELECT token_list opt_into_clause END_EXEC  {
 	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
 	driver.put_exec_list();
-}
+};
+
+opt_into_clause:
+%empty		{ }
+| INTO res_host_references { }
+;
+
 
 badsql:
 execsql_with_opt_at error END_EXEC
@@ -981,6 +989,7 @@ _sign_is LEADING flag_separate
 _sign_is:	 SIGN  {}
 | SIGN IS {}
 ;
+
 flag_separate:
 %empty 
 | SEPARATE { driver.current_field->separate = SIGN_SEPARATE; }

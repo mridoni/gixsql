@@ -276,7 +276,7 @@
       <AdditionalLibraryDirectories>$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\debug\lib;$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\lib;%PGSQL_HOME%\lib</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy D:\gix-ide-x64\bin\libgixsql* D:\gix-ide-x64\lib\x64\msvc &amp;&amp; copy D:\gix-ide-x64\bin\libgixsql.dll D:\gix-ide-x64\lib\x64\msvc</Command>
+      <Command>copy D:\gix-ide-x64\bin\libgixsql* D:\gix-ide-x64\lib\x64\msvc &amp;&amp; copy D:\gix-ide-x64\bin\libgixsql-*.* D:\gix-ide-x64\lib\x64\msvc &amp;&amp; copy D:\gix-ide-x64\bin\libgixsql.dll D:\gix-ide-x64\lib\x64\msvc</Command>
     </PostBuildEvent>
     <PreBuildEvent>
       <Command>

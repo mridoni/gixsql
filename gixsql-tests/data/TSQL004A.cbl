@@ -170,7 +170,7 @@
            END-EXEC. 
        
       * we try a single open + fetch + close to see if the cursor
-      * is stilla vailable for opening after close
+      * is still available for opening after being closed
 
       *  open cursor
            EXEC SQL

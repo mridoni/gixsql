@@ -69,7 +69,6 @@ struct query_info {
 static ConnectionManager connection_manager;
 static CursorManager cursor_manager;
 
-
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err);
 static bool get_autocommit(DataSourceInfo*);
@@ -88,7 +87,8 @@ static int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connectio
 static int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection_id);
 
 static std::string get_hostref_or_literal(void* data, int connection_id_tl);
-bool prepare_statement(const std::string& s, std::string& s_out, std::vector<std::string>& params);
+
+int __norec_sqlcode = GIXSQL_DEFAULT_NO_REC_CODE;
 
 static void
 sqlca_initialize(struct sqlca_t* sqlca)
@@ -479,13 +479,15 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	if (rc != RESULT_SUCCESS)
 		return rc;
 
-	rc = dbi->move_to_first_record(stmt_name);
+	if (!dbi->move_to_first_record(stmt_name)) {
+		spdlog::error("move_to_first_record failed: {} - {}:", dbi->get_error_code(), dbi->get_state(), dbi->get_error_message());
+		setStatus(st, dbi, dbi->get_error_code());
+		return RESULT_FAILED;
+	}
 
-	spdlog::trace(FMT_FILE_FUNC "move_to_first_record returned: {}", __FILE__, __func__, rc);
+	spdlog::trace(FMT_FILE_FUNC "move_to_first_record successful", __FILE__, __func__);
 
-	FAIL_ON_ERROR(rc, st, dbi, DBERR_MOVE_TO_FIRST_FAILED)
-
-		int nfields = dbi->get_num_fields(nullptr);
+	int nfields = dbi->get_num_fields(nullptr);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
 		setStatus(st, NULL, DBERR_FIELD_COUNT_MISMATCH);
@@ -497,21 +499,14 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
-			spdlog::error("No data");
+			spdlog::trace("No data");
 			setStatus(st, NULL, DBERR_NO_DATA);
 			return RESULT_FAILED;
 		}
 
 		if (dbi->get_num_rows(nullptr) > 1) {
-			spdlog::error("Too much data");
+			spdlog::trace("Too much data");
 			setStatus(st, NULL, DBERR_TOO_MUCH_DATA);
-			return RESULT_FAILED;
-		}
-	}
-	else {	// if a DB driver does not support row count, it still MUST be able to tell us if there is data in a resultset
-		if (!dbi->has_data(ResultSetContextType::CurrentResultSet, nullptr)) {
-			spdlog::error("No data");
-			setStatus(st, dbi, DBERR_NO_DATA);
 			return RESULT_FAILED;
 		}
 	}
@@ -940,11 +935,13 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 			return RESULT_FAILED;
 	}
 
-	int rc = dbi->move_to_first_record();
+	if (!dbi->move_to_first_record()) {
+		spdlog::error("move_to_first_record failed: {} - {}: {}", dbi->get_error_code(), dbi->get_state(), dbi->get_error_message());
+		setStatus(st, dbi, dbi->get_error_code());
+		return RESULT_FAILED;
+	}
 
-	spdlog::trace(FMT_FILE_FUNC "move_to_first_record returned: {}", __FILE__, __func__, rc);
-
-	FAIL_ON_ERROR(rc, st, dbi, DBERR_MOVE_TO_FIRST_FAILED)
+	spdlog::trace(FMT_FILE_FUNC "move_to_first_record successful", __FILE__, __func__);
 
 	int nfields = dbi->get_num_fields(nullptr);
 	if (nfields != nResParams) {
@@ -958,25 +955,17 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
-			spdlog::error("No data");
+			spdlog::trace("No data");
 			setStatus(st, dbi, DBERR_NO_DATA);
 			return RESULT_FAILED;
 		}
 
 		if (dbi->get_num_rows(nullptr) > 1) {
-			spdlog::error("Too much data");
+			spdlog::trace("Too much data");
 			setStatus(st, dbi, DBERR_TOO_MUCH_DATA);
 			return RESULT_FAILED;
 		}
 	}
-	else {	// if a DB driver does not support row count, it still MUST be able to tell us if there is data in a resultset
-		if (!dbi->has_data(ResultSetContextType::CurrentResultSet, nullptr)) {
-			spdlog::error("No data");
-			setStatus(st, dbi, DBERR_NO_DATA);
-			return RESULT_FAILED;
-		}
-	}
-
 
 	// set result params
 	int datalen = 0;
@@ -1243,9 +1232,19 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 		set_sqlerrm(st, "Too much data");
 		break;
 
+	case DBERR_CONN_INIT_ERROR:
+		memcpy(st->sqlstate, "IM002", 5);
+		set_sqlerrm(st, "Invalid datasource definition");
+		break;
+
+	case DBERR_CONN_INVALID_DBTYPE:
+		memcpy(st->sqlstate, "IM003", 5);
+		set_sqlerrm(st, "Invalid DB type/driver requested");
+		break;
+
 	default:
 		memcpy(st->sqlstate, "HV000", 5);
-		set_sqlerrm(st, "General error");
+		set_sqlerrm(st, "General GixSQL error");
 	}
 
 	if (dbi) {
@@ -1264,7 +1263,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 			if (sqlstate.size() > 5)
 				sqlstate = sqlstate.substr(0, 5);
 
-			memset(st->sqlstate, ' ', 5);
+			memset(st->sqlstate, '0', 5);
 			memcpy(st->sqlstate, sqlstate.c_str(), sqlstate.size());
 		}
 	}
@@ -1279,7 +1278,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 	}
 
 	if (err == DBERR_NO_DATA)
-		st->sqlcode = 100;
+		st->sqlcode = __norec_sqlcode;
 
 	return RESULT_SUCCESS;
 }
@@ -1364,9 +1363,4 @@ std::string get_hostref_or_literal(void* data, int l)
 
 	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
 	return t;
-}
-
-bool prepare_statement(const std::string& s, std::string& s_out, std::vector<std::string>& params)
-{
-	return false;
 }

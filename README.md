@@ -266,7 +266,7 @@ Options:
   -e, --esql                  preprocess for ESQL
   -p, --esql-preprocess-copy  ESQL: preprocess all included COPY files
   -E, --esql-copy-exts arg    ESQL: copy files extension list (comma-separated)
-  -a, --esql-anon-params      ESQL: use anonymous (not numbered) parameters
+  -z, --param-style arg (=d)  ESQL: generated parameters style (=a|d|c
   -S, --esql-static-calls     ESQL: emit static calls
   -g, --debug-info            generate debug info
   -c, --consolidate           consolidate source to single-file
@@ -276,8 +276,8 @@ Options:
   -m, --map                   emit map file
   -C, --cobol85               emit COBOL85-compliant code
   -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
-  -L, --no-smart-cursor-init  disable smart cursor initialization
   -P, --picx-as arg (=char)   text field options (=char|charf|varchar)
+  --no-rec-code arg           custom code for "no record" condition(=nnn)
 ```	  
 
 When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gix/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
@@ -385,6 +385,8 @@ Keep pressing 'y' to advance in the loop and display all the three records in th
 
 ## Building from source
 
+GixSQL requires a C++17-compatible compiler, with support of the `filesystem` namespace. This usually means GCC 8+ and Visual Studio 2017 onwards (minimum 15.7) or, better, Visual Studio 2019/2022. Building GixSQL with older compilers might need adding `LIBS=-lstdc++fs` to your configure line (old gcc/lang) or `LIBS=-lc++fs` (old LLVM).
+
 ### Windows (Visual Studio)
 
 After cloning or downloading the repository you will find a solution file (`gixsql.sln`). You can use Visual Studio 2019 to build it, but first you  will likely have to check the include and library definitions for the PostgreSQL and MySQL client libraries (32/and or 64 bit). The preprocessor (`gixpp`) does not have any specific dependency, while the main runtime library (`libgixsql`)  - starting from v1.0.18 - depends on [spdlog](https://github.com/gabime/spdlog) and [fmt](https://github.com/fmtlib/fmt).
@@ -454,6 +456,8 @@ Starting from v1.0.16, the `configure` script can also be used to build with MSY
 
 Reasonably up-to-date installs of MinGW already have a correct version of `bison`.
 
+## Usage notes
+
 ### Using GixSQL from Gix-IDE
 When you create a project in Gix-IDE, you are asked whether you want to enable it for ESQL preprocessing. This is not an absolute requirement. At any point you can set the project property "Preprocess for ESQL" (under "General") to "Yes". There are several properties you can configure here that affed code generation by the preprocessor:
 
@@ -467,7 +471,7 @@ At the moment  Gix-IDE always uses its embedded version of GixSQL. In the future
 
 ### GixSQL-specific error codes
 
-When an error occurs, in the runtime libraries or in the DBMS, GixSQL does its best to return standard-compliant  `SQLSTATE` and `SQLCODE` error codes and messages. There are a few instances where an operation fails due to "internal" issues (logic errors, consistency checks, unsupported features, possible driver bugs, etc.). In these case GixSQL will use a custom error code and message for `SQLCODE` and `SQLERRM`. The table below details the internal error codes that are currently use and a brief explanation for each of them (error messages in `SQLERRM` are slightly different due to space limitation in the field).
+When an error occurs, in the runtime libraries or in the DBMS, GixSQL does its best to return standard-compliant  `SQLSTATE` and `SQLCODE` error codes and messages (the "no record found" condition is a special case, see below). There are a few instances where an operation fails due to "internal" issues (logic errors, consistency checks, unsupported features, possible driver bugs, etc.). In these case GixSQL will use a custom error code and message for `SQLCODE` and `SQLERRM`. The table below details the internal error codes that are currently use and a brief explanation for each of them (error messages in `SQLERRM` may be slightly different due to space limitation in the field).
 
 When one of these errors occur and there isn't a self-evident explanation (e.g. your program did not properly initialize a data field used for a prepared statement) you can use the logging system (see above) to try and diagnose the problem.
 
@@ -502,3 +506,59 @@ When one of these errors occur and there isn't a self-evident explanation (e.g. 
 | DBERR_PREPARE_FAILED        | -124   | Prepare statement failed                                    |
 | DBERR_CONN_INIT_ERROR       | -201   | Connection initialization error                             |
 | DBERR_CONN_INVALID_DBTYPE   | -202   | Invalid DB type                                             |
+
+### SQL Parameter generation and conversion
+
+Each DBMS uses a different set of placeholders for parameters in SQL statements. For instance:
+
+- PostgreSQL uses a `$` prefix followed by a numeric index (e.g. `$1`, `$2`, etc.)
+- Oracle uses a colon (`:`) followed by an alphanumeric identifier (e.g. `:param1`, `:client_no`, `:1`)
+- ODBC only accepts "anonymous" parameters whose placeholder is a question mark (`?`)
+- SQLite can use any of the above
+
+GixSQL will generate the appropriate parameter placeholders for each case (using the `-z` parameter in gixpp):
+
+- `-z d` : parameter placeholders are generated with a *dollar* prefix, followed by a numerical index  (e.g. `$1`, `$2`, etc.). This is the default.
+- `-z a` : parameter placeholders are generated as *anonymous*  (`?`)
+- `-z c` : parameter placeholders are generated with a *colon* prefix, followed by a numerical index (e.g. `:1`, `:2`, etc.)
+
+This obviously does not apply to prepared statements, whose text is compiled (or generated) in the program code itself. This means that a statement like `SELECT mycol FROM mytab WHERE mykey = ?` will succeed on ODBC (if syntactically and semantically correct, of course) and fail on PostgreSQL, because the latter will not recognize the `?` placeholder. 
+
+GixSQL can optionally convert all the parameter placeholders in a prepared statements to the ones used by the database driver. This feature can be activated in one of two ways:
+
+- Pass the `fixup_params` options in a connection string when connecting (e.g. `pgsql://localhost/mydb?fixup_params=on`)
+- set the `GIXSQL_FIXUP_PARAMS` to `on` or `1`
+
+### Customization of SQLCODE on "no record found"
+
+The return values for `SQLCODE`, as it is common knowledge, are not standard. Many DBMSs, when no data is found (e.g. when trying to fetch after the last row in a cursor has been reached, or when a `SELECT` statements returns no results) supply `100` as a return code when flagging this condition. While this behavious is widespread, it is far from being a standard. Oracle, for instance, uses `1403`. GixSQL, in this condition, returns a (more standardized) `02000` for `SQLSTATE` and, until v1.0.18, used to return a fixed value of `100` in `SQLCODE`. From v1.0.18 onwards, this value is customizable, to conform to the standards used by the combination of your COBOL code and DBMS of choice. A custom code for the "no record found" condition can (actually should) be set in two different places:
+
+- While preprocessing, by using the `--no-rec-code` option and adding a numeric value (e.g. `--no-rec-code 1403`). This instructs the preprocessor to correctly handle the `NOT FOUND` clauses in `EXEC SQL WHENEVER` statements.
+- At runtime, by setting the `GIXSQL_NOREC_CODE` environment variable (e.g. `export GIXSQL_NOREC_CODE=1403` (Linux) or `set GIXSQL_NOREC_CODE=1403` (Windows)
+- 
+## Driver notes
+
+### PostgreSQL
+
+The PostgreSQL drivers implements two ways of dealing with cursors: "native" (the default one) and "emulated". Native cursors use the SQL language features provided by PostgreSQL (e.g. `DECLARE crsr CURSOR FOR...`, `FETCH NEXT`, etc.) to manage cursor operations. Emulated cursors, on the other hand, execute the `SELECT` statement provided in the cursor definition and handle the resultset internally. Native cursors are generally to be preferred: they are a bit (just a bit) faster and support dynamic (updatable) behaviour. On the negative side, they **must** be executed inside a transaction, so you will need to add at least a `START TRANSACTION`/`COMMIT` pair of statements to your programs, if they are not already there.
+
+The PostgreSQL driver has specific options that can be added to the connection string:
+
+- `default_schema`: used to set the default schema(s), maps directly to PostgreSQL's `search_path`
+- `decode_binary` : binary (`bytea`) fields are decoded when their data is read into a COBOL field. The default is `on`. If, for any reason, you want to preserve the original encoding, set it to `off` in the connection string. Since encoded binary data takes more space, in this case you should make sure that your data fields are large enough to accomodate the data being read.
+
+### ODBC
+A lot of features in the ODBC driver depend in turn on the underlying driver (MySQL ODBC Connector, psqlODBC, etc.) and on its settings. Tests have usually been conducted using the latest versions of the available ODBC dirivers (e.g. 13.x for PostgreSQL).
+
+For instance: when using the PostgreSQL driver (psqlODBC) you should set the "rollback on error" option to "nop", to let GixSQL handle database errors. Otherwise the ODBC driver will always roll back the transaction in case of errors and not allow your program to handle errors, roll back to savepoints, etc. 
+
+### Oracle
+
+The Oracle driver currently supports connecting only with a service name (e.g. `oracle://<oracle host>/<service name>/`), no SID. Other connection options and parameters will be added in the future.
+
+### SQLite
+
+The connection string for SQLIte databases directly encodes the filename, e.g.:
+- `sqlite:///home/user/mydb.db` 
+- `sqlite://c:/Users/myuser/mydb.db`
+As usual with SQLite, if the SQLIte file does not exist, it will be created. Currently no options are available for the SQLite driver.

@@ -2,7 +2,7 @@
 <RunSettings>
 	<RunConfiguration>
 		<EnvironmentVariables>
-			<GIXSQL_TEST_MATRIX_CONFIG>C:\Users\marchetto\source\repos\gixsql-more-drivers\gixsql-tests\gixsql_test_data.xml</GIXSQL_TEST_MATRIX_CONFIG>
+			<GIXSQL_TEST_MATRIX_CONFIG>C:\Users\marchetto\source\repos\gixsql\gixsql-tests\gixsql_test_data.xml</GIXSQL_TEST_MATRIX_CONFIG>
 			
 			<GIXSQL_INSTALL_BASE>D:\gix-ide-x64</GIXSQL_INSTALL_BASE>
 			

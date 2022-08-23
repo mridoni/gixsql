@@ -93,6 +93,8 @@ USA.
 
 #define SQL_QUERY_BLOCK_SIZE	8191
 
+#define DEFAULT_NO_REC_CODE	100
+
 // These must be in sync with the ones in SqlVar.h
 #ifdef USE_VARLEN_16
 #define VARLEN_LENGTH_PIC		"9(4) COMP-5"
@@ -191,7 +193,6 @@ static struct esql_whenever_handler_t
 	esql_whenever_clause_handler_t sqlerror;
 } esql_whenever_handler;
 
-
 inline std::string TPESQLProcessing::get_call_id(const std::string s)
 {
 	return CALL_PREFIX + s;
@@ -219,7 +220,6 @@ TPESQLProcessing::TPESQLProcessing(GixPreProcessor* gpp) : ITransformationStep(g
 	opt_no_output = std::get<bool>(gpp->getOpt("no_output", false));
 	opt_emit_map_file = std::get<bool>(gpp->getOpt("emit_map_file", false));
 	opt_emit_cobol85 = std::get<bool>(gpp->getOpt("emit_cobol85", false));
-	opt_smart_crsr_init = std::get<bool>(gpp->getOpt("smart_crsr_init", false));
 	opt_picx_as_varchar = std::get<bool>(gpp->getOpt("picx_as_varchar", false));
 
 	auto vsfxs = std::get<std::string>(gpp->getOpt("varlen_suffixes", std::string()));
@@ -232,6 +232,8 @@ TPESQLProcessing::TPESQLProcessing(GixPreProcessor* gpp) : ITransformationStep(g
 		opt_varlen_suffix_len = vsfxs.substr(0, p);
 		opt_varlen_suffix_data = vsfxs.substr(p + 1);
 	}
+
+	opt_norec_sqlcode = std::get<int>(gpp->getOpt("no_rec_code", DEFAULT_NO_REC_CODE));
 
 	output_line = 0;
 	working_begin_line = 0;
@@ -347,14 +349,13 @@ int TPESQLProcessing::outputESQL()
 
 	// If we are using "smart" cursor initialization, the block containing the initialization code goes at the end of the program
 	// otherwise it has already been output at the start of the PROCEDURE DIVISION
-	if (opt_smart_crsr_init) {
-		input_file_stack.push(filename_clean_path(input_file));
-		if (!put_cursor_declarations()) {
-			main_module_driver.error("An error occurred while generating ESQL cursor declarations", ERR_CRSR_GEN);
-			return false;
-		}
-		input_file_stack.pop();
+	input_file_stack.push(filename_clean_path(input_file));
+	if (!put_cursor_declarations()) {
+		main_module_driver.error("An error occurred while generating ESQL cursor declarations", ERR_CRSR_GEN);
+		return false;
 	}
+	input_file_stack.pop();
+
 
 	bool b1 = opt_no_output ? true : file_write_all_lines(output_file, output_lines);
 	bool b2;
@@ -447,14 +448,6 @@ bool TPESQLProcessing::processNextFile()
 			// PROCEDURE DIVISION can be string_split across several lines if a USING clause is added
 			for (int iline = exec_sql_stmt->startLine; iline <= exec_sql_stmt->endLine; iline++) {
 				put_output_line(input_lines.at(iline - 1));
-			}
-
-			// If we are using "smart" cursor initialization, the block containing the initialization code goes at the end of the program
-			if (!opt_smart_crsr_init) {
-				if (!put_cursor_declarations()) {
-					main_module_driver.error("An error occurred while generating ESQL cursor declarations", ERR_CRSR_GEN);
-					return false;
-				}
 			}
 			break;
 
@@ -658,11 +651,13 @@ bool TPESQLProcessing::put_cursor_declarations()
 	put_output_line(code_tag + "*");
 	put_output_line(code_tag + "*   ESQL CURSOR DECLARATIONS (START)");
 
-	if (opt_smart_crsr_init) {
-		put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
-	}
+	put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
 
-	for (cb_exec_sql_stmt_ptr stmt : startup_items) {
+	auto cursor_list = startup_items;
+	auto other_crsrs = cpplinq::from(*(main_module_driver.exec_list)).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
+	cursor_list.insert(cursor_list.end(), other_crsrs.begin(), other_crsrs.end());
+
+	for (cb_exec_sql_stmt_ptr stmt : cursor_list) {
 		bool has_params = stmt->host_list->size() > 0;
 
 		//if (stmt->statementSource && !stmt->statementSource->is_literal) {
@@ -670,9 +665,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 		//	return false;
 		//}
 
-		if (opt_smart_crsr_init) {
-			put_output_line(string_format(AREA_A_CPREFIX "GIXSQL-CI-P-%s.", string_replace(stmt->cursorName, "_", "-")));
-		}
+		put_output_line(string_format(AREA_A_CPREFIX "GIXSQL-CI-P-%s.", string_replace(stmt->cursorName, "_", "-")));
 
 		if (has_params) {
 			put_start_exec_sql(false);
@@ -744,9 +737,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 		}
 	}
 
-	if (opt_smart_crsr_init) {
-		put_output_line(AREA_A_CPREFIX "GIX-SKIP-CRSR-INIT.");
-	}
+	put_output_line(AREA_A_CPREFIX "GIX-SKIP-CRSR-INIT.");
 
 	put_output_line(code_tag + "*");
 	put_output_line(code_tag + "*   ESQL CURSOR DECLARATIONS (END)");
@@ -841,10 +832,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			return false;
 
 		// Cursor initialization flags (if requested)
-		if (opt_smart_crsr_init) {
-			put_smart_cursor_init_flags();
-		}
-
+		put_smart_cursor_init_flags();
 		break;
 
 	case ESQL_Command::Incfile:
@@ -938,54 +926,55 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			>0 RESULT parameters  -> SelectInto
 		*/
 
-		//int select_field_list_len = 0;
-		int res_params_count = 0;
-
-		put_start_exec_sql(false);
-
-		if (!put_res_host_parameters(stmt, &res_params_count))
-			return false;
-
-		if (!put_host_parameters(stmt))
-			return false;
-
-		std::string call_id;
-		if (!stmt->res_host_list->size()) {
-			call_id = get_call_id(stmt->cursorName.empty() ? "Exec" : "CursorDeclare");
-			if (stmt->host_list->size())
-				call_id += "Params";
-		}
-		else {
-			call_id = get_call_id("ExecSelectIntoOne");
-		}
-
 		if (stmt->cursorName.empty()) {
-			ESQLCall select_call(call_id, emit_static);
-			select_call.addParameter("SQLCA", BY_REFERENCE);
-			select_call.addParameter(&main_module_driver, stmt->connectionId);
-			select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-			select_call.addParameter(stmt->host_list->size(), BY_VALUE);
-			select_call.addParameter(res_params_count, BY_VALUE);
-			if (!put_call(select_call, false))
+			int res_params_count = 0;
+
+			put_start_exec_sql(false);
+
+			if (!put_res_host_parameters(stmt, &res_params_count))
 				return false;
-		}
-		else {
-			ESQLCall select_call(call_id, emit_static);
-			select_call.addParameter("SQLCA", BY_REFERENCE);
-			select_call.addParameter(&main_module_driver, stmt->connectionId);
-			select_call.addParameter("\"" + stmt->cursorName + "\" & x\"00\"", BY_REFERENCE);
-			select_call.addParameter(stmt->cursor_hold, BY_VALUE);
-			select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-			select_call.addParameter(0, BY_VALUE);
-			if (stmt->host_list->size())
+
+			if (!put_host_parameters(stmt))
+				return false;
+
+			std::string call_id;
+			if (!stmt->res_host_list->size()) {
+				call_id = get_call_id(stmt->cursorName.empty() ? "Exec" : "CursorDeclare");
+				if (stmt->host_list->size())
+					call_id += "Params";
+			}
+			else {
+				call_id = get_call_id("ExecSelectIntoOne");
+			}
+
+			if (stmt->cursorName.empty()) {
+				ESQLCall select_call(call_id, emit_static);
+				select_call.addParameter("SQLCA", BY_REFERENCE);
+				select_call.addParameter(&main_module_driver, stmt->connectionId);
+				select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 				select_call.addParameter(stmt->host_list->size(), BY_VALUE);
+				select_call.addParameter(res_params_count, BY_VALUE);
+				if (!put_call(select_call, false))
+					return false;
+			}
+			else {
+				ESQLCall select_call(call_id, emit_static);
+				select_call.addParameter("SQLCA", BY_REFERENCE);
+				select_call.addParameter(&main_module_driver, stmt->connectionId);
+				select_call.addParameter("\"" + stmt->cursorName + "\" & x\"00\"", BY_REFERENCE);
+				select_call.addParameter(stmt->cursor_hold, BY_VALUE);
+				select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
+				select_call.addParameter(0, BY_VALUE);
+				if (stmt->host_list->size())
+					select_call.addParameter(stmt->host_list->size(), BY_VALUE);
 
-			if (!put_call(select_call, false))
-				return false;
+				if (!put_call(select_call, false))
+					return false;
+			}
+			put_end_exec_sql(false);
+
+			put_whenever_handler(stmt->period);
 		}
-		put_end_exec_sql(false);
-
-		put_whenever_handler(stmt->period);
 	}
 	break;
 
@@ -994,11 +983,10 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		bool is_crsr_startup_item = cpplinq::from(startup_items).where([stmt](cb_exec_sql_stmt_ptr p) { return p->cursorName == stmt->cursorName; }).to_vector().size() > 0;
 
 		// We need to add a check only if the cursor has been declared in the WORKING-STORAGE section
-		if (opt_smart_crsr_init && is_crsr_startup_item) {
-			std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
-			put_smart_cursor_init_check(stmt->cursorName);
-			put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
-		}
+		std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
+		put_smart_cursor_init_check(stmt->cursorName);
+		put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
+
 
 		std::string cursor_id = stmt->cursorName;
 		ESQLCall open_call(get_call_id("CursorOpen"), emit_static);
@@ -1008,9 +996,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		if (!put_call(open_call, false, 1))
 			return false;
 
-		if (opt_smart_crsr_init && is_crsr_startup_item) {
-			put_output_line(string_format(AREA_B_CPREFIX "END-IF"));
-		}
+		put_output_line(string_format(AREA_B_CPREFIX "END-IF"));
 
 		put_whenever_handler(stmt->period);
 	}
@@ -2244,7 +2230,14 @@ void TPESQLProcessing::put_smart_cursor_init_flags()
 		return;
 
 	put_output_line(code_tag + "*   ESQL CURSOR INIT FLAGS (START)");
+	// First we generate the flags for cursors declared in WORKING-STORAGE
 	for (cb_exec_sql_stmt_ptr stmt : startup_items) {
+		std::string cname = string_replace(stmt->cursorName, "_", "-");
+		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
+	}
+	// Then the other cursors
+	auto other_crsrs = cpplinq::from(*(main_module_driver.exec_list)).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
+	for (cb_exec_sql_stmt_ptr stmt : other_crsrs) {
 		std::string cname = string_replace(stmt->cursorName, "_", "-");
 		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
 	}
@@ -2405,7 +2398,7 @@ void TPESQLProcessing::put_whenever_handler(bool terminate_with_period)
 	put_output_line(lp + std::string("EVALUATE TRUE"));
 
 	// Not found
-	put_output_line(lp + std::string("WHEN SQLCODE = 100"));
+	put_output_line(lp + std::string("WHEN SQLCODE = ") + std::to_string(opt_norec_sqlcode));
 	put_whenever_clause_handler(&esql_whenever_handler.not_found);
 
 	// SQLWARNING

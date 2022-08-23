@@ -174,8 +174,8 @@ namespace gixsql_tests
                             client_pp_params = String.Empty;
                     }
                     string gixpp_args = $"-e -v -S -I. -I{cc.gix_copy_path} -i {msrc} -o {pp_file} {client_pp_params}";
-                    if (td.AddtitionalPreProcessParams != String.Empty)
-                        gixpp_args += (" " + td.AddtitionalPreProcessParams);
+                    if (td.AdditionalPreProcessParams != String.Empty)
+                        gixpp_args += (" " + td.AdditionalPreProcessParams);
 
                     Console.WriteLine($"[gixpp]: {cc.gixpp_exe} {gixpp_args}");
 

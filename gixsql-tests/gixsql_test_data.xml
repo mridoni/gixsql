@@ -35,52 +35,63 @@
 			<provider value="Npgsql" />
 		</data-source-client>
 
-		<!--<data-source-client type="mysql" architecture="x86">
+		<data-source-client type="mysql" architecture="x86">
 			<environment>
 				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
 			</environment>
-			<provider value="MySQL" />
+			<provider value="MySql.Data.MySqlClient" />
+			<additional-preprocess-params value="-z a" />
 		</data-source-client>
 		<data-source-client type="mysql" architecture="x64">
 			<environment>
 				<variable key="PATH" value="C:\vcpkg\installed\x64-windows\bin;C:\vcpkg\installed\x64-mingw-dynamic\bin" />
 			</environment>
-			<provider value="MySQL" />
-		</data-source-client>-->
+			<provider value="MySql.Data.MySqlClient" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
 
 		<data-source-client type="oracle" architecture="x64">
 			<environment>
 				<variable key="PATH" value="D:\oracle\instantclient_21_6_x64" />
 			</environment>
 			<provider value="Oracle.ManagedDataAccess.Client" />
-			<additional-preprocess-params>-z c</additional-preprocess-params>
+			<additional-preprocess-params value="-z c" />
 		</data-source-client>
-		
 		<data-source-client type="oracle" architecture="x86">
 			<environment>
 				<variable key="PATH" value="D:\oracle\instantclient_21_6_x86" />
 			</environment>
 			<provider value="Oracle.ManagedDataAccess.Client" />
-			<additional-preprocess-params>-z c</additional-preprocess-params>
-		</data-source-client>		
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
 
 		<data-source-client type="sqlite" architecture="x64">
 			<environment>
-				<!--<variable key="PATH" value="" />-->
 			</environment>
 			<provider value="System.Data.SQLite" />
-			<additional-preprocess-params>-z c</additional-preprocess-params>
+			<additional-preprocess-params value="-z c" />
 		</data-source-client>
-
 		<data-source-client type="sqlite" architecture="x86">
 			<environment>
-				<!--<variable key="PATH" value="" />-->
 			</environment>
 			<provider value="System.Data.SQLite" />
-			<additional-preprocess-params>-z c</additional-preprocess-params>
+			<additional-preprocess-params value="-z c" />
 		</data-source-client>
-	</data-source-clients>
 
+		<data-source-client type="odbc" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="System.Data.Odbc" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+		<data-source-client type="odbc" architecture="x86">
+			<environment>
+			</environment>
+			<provider value="System.Data.Odbc" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+
+	</data-source-clients>
 
 	<data-sources>
 		<data-source type="pgsql" index="1">
@@ -99,7 +110,7 @@
 			<password>test</password>
 			<options></options>
 		</data-source>
-		<!--<data-source type="mysql" index="1">
+		<data-source type="mysql" index="1">
 			<hostname>192.168.1.171</hostname>
 			<port>3306</port>
 			<dbname>testdb1</dbname>
@@ -114,9 +125,9 @@
 			<username>test</username>
 			<password>test</password>
 			<options></options>
-		</data-source>-->
+		</data-source>
 		<data-source type="oracle" index="1">
-			<hostname>192.168.150.141</hostname>
+			<hostname>192.168.150.145</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test1</username>
@@ -124,7 +135,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="2">
-			<hostname>192.168.150.141</hostname>
+			<hostname>192.168.150.145</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test2</username>
@@ -145,6 +156,22 @@
 			<dbname></dbname>
 			<username></username>
 			<password></password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="1">
+			<hostname>ODBC_TEST1</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="2">
+			<hostname>ODBC_TEST2</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
 			<options></options>
 		</data-source>
 	</data-sources>
@@ -232,9 +259,9 @@
 			<pre-run-drop-table data-source-index="1">tab2</pre-run-drop-table>
 			<pre-run-drop-table data-source-index="2">tab1</pre-run-drop-table>
 			<pre-run-drop-table data-source-index="2">tab2</pre-run-drop-table>
-			<!--<expected-to-fail preprocess="false" compile="false" />-->
-			<!--<additional-preprocess-params value="" />-->
-			<!--<additional-compile-params value="" />-->
+
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB1 (FLD1 INT)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="2">CREATE TABLE TAB2 (FLD2 INT)</pre-run-sql-statement>
 
 			<environment>
 				<variable key="DATASRC1" value="${datasource1-noauth-url}" />
@@ -487,8 +514,14 @@
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<!-- For ODBC, we assume PostgreSQL to be the underlying DBMS -->
+			<pre-run-sql-statement data-source-index="1" type="odbc">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
-			<pre-run-sql-statement data-source-index="1" params=":p1,:p2">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="pgsql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="oracle">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="sqlite">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="mysql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="odbc">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
 
 			<!--<expected-to-fail preprocess="false" compile="false" />-->
 			<!--<additional-preprocess-params value="" />-->
@@ -536,10 +569,16 @@
 			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
 			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))"</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
-			
-			<pre-run-sql-statement data-source-index="1" params=":p1,:p2">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<!-- For ODBC, we assume PostgreSQL to be the underlying DBMS -->
+			<pre-run-sql-statement data-source-index="1" type="odbc">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="pgsql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="oracle">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="sqlite">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="mysql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="odbc">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
 
 			<!--<expected-to-fail preprocess="false" compile="false" />-->
 			<!--<additional-preprocess-params value="" />-->
@@ -569,7 +608,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL005C" enabled="true" not-applies-to="sqlite">
+		<test name="TSQL005C" enabled="true" not-applies-to="sqlite,mysql">
 			<description>BINARY/VARBINARY data types</description>
 			<issue-coverage>#000</issue-coverage>
 			<group></group>
@@ -960,6 +999,27 @@
 			<expected-output></expected-output>
 		</test>
 
+
+		<test name="TSQL014D" enabled="true">
+			<description>Parse SELECT.. without INTO</description>
+			<issue-coverage>#FR2</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL014D.cbl" />
+			</cobol-sources>
+
+			<!--<data-sources count="1" />-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="false" />
+
+			<expected-output></expected-output>
+		</test>
+
 		<test name="TSQL015A" enabled="true">
 			<description>Add OCCURS UNBOUNDED</description>
 			<issue-coverage>#080</issue-coverage>
@@ -1213,8 +1273,8 @@
 			<compile value="true" />
 			<run value="false" />
 
-			<additional-preprocess-params>--cobol85</additional-preprocess-params>
-			<additional-compile-params>-std ibm</additional-compile-params>
+			<additional-preprocess-params value="--cobol85" />
+			<additional-compile-params value="-std ibm" />
 
 			<expected-output>
 			</expected-output>
@@ -1258,8 +1318,8 @@
 				<variable key="DATASRC_PWD" value="${datasource1-password}" />
 			</environment>
 
-			<additional-preprocess-params>--cobol85</additional-preprocess-params>
-			<additional-compile-params>-std ibm</additional-compile-params>
+			<additional-preprocess-params value="--cobol85" />
+			<additional-compile-params value="-std ibm" />
 
 			<preprocess value="true" />
 			<compile value="true" />
@@ -1531,7 +1591,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL021B-3" enabled="true">
+		<test name="TSQL021B-3" enabled="true" not-applies-to="odbc">
 			<description>More formats for connect</description>
 			<issue-coverage>#043</issue-coverage>
 			<architecture>all</architecture>
@@ -2150,6 +2210,79 @@
 				<line># RECS REQUESTED: 00010000</line>
 				<line># RECS INSERTED : 00010000</line>
 				<line># RECS READ: 00010000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL033-1" enabled="true">
+			<description>FR: allow mapping of "NoRecCode"</description>
+			<issue-coverage>#095</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL033A.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">tab00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INTEGER, FLD1 CHAR(100), FLD2 CHAR(100) )</pre-run-sql-statement>
+
+			<additional-preprocess-params value="--no-rec-code 998877" />
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+				<variable key="GIXSQL_NOREC_CODE" value="998877" />
+			</environment>
+
+			<expected-output>
+				<line># RECS REQUESTED: 00000010</line>
+				<line># RECS INSERTED : 00000010</line>
+				<line>SEL-ERR*SQLCODE  : +0000998877</line>
+				<line>SEL-ERR SQLCODE  : +0000998877</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL033-2" enabled="true">
+			<description>FR: allow mapping of "NoRecCode"</description>
+			<issue-coverage>#095</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL033A.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">tab00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INTEGER, FLD1 CHAR(100), FLD2 CHAR(100) )</pre-run-sql-statement>
+
+			<!--<additional-preprocess-params value="" />-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line># RECS REQUESTED: 00000010</line>
+				<line># RECS INSERTED : 00000010</line>
+				<line>SEL-ERR*SQLCODE  : +0000000100</line>
+				<line>SEL-ERR SQLCODE  : +0000000100</line>
 			</expected-output>
 
 			<expected-preprocessed-file-content>

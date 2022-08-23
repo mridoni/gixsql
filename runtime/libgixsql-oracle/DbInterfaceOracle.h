@@ -82,10 +82,9 @@ public:
 	virtual int cursor_open(ICursor* cursor);
 	virtual int fetch_one(ICursor *, int) override;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len);
-	virtual int move_to_first_record(std::string stmt_name = "") override;
+	virtual bool move_to_first_record(std::string stmt_name = "") override;
 	virtual int supports_num_rows() override;
 	virtual int get_num_rows(ICursor* crsr) override;
-	virtual int has_data(ResultSetContextType resultset_context_type, void* context) override;
 	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
 	virtual int get_error_code() override;
@@ -118,6 +117,7 @@ private:
 
 	int dpiRetrieveError(int rc);
 	void dpiClearError(); 
+	void dpiSetError(int err_code, std::string sqlstate, std::string err_msg); 
 
 	int _odpi_exec(ICursor* crsr, std::string, OdpiStatementData* prep_stmt = nullptr);
 	int _odpi_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, OdpiStatementData* prep_stmt = nullptr);
