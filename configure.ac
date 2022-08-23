@@ -87,7 +87,7 @@ AC_ARG_ENABLE([pgsql],
   [AS_HELP_STRING([--enable-sqlite], [Enable SQLite support @<:@yes@:>@])])  
 
 AC_ARG_WITH([default-driver],
-	[AS_HELP_STRING([--with-default-driver[=none|odbc|mysql|pgsql!oracle|sqlite]],
+	[AS_HELP_STRING([--with-default-driver[=none|odbc|mysql|pgsql|oracle|sqlite]],
 		[set DBMS default-driver])],
 		[],
 		[with_default_driver=none])
@@ -204,6 +204,3 @@ AC_CONFIG_FILES([Makefile
                  runtime/libgixsql-sqlite/Makefile
 ])
 AC_OUTPUT
-
-
-
