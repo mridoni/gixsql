@@ -741,8 +741,6 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 		spdlog::error("cursor {} is alredy open", cname);
 		rc = dbi->close_cursor(cursor);
 		FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
-
-			cursor->setOpened(false);
 	}
 
 	//if (cursor->getConnection() == NULL) {		// USE_DEFAULT_CONNECTION
@@ -757,8 +755,6 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 
 	rc = dbi->cursor_open(cursor);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_OPEN_CURSOR_FAILED)
-
-		cursor->setOpened(true);
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
@@ -859,8 +855,6 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	IDbInterface* dbi = cursor->getConnection()->getDbInterface();
 	int rc = dbi->close_cursor(cursor);
-
-	cursor->setOpened(false);
 
 	// See issue #98
 	//if (cursor_manager.exists(cname))
