@@ -979,6 +979,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 		SqlVar* v = _res_sql_var_list.at(i);
 		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, NULL, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
+			free(buffer);
 			return RESULT_FAILED;
 		}
 
