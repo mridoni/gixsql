@@ -87,7 +87,7 @@ private:
 
 	PGResultSetData* current_resultset_data = nullptr;
 
-	int last_rc = 0;
+	PGresultStatus last_rc = PGRES_EMPTY_QUERY;
 	std::string last_error;
 	std::string last_state;
 
