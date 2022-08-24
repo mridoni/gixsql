@@ -672,7 +672,10 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 				return false;
 			}
 			wk_rs = (PGResultSetData*)c->getPrivateData();
-			row = wk_rs->current_row_index;	// we overwrite the row index
+			// we overwrite the row index (for ?)
+			if (wk_rs->current_row_index != -1) {
+				row = wk_rs->current_row_index;
+			}
 		}
 		break;
 
@@ -685,7 +688,8 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 	const char* res = PQgetvalue(wk_rs->resultset, row, col);
 	if (!res) {
-		return false;
+		lib_logger->error("Cannot retrieve return statement value for row {} col {}", row, col);
+		return false;	// FIXME: this means "caller error", not a problem with the resultset value!
 	}
 
 	auto type = PQftype(wk_rs->resultset, col);
