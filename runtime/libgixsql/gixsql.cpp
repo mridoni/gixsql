@@ -520,6 +520,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 		SqlVar* v = _res_sql_var_list.at(i);
 		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, stmt_name, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
+			free(buffer);
 			return RESULT_FAILED;
 		}
 
@@ -814,10 +815,12 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
 		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, cursor, 0, i++, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
-			continue;
+			free(buffer);
+			return RESULT_FAILED;
 		}
 
 		(*it)->createCobolData(buffer, datalen);
+		// may add trace code here (or remove from GIXSQLExecSelectIntoOne)
 
 	}
 	free(buffer);
