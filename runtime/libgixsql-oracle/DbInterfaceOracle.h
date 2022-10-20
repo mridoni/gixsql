@@ -20,10 +20,6 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA.
 */
 
-extern "C" {
-#include "dpi.h"
-#include "dpiImpl.h"
-}
 
 #include <string>
 #include <vector>
@@ -35,6 +31,10 @@ extern "C" {
 #include "IDataSourceInfo.h"
 #include "ISchemaManager.h"
 
+extern "C" {
+#include "dpi.h"
+#include "dpiImpl.h"
+}
 
 #define DECODE_BINARY_ON		1
 #define DECODE_BINARY_OFF		0
