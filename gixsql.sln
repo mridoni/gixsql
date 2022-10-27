@@ -47,7 +47,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql-sqlite", "runtime
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libgixsql-oracle", "runtime\libgixsql-oracle\libgixsql-oracle.vcxproj", "{EECD5583-42BB-4A10-AF3B-4DC5CF419071}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "gixsql-tests-nunit", "gixsql-tests-nunit\gixsql-tests-nunit.csproj", "{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "gixsql-tests-nunit", "gixsql-tests-nunit\gixsql-tests-nunit.csproj", "{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -363,39 +363,27 @@ Global
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|Any CPU.ActiveCfg = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|Any CPU.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|Win32.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|Win32.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|x64.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug_5.15.2|x64.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Win32.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Win32.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|x64.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Any CPU.ActiveCfg = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Any CPU.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Win32.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Win32.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|x64.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|x64.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|Win32.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|Win32.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|x64.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release|x64.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|Win32.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|Win32.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|x64.ActiveCfg = Debug|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Debug|x64.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|Any CPU.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|Win32.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|Win32.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|x64.ActiveCfg = Release|Any CPU
-		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Test_Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -412,7 +400,7 @@ Global
 		{EECD5583-42BB-4A10-AF3B-4DC5CF419071} = {CA214231-A8B6-4FBA-B3AE-3FE5CAF64A38}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {0D846CBC-2353-409E-B512-D9DF7822A67A}
 		Qt5Version = Qt_5.14_msvc64
+		SolutionGuid = {0D846CBC-2353-409E-B512-D9DF7822A67A}
 	EndGlobalSection
 EndGlobal

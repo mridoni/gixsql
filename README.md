@@ -432,15 +432,17 @@ in case you want to to build a 32-bit version.
 
 *All commands and packages refer to Ubuntu 20.04, You might need to adjust them depending on your distribution or environment.*
 
-You will need the development packages for the DBMS client libraries, e.g.:
+You will need the development packages for some of the DBMS client libraries, e.g.:
 
 	apt install libmariadb-dev libpq-dev unixodbc-dev flex
 
 *(it is still possible to use libmysqlclient-dev, should you prefer it).*
 
+The client support code for Oracle and SQLite is integrated in GixSQL, so no additional package is needed.
+
 Starting from v1.0.16 you will also need the development packages for spdlog and fmt, if not already installed:
 
-	apt install ibspdlog-dev libfmt-dev
+	apt install libspdlog-dev libfmt-dev
 
 You will also need a modern enough version of bison (3.7+). If you do not already have it installed and you are using Ubuntu 20.04, you can download it from Debian's repositories and install it over the current one (or you can download and compile it from [here](https://www.gnu.org/software/bison/).
 
@@ -452,20 +454,20 @@ and
 
 Download the .tar.gz.package from the Releases page, e.g.
 
-	gixsql-1.0.16-xxxx.tar.gz
+	gixsql-1.0.18-xxxx.tar.gz
 
-Untar the package:
+Untar the package (the package name and verision may obviously vary):
 
-	tar xzvf gixsql-1.0.16-641.tar.gz
+	tar xzvf gixsql-1.0.18b-922.tar.gz
 
 cd to the directory created by the tar command and run configure (in this case we will install to /opt/gixsql)
 
-	cd gixsql-1.0.16-641
+	cd gixsql-1.0.18-922
 	./configure --prefix=/opt/gixsql
 
 By default configure tries to build all the drivers. If you nly need one, you can disable the others. For instance, to build only the PostgreSQL driver:
 
-	./configure --prefix=/opt/install --disable-mysql --disable-odbc
+	./configure --prefix=/opt/install --disable-mysql --disable-odbc --disable-sqlite ---disable-oracle
 
 If all goes well you can just do:
 

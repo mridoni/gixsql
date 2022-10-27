@@ -45,8 +45,9 @@ Source: "{#DIST_DIR}\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion createal
 Source: "{#WORKSPACE}\copy\SQLCA.cpy"; DestDir: "{app}\lib\copy"; Flags: ignoreversion createallsubdirs recursesubdirs
 
 ; examples and docs
-Source: "{#WORKSPACE}\gixsql-tests\data\*.cbl"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
-Source: "{#WORKSPACE}\gixsql-tests\data\*.cpy"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
+Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.cbl"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
+Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.cpy"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
+Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.sql"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
 Source: "{#WORKSPACE}\README"; DestDir: "{userdocs}\GixSQL\Documentation"; Flags: ignoreversion
 
 ; MS runtimes

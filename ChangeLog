@@ -1,5 +1,10 @@
+=== v1.0.18b =====================================================
+- Changed cursor initialization (should fix #88)
+- Fix for "1.0.17/1.0.18 regression: COMMIT and ROLLBACK delete all cursor definitions -> Status -111" (#119)
+- Merged pull request #127 (thanks to Simon Sobisch)
+
 === v1.0.18a =====================================================
-- Changed logging system initializationto avoid possible crashes
+- Changed logging system initialization to avoid possible crashes
 - Fixed some spelling problems in the documentation
 - Fixed some memory leaks in the runtime
 - Solution for "sqlstate by driver may set 00000 for errors (in GixSQL?)" (#114)
