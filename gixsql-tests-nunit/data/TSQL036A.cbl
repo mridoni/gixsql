@@ -56,13 +56,15 @@
                 TESTNUM INTO :TESTNUM FROM TAB01 
            END-EXEC.
 
-           DISPLAY 'SELECT SQLCODE: ' SQLCODE.
-           IF SQLCODE <> 0 THEN
-              GO TO 100-EXIT
-           END-IF.     
+
+           DISPLAY 'SELECT SQLCODE : ' SQLCODE.
+           DISPLAY 'SELECT SQLSTATE: ' SQLSTATE.
+
+      * we do not check SQLCODE and stop on error, so we can
+      * display the field content and SQLCODE itself
 
            DISPLAY 'RES: [' TESTNUM ']'.           
-           DISPLAY 'RES: [' TESTREM ']'.           
+           DISPLAY 'REM: [' TESTREM ']'.           
 
            EXEC SQL CONNECT RESET END-EXEC.
 

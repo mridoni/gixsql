@@ -21,6 +21,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <string>
 
 // These must be in sync with the ones in TPESQLProcessing.cpp
 #ifdef USE_VARLEN_16
@@ -57,7 +58,7 @@ public:
 	bool isVarLen();
 	bool isBinary();
 
-	void createCobolData(char *retstr, int datalen);
+	void createCobolData(char *retstr, int datalen, int* sqlcode);
 
 	void createCobolDataLowValue();
 

@@ -32,6 +32,8 @@
 
 #define DECIMAL_LENGTH 1
 
+#define DBERR_NUM_OUT_OF_RANGE		-410
+
 #if defined(unix) || defined(__unix__) || defined(__unix) || defined(__linux__)
 #include <byteswap.h>
 #define COB_BSWAP_16(val) (bswap_16 (val))
@@ -372,8 +374,10 @@ void* SqlVar::getAddr()
 }
 
 
-void SqlVar::createCobolData(char *retstr, int datalen)
+void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 {
+	*sqlcode = 0;
+
 	void* addr = this->addr;
 
 	switch (type) {
@@ -398,7 +402,13 @@ void SqlVar::createCobolData(char *retstr, int datalen)
 				int_fillzero = 0;
 
 			memset(addr, ASCII_ZERO, int_fillzero);
-			memcpy((uint8_t *)addr + int_fillzero, retstr, beforedp);
+			if (beforedp <= length) {
+				memcpy((uint8_t*)addr + int_fillzero, retstr, beforedp);
+			}
+			else {	// Truncation will occur
+				memcpy((uint8_t*)addr, retstr + (beforedp - this->length), length);
+				*sqlcode = DBERR_NUM_OUT_OF_RANGE;
+			}
 
 			if (power < 0) {
 				int afterdp = 0;
@@ -455,7 +465,13 @@ void SqlVar::createCobolData(char *retstr, int datalen)
 				int_fillzero = 0;
 
 			memset(addr, ASCII_ZERO, int_fillzero);
-			memcpy((uint8_t *)addr + int_fillzero, value, beforedp);
+			if (beforedp <= length) {	
+				memcpy((uint8_t*)addr + int_fillzero, value, beforedp);
+			}
+			else {	// Truncation will occur
+				memcpy((uint8_t*)addr, value + (beforedp - this->length), length);
+				*sqlcode = DBERR_NUM_OUT_OF_RANGE;
+			}
 
 			if (power < 0) {
 				int afterdp = 0;
@@ -515,8 +531,13 @@ void SqlVar::createCobolData(char *retstr, int datalen)
 
 			int_fillzero = length - beforedp + power;
 			memset(addr, ASCII_ZERO, int_fillzero);
-
-			memcpy((uint8_t *)addr + SIGN_LENGTH + int_fillzero, value, beforedp);
+			if (beforedp <= length) {
+				memcpy((uint8_t*)addr + int_fillzero, value, beforedp);
+			}
+			else {	// Truncation will occur
+				memcpy((uint8_t*)addr, value + (beforedp - this->length), length);
+				*sqlcode = DBERR_NUM_OUT_OF_RANGE;
+			}
 
 			if (power < 0) {
 				int afterdp = 0;

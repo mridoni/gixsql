@@ -24,11 +24,12 @@ namespace gixsql_tests
 
         static GixSqlDynamicTestRunner()
         {
-            DbProviderFactories.RegisterFactory("MySql", MySql.Data.MySqlClient.MySqlClientFactory.Instance);
+            //DbProviderFactories.RegisterFactory("MySql.Data.MySqlClient", MySql.Data.MySqlClient.MySqlClientFactory.Instance);
+            DbProviderFactories.RegisterFactory("MySql.Data.MySqlClient", MySqlConnector.MySqlConnectorFactory.Instance);
             DbProviderFactories.RegisterFactory("Npgsql", Npgsql.NpgsqlFactory.Instance);
-            DbProviderFactories.RegisterFactory("SQLite", System.Data.SQLite.EF6.SQLiteProviderFactory.Instance);
-            DbProviderFactories.RegisterFactory("Odbc", System.Data.Odbc.OdbcFactory.Instance);
-            DbProviderFactories.RegisterFactory("Oracle", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
+            DbProviderFactories.RegisterFactory("System.Data.SQLite", System.Data.SQLite.EF6.SQLiteProviderFactory.Instance);
+            DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
+            DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
         }
         
         public void Init(GixSqlTestData td)

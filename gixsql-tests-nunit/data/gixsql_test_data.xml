@@ -35,7 +35,7 @@
 			<provider value="Npgsql" />
 		</data-source-client>
 
-		<!--<data-source-client type="mysql" architecture="x86">
+		<data-source-client type="mysql" architecture="x86">
 			<environment>
 				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
 			</environment>
@@ -89,7 +89,7 @@
 			</environment>
 			<provider value="System.Data.Odbc" />
 			<additional-preprocess-params value="-z a" />
-		</data-source-client>-->
+		</data-source-client>
 
 	</data-source-clients>
 
@@ -127,7 +127,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="1">
-			<hostname>192.168.150.145</hostname>
+			<hostname>192.168.56.135</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test1</username>
@@ -135,7 +135,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="2">
-			<hostname>192.168.150.145</hostname>
+			<hostname>192.168.56.135</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test2</username>
@@ -2385,7 +2385,8 @@
 
 			<expected-output>
 				<line>CONNECT SQLCODE: +0000000000</line>
-				<line>SELECT SQLCODE: +0000000000</line>
+				<line>SELECT SQLCODE : -0000000410</line>
+				<line>SELECT SQLSTATE: 22003</line>
 				<line>RES: [+47483647]</line>
 				<line>REM: [00]</line>
 			</expected-output>

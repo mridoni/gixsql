@@ -102,6 +102,14 @@ sqlca_initialize(struct sqlca_t* sqlca)
 	memcpy((char*)sqlca, (char*)&sqlca_init, sizeof(struct sqlca_t));
 }
 
+// There are cases where the DB operation was successful
+// but the data is invalid and cannot be used by GnuCOBOL.
+// We ned to trap them and use the specific error code available
+static bool is_data_error(int err)
+{
+	return (err == DBERR_NUM_OUT_OF_RANGE);
+}
+
 LIBGIXSQL_API int
 GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void* d_connection_id, int connection_id_tl,
 	void* d_dbname, int dbname_tl, void* d_username, int username_tl, void* d_password, int password_tl)
@@ -535,7 +543,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	}
 
 	// set result params
-	int datalen = 0;
+	int datalen = 0, sqlcode = 0;
 	bool has_invalid_column_data = false;
 	int bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
 	char* buffer = (char*)calloc(1, bsize);
@@ -547,7 +555,12 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 			return RESULT_FAILED;
 		}
 
-		v->createCobolData(buffer, datalen);
+		v->createCobolData(buffer, datalen, &sqlcode);
+		if (sqlcode) {
+			setStatus(st, dbi, sqlcode);
+			free(buffer);
+			return RESULT_FAILED;
+		}
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
@@ -825,7 +838,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_FETCH_ROW_FAILED)
 
-		int nResParams = _res_sql_var_list.size();
+	int nResParams = _res_sql_var_list.size();
 	int nfields = dbi->get_num_fields(cursor);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
@@ -837,7 +850,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	char* buffer = (char*)calloc(1, bsize);
 	std::vector<SqlVar*>::iterator it;
 	int i = 0;
-	int datalen = 0;
+	int datalen = 0, sqlcode = 0;
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
 		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, cursor, 0, i++, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
@@ -845,7 +858,12 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 			return RESULT_FAILED;
 		}
 
-		(*it)->createCobolData(buffer, datalen);
+		(*it)->createCobolData(buffer, datalen, &sqlcode);
+		if (sqlcode) {
+			setStatus(st, dbi, sqlcode);
+			free(buffer);
+			return RESULT_FAILED;
+		}
 		// may add trace code here (or remove from GIXSQLExecSelectIntoOne)
 
 	}
@@ -1001,7 +1019,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	}
 
 	// set result params
-	int datalen = 0;
+	int datalen = 0, sqlcode = 0;
 	bool has_invalid_column_data = false;
 	int bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
 	char* buffer = (char*)calloc(1, bsize);
@@ -1013,7 +1031,12 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 			return RESULT_FAILED;
 		}
 
-		v->createCobolData(buffer, datalen);
+		v->createCobolData(buffer, datalen, &sqlcode);
+		if (sqlcode) {
+			setStatus(st, dbi, sqlcode);
+			free(buffer);
+			return RESULT_FAILED;
+		}
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
@@ -1151,7 +1174,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 
 	switch (err) {
 	case DBERR_NO_ERROR:
-		memcpy(st->sqlstate, "     ", 5);
+		memcpy(st->sqlstate, "00000", 5);
 		st->sqlcode = 0;
 		memset(st->sqlerrm.sqlerrmc, ' ', 69);
 		st->sqlerrm.sqlerrmc[69] = 0;
@@ -1288,6 +1311,11 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 		set_sqlerrm(st, "Invalid DB type/driver requested");
 		break;
 
+	case DBERR_NUM_OUT_OF_RANGE:
+		memcpy(st->sqlstate, "22003", 5);
+		set_sqlerrm(st, "Numeric value is out of range");
+		break;
+
 	default:
 		memcpy(st->sqlstate, "HV000", 5);
 		set_sqlerrm(st, "General GixSQL error");
@@ -1300,7 +1328,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 		}
 
 		st->sqlcode = dbi->get_error_code();
-		if (st->sqlcode == 0)
+		if (st->sqlcode == 0 || is_data_error(err))
 			st->sqlcode = err;
 
 		// if the driver provides an sqlstate we use it instead of the generic one above
