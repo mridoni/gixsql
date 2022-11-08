@@ -404,7 +404,7 @@ namespace gixsql_tests
             catch (Exception ex)
             {
 
-                throw;
+                throw ex;
             }
         }
 

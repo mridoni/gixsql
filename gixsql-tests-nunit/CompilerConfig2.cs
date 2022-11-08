@@ -43,7 +43,7 @@ namespace gixsql_tests
                 cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
 
                 string cdef_file = Path.Combine(cc.gix_data_dir, "compiler-defs", cc.compiler_id + ".def");
-                if (!File.Exists(cdef_file)) throw new Exception(cdef_file); ;
+                if (!File.Exists(cdef_file)) throw new Exception("Compiler definition file does not exist: " + cdef_file); ;
 
                 XmlDocument xdef = new XmlDocument();
                 xdef.Load(cdef_file);

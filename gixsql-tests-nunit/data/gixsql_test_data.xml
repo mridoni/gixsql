@@ -15,10 +15,10 @@
 	</compiler-types>
 
 	<compilers>
-		<compiler type="msvc" architecture="x64" id="comp_32616" />
-		<compiler type="msvc" architecture="x86" id="comp_32616" />
-		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-msys2-x64" />
-		<compiler type="gcc" architecture="x86" id="gnucobol-3.1.2-msys2-x86" />
+		<compiler type="msvc" architecture="x64" id="gnucobol-3.1.2-windows-msvc-all" />
+		<compiler type="msvc" architecture="x86" id="gnucobol-3.1.2-windows-msvc-all" />
+		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-windows-mingw-x64" />
+		<compiler type="gcc" architecture="x86" id="gnucobol-3.1.2-windows-mingw-x86" />
 	</compilers>
 
 	<data-source-clients>
@@ -2354,6 +2354,41 @@
 
 			<expected-preprocessed-file-content>
 			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL036A" enabled="true">
+			<description>missing size checks for numeric display (wrong numeric truncation, memory errors) in createCobolData</description>
+			<issue-coverage>#129</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL036A.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<pre-run-drop-table data-source-index="1">tab01</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB01 (TESTNUM INTEGER)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1">INSERT INTO TAB01 (TESTNUM) VALUES (2147483647)</pre-run-sql-statement>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>CONNECT SQLCODE: +0000000000</line>
+				<line>SELECT SQLCODE: +0000000000</line>
+				<line>RES: [+47483647]</line>
+				<line>REM: [00]</line>
+			</expected-output>
 		</test>
 
 	</tests>
