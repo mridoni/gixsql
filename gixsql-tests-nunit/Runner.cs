@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using Mono.Options;
+using System.IO;
 
 namespace gixsql_tests_nunit
 {
@@ -17,11 +18,16 @@ namespace gixsql_tests_nunit
         {
             string runsettings = null;
             string test_filter = null;
+            string db_filter = null;
+            bool clean_test_dir_before_run = false;
             List<string> test_filter_list = new List<string>();
+            List<string> db_filter_list = new List<string>();
 
             var opts = new OptionSet() {
                 { "r=", v => runsettings = v },
-                { "f=", v => test_filter = v },
+                { "t=", v => test_filter = v },
+                { "d=", v => db_filter = v },
+                { "c", v => clean_test_dir_before_run = true },
               };
 
             opts.Parse(args);
@@ -52,6 +58,15 @@ namespace gixsql_tests_nunit
                     {
                         Console.Error.WriteLine("Invalid value for TEST_TEMP_DIR: " + Environment.GetEnvironmentVariable("TEST_TEMP_DIR"));
                         return 1;
+                    }
+                    else
+                    {
+                        if (clean_test_dir_before_run)
+                        {
+                            DirectoryInfo di = new DirectoryInfo(Environment.GetEnvironmentVariable("TEST_TEMP_DIR"));
+                            foreach (System.IO.FileInfo file in di.GetFiles()) file.Delete();
+                            foreach (System.IO.DirectoryInfo sd in di.GetDirectories()) sd.Delete(true);
+                        }
                     }
                 }
 
@@ -87,6 +102,14 @@ namespace gixsql_tests_nunit
                 }
             }
 
+            if (!String.IsNullOrWhiteSpace(db_filter))
+            {
+                foreach (var f in db_filter.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    db_filter_list.Add(f);
+                }
+            }
+
             var tests = TestMatrixDataProvider.GetData();
 
             foreach (object[] t in tests)
@@ -96,6 +119,21 @@ namespace gixsql_tests_nunit
                 if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name)) {
                     Console.WriteLine("Skipping: " + test.FullName);
                     continue;
+                }
+
+
+                if (db_filter_list.Count > 0) { 
+                    if (test.DataSources.Count == 0)
+                    {
+                        Console.WriteLine("Skipping: " + test.FullName);
+                        continue;
+                    }
+
+                    if (!db_filter_list.Contains(test.DataSources[0].type))
+                    {
+                        Console.WriteLine("Skipping: " + test.FullName);
+                        continue;
+                    }
                 }
 
                 Console.WriteLine("Running: " + test.FullName);
