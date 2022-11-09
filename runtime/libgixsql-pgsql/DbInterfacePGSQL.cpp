@@ -328,6 +328,11 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	}
 }
 
+DbPropertySetResult DbInterfacePGSQL::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 int DbInterfacePGSQL::exec(std::string query)
 {
 	return _pgsql_exec(nullptr, query);
@@ -754,9 +759,9 @@ bool DbInterfacePGSQL::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfacePGSQL::supports_num_rows()
+uint64_t DbInterfacePGSQL::get_native_features()
 {
-	return 1;
+	return (uint64_t)DbNativeFeature::ResultSetRowCount;
 }
 
 int DbInterfacePGSQL::get_num_rows(ICursor* crsr)

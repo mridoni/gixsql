@@ -175,18 +175,45 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		return RESULT_FAILED;
 	}
 
-	if (opts->autocommit) {
-		rc = dbi->begin_transaction();
-		if (rc != DBERR_NO_ERROR) {
-			setStatus(st, dbi, DBERR_BEGIN_TX_FAILED);
+	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
+		DbPropertySetResult f_ac_set = DbPropertySetResult::Failure;
+		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, opts->autocommit);
+		if (f_ac_set == DbPropertySetResult::Failure) {
+			setStatus(st, dbi, DBERR_CONN_INIT_ERROR);
 			dbi->terminate_connection();
 			return RESULT_FAILED;
 		}
 	}
 
+	//if (opts->autocommit) {	// requesting autocommit
+	//	DbPropertySetResult f_ac_set = DbPropertySetResult::Failure;
+	//	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
+	//		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, true);
+	//	}
+	//	//else {
+	//	//	if (dbi->has(DbNativeFeature::AutoCommitDefaultOn)) {
+	//	//		// do nothing
+	//	//	}
+	//	//	else {
+	//	//		rc = dbi->begin_transaction();
+	//	//		if (rc != DBERR_NO_ERROR) {
+	//	//			setStatus(st, dbi, DBERR_BEGIN_TX_FAILED);
+	//	//			dbi->terminate_connection();
+	//	//			return RESULT_FAILED;
+	//	//		}
+	//	//	}
+	//	//}
+
+	//}
+	//else {
+	//	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
+	//		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, true);
+	//	}
+	//}
+
 	Connection* c = connection_manager.create();
 	c->setName(connection_id);	// it might still be empty, the connection manager will assign a default name
-	c->setConnectionOptions(opts.get());	// Generic/gobal connection options, separate from driver-specific options that reside only in the data source info
+	c->setConnectionOptions(opts.get());	// Generic/global connection options, separate from driver-specific options that reside only in the data source info
 	c->setConnectionInfo(data_source);
 	c->setDbInterface(dbi);
 	c->setOpened(true);
@@ -526,7 +553,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	}
 
 	// Some drivers (notably DB2, both natevely and under ODBC, do not support SQLNumRows, so we have to check here
-	if (dbi->supports_num_rows()) {
+	if(dbi->has(DbNativeFeature::ResultSetRowCount)) {
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
@@ -1002,7 +1029,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	}
 
 	// Some drivers (notably DB2, both natevely and under ODBC, do not support SQLNumRows, so we have to check here
-	if (dbi->supports_num_rows()) {
+	if (dbi->has(DbNativeFeature::ResultSetRowCount)) {
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {

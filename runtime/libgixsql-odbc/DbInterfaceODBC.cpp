@@ -343,6 +343,11 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 	return DBERR_NO_ERROR;
 }
 
+DbPropertySetResult DbInterfaceODBC::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 
 int DbInterfaceODBC::exec(std::string _query)
 {
@@ -847,10 +852,11 @@ bool DbInterfaceODBC::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfaceODBC::supports_num_rows()
+uint64_t DbInterfaceODBC::get_native_features()
 {
-	return 0;
+	return (uint64_t)0;
 }
+
 
 int DbInterfaceODBC::get_num_rows(ICursor* crsr)
 {

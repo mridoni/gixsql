@@ -87,7 +87,7 @@ public:
 	virtual int fetch_one(ICursor *, int) override;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len) override;
 	virtual bool move_to_first_record(std::string stmt_name = "") override;
-	virtual int supports_num_rows() override;
+	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(ICursor* crsr) override;
 	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
@@ -97,6 +97,7 @@ public:
 	virtual IConnection* get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
+	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
 	virtual bool getSchemas(vector<SchemaInfo *>& res) override;
 	virtual bool getTables(string table, vector<TableInfo*>& res) override;

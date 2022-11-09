@@ -291,6 +291,11 @@ int DbInterfaceSQLite::exec_prepared(std::string stmt_name, std::vector<std::str
 	return DBERR_NO_ERROR;
 }
 
+DbPropertySetResult DbInterfaceSQLite::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 int DbInterfaceSQLite::exec(std::string query)
 {
 	return _sqlite_exec(nullptr, query);
@@ -670,10 +675,11 @@ bool DbInterfaceSQLite::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfaceSQLite::supports_num_rows()
+uint64_t DbInterfaceSQLite::get_native_features()
 {
-	return 0;
+	return (uint64_t)0;
 }
+
 
 int DbInterfaceSQLite::get_num_rows(ICursor* crsr)
 {

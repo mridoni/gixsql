@@ -235,6 +235,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -252,6 +253,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -269,6 +271,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%MYSQL_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <CallingConvention>Cdecl</CallingConvention>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -285,6 +288,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -301,6 +305,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -317,6 +322,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%MYSQL_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -335,6 +341,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -356,6 +363,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%MYSQL32_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -376,6 +384,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x86-windows\include\mysql;..\libgixsql;%MYSQL32_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -397,6 +406,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -418,6 +428,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%MYSQL_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -439,6 +450,7 @@
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLMYSQL_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\installed\x64-windows\include\mysql;..\libgixsql;%MYSQL_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -22,6 +22,7 @@ USA.
 
 #include <string>
 #include <vector>
+#include <variant>
 
 #include "ICursor.h"
 #include "Logger.h"
@@ -87,6 +88,30 @@ enum class ResultSetContextType {
 	Cursor				= 3
 };
 
+enum class DbNativeFeature : uint64_t {
+	// autocommit is supported by the DBMS, can be switched on/off
+	AutoCommitSupport	= 1,
+
+	// autocommit is enabled by default for new connections
+	AutoCommitDefaultOn	= 1 << 1,
+
+	// has native updatable cursors
+	UpdatableCursors	= 1 << 2,
+
+	// resultsets include row count 
+	ResultSetRowCount	= 1 << 3
+};
+
+enum class DbProperty {
+	AutoCommitEnabled = 1
+};
+
+enum class DbPropertySetResult {
+	Success = 0,
+	Failure = 1,
+	Unsupported = 2
+};
+
 class IDbInterface
 {
 public:
@@ -107,7 +132,7 @@ public:
 	virtual int fetch_one(ICursor *, int) = 0;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void *context, int row, int col, char* bfr, int bfrlen, int* value_len) = 0;
 	virtual bool move_to_first_record(std::string stmt_name = "") = 0;
-	virtual int supports_num_rows() = 0;
+	virtual uint64_t get_native_features() = 0;
 	virtual int get_num_rows(ICursor* crsr) = 0;
 	virtual int get_num_fields(ICursor *crsr) = 0;
 	virtual char *get_error_message() = 0;
@@ -117,10 +142,16 @@ public:
 	virtual IConnection* get_owner() = 0;
 	virtual int prepare(std::string stmt_name, std::string sql) = 0;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) = 0;
+	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;
 
 	IDbManagerInterface* manager()
 	{
 		return dynamic_cast<IDbManagerInterface*>(this);
+	}
+
+	bool has(DbNativeFeature f)
+	{
+		return get_native_features() & ((uint64_t)f);
 	}
 
 protected:

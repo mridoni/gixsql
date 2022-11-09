@@ -333,6 +333,11 @@ int DbInterfaceOracle::exec_prepared(std::string stmt_name, std::vector<std::str
 	return DBERR_NO_ERROR;
 }
 
+DbPropertySetResult DbInterfaceOracle::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 int DbInterfaceOracle::exec(std::string query)
 {
 	return _odpi_exec(nullptr, query);
@@ -800,9 +805,9 @@ bool DbInterfaceOracle::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfaceOracle::supports_num_rows()
+uint64_t DbInterfaceOracle::get_native_features()
 {
-	return 1;
+	return (uint64_t) DbNativeFeature::ResultSetRowCount;
 }
 
 int DbInterfaceOracle::get_num_rows(ICursor* crsr)

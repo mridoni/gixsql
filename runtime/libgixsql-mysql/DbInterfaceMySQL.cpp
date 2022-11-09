@@ -299,6 +299,11 @@ int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	return DBERR_NO_ERROR;
 }
 
+DbPropertySetResult DbInterfaceMySQL::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 int DbInterfaceMySQL::mysqlRetrieveError(int rc)
 {
 	if (rc == MYSQL_OK) {
@@ -837,10 +842,11 @@ bool DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfaceMySQL::supports_num_rows()
+uint64_t DbInterfaceMySQL::get_native_features()
 {
-	return 1;
+	return (uint64_t)DbNativeFeature::ResultSetRowCount;
 }
+
 
 int DbInterfaceMySQL::get_num_rows(ICursor* crsr)
 {
