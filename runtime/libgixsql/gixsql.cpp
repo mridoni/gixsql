@@ -342,33 +342,40 @@ static int _gixsqlExec(Connection* conn, struct sqlca_t* st, char* _query)
 
 	if (is_commit_or_rollback_statement(query)) {
 		cursor_manager.closeConnectionCursors(conn->getId(), false);
-
-		if (conn->getConnectionOptions()->autocommit) {
-			rc = dbi->end_transaction(query);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-				rc = dbi->begin_transaction();
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-		}
-		else {
-			rc = dbi->exec(query);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-		}
-	}
-	else {
-		rc = dbi->exec(query);
-		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-
-			if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-				rc = dbi->end_transaction("COMMIT");
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-					rc = dbi->begin_transaction();
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-			}
 	}
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+	rc = dbi->exec(query);
+	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+
+		//if (is_commit_or_rollback_statement(query)) {
+		//	cursor_manager.closeConnectionCursors(conn->getId(), false);
+
+		//	if (conn->getConnectionOptions()->autocommit) {
+		//		rc = dbi->end_transaction(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+		//			rc = dbi->begin_transaction();
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//	}
+		//	else {
+		//		rc = dbi->exec(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//	}
+		//}
+		//else {
+		//	rc = dbi->exec(query);
+		//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+
+		//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
+		//			rc = dbi->end_transaction("COMMIT");
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+		//				rc = dbi->begin_transaction();
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//		}
+		//}
+
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -425,36 +432,44 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 	std::string query = _query;
 	int rc = 0;
 	IDbInterface* dbi = conn->getDbInterface();
-	if (!dbi)
-		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
+	if (!dbi) {
+		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR);
+	}
 
-		if (is_commit_or_rollback_statement(query)) {
-			cursor_manager.closeConnectionCursors(conn->getId(), false);
+	if (is_commit_or_rollback_statement(query)) {
+		cursor_manager.closeConnectionCursors(conn->getId(), false);
+	}
 
-			if (conn->getConnectionOptions()->autocommit) {
-				rc = dbi->end_transaction(query);
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-					rc = dbi->begin_transaction();
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-			}
-			else {
-				rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-			}
-		}
-		else {
-			rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+	//if (is_commit_or_rollback_statement(query)) {
+	//	cursor_manager.closeConnectionCursors(conn->getId(), false);
 
-				if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-					rc = dbi->end_transaction(query);
-					FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+	//	if (conn->getConnectionOptions()->autocommit) {
+	//		rc = dbi->end_transaction(query);
+	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
-						rc = dbi->begin_transaction();
-					FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-				}
-		}
+	//			rc = dbi->begin_transaction();
+	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+	//	}
+	//	else {
+	//		rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+	//	}
+	//}
+	//else {
+	//	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+	//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+
+	//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
+	//			rc = dbi->end_transaction(query);
+	//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+	//				rc = dbi->begin_transaction();
+	//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+	//		}
+	//}
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
@@ -518,7 +533,7 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	if (!dbi)
 		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
 
-	rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
+		rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 		setStatus(st, NULL, DBERR_NO_ERROR);
@@ -553,7 +568,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	}
 
 	// Some drivers (notably DB2, both natevely and under ODBC, do not support SQLNumRows, so we have to check here
-	if(dbi->has(DbNativeFeature::ResultSetRowCount)) {
+	if (dbi->has(DbNativeFeature::ResultSetRowCount)) {
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
@@ -824,7 +839,7 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 	rc = dbi->cursor_open(cursor);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_OPEN_CURSOR_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -865,7 +880,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_FETCH_ROW_FAILED)
 
-	int nResParams = _res_sql_var_list.size();
+		int nResParams = _res_sql_var_list.size();
 	int nfields = dbi->get_num_fields(cursor);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
@@ -939,7 +954,7 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -1098,7 +1113,7 @@ GIXSQLDisconnect(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 }
 
 LIBGIXSQL_API int
-GIXSQLStartSQL(void) 
+GIXSQLStartSQL(void)
 {
 	CHECK_LIB_INIT();
 
@@ -1109,7 +1124,7 @@ GIXSQLStartSQL(void)
 }
 
 LIBGIXSQL_API int
-GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr) 
+GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
 {
 	CHECK_LIB_INIT();
 
@@ -1380,9 +1395,9 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 		if (st->sqlerrm.sqlerrmc[0] == ' ') {
 			sprintf(bfr, "%d : %s", err, err != 0 ? "Generic GIXSQL error" : "No error");
 			set_sqlerrm(st, bfr);
-		}
-#endif
 	}
+#endif
+}
 
 	if (err == DBERR_NO_DATA)
 		st->sqlcode = __norec_sqlcode;
@@ -1557,7 +1572,7 @@ static bool lib_initialize()
 			p->flush();
 			delete p;
 		}
-	});
+		});
 
 #ifdef _DEBUG
 	gixsql_logger->flush_on(spdlog::level::trace);

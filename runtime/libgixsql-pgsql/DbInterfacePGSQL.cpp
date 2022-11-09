@@ -186,20 +186,20 @@ int DbInterfacePGSQL::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::begin_transaction()
-{
-	int rc = exec("BEGIN TRANSACTION");
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-}
-
-int DbInterfacePGSQL::end_transaction(std::string completion_type)
-{
-	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-		return DBERR_END_TX_FAILED;
-
-	int rc = exec(completion_type);
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-}
+//int DbInterfacePGSQL::begin_transaction()
+//{
+//	int rc = exec("BEGIN TRANSACTION");
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
+//}
+//
+//int DbInterfacePGSQL::end_transaction(std::string completion_type)
+//{
+//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
+//		return DBERR_END_TX_FAILED;
+//
+//	int rc = exec(completion_type);
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
+//}
 
 char* DbInterfacePGSQL::get_error_message()
 {

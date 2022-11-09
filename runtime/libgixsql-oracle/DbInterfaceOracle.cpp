@@ -165,20 +165,20 @@ int DbInterfaceOracle::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceOracle::begin_transaction()
-{
-	int rc = exec("BEGIN TRANSACTION");
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-}
-
-int DbInterfaceOracle::end_transaction(std::string completion_type)
-{
-	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-		return DBERR_END_TX_FAILED;
-
-	int rc = exec(completion_type);
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-}
+//int DbInterfaceOracle::begin_transaction()
+//{
+//	int rc = exec("BEGIN TRANSACTION");
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
+//}
+//
+//int DbInterfaceOracle::end_transaction(std::string completion_type)
+//{
+//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
+//		return DBERR_END_TX_FAILED;
+//
+//	int rc = exec(completion_type);
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
+//}
 
 char* DbInterfaceOracle::get_error_message()
 {

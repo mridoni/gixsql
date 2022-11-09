@@ -73,8 +73,8 @@ public:
 	virtual int connect(IDataSourceInfo*, IConnectionOptions* opts) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
-	virtual int begin_transaction() override;
-	virtual int end_transaction(std::string) override;
+	//virtual int begin_transaction() override;
+	//virtual int end_transaction(std::string) override;
 	virtual int exec(std::string) override;
 	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
 	virtual int close_cursor(ICursor*) override;
