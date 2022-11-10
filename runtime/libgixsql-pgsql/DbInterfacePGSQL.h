@@ -36,6 +36,9 @@ USA.
 #define DECODE_BINARY_OFF		0
 #define DECODE_BINARY_DEFAULT	DECODE_BINARY_ON
 
+// Opens a transaction on connect when NOT in autocommit mode
+#define STARTUP_TRANSACTION_DEFAULT	true
+
 struct PGResultSetData {
 	PGResultSetData();
 	~PGResultSetData();
@@ -108,5 +111,9 @@ private:
 	void pgsqlSetError(int err_code, std::string sqlstate, std::string err_msg);
 
 	bool use_native_cursors = true;
+
+	//void __begin_autocommit_tx();
+	//void __commit_autocommit_tx();
+	//void __rollback_autocommit_tx();
 };
 

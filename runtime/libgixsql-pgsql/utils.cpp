@@ -33,6 +33,11 @@
 
 #include "utils.h"
 
+// These statements cannot be run inside a transaction block
+static std::vector<std::string> special_tx_statements = {
+	"VACUUM", "REINDEX", "CLUSTER", "CHECKPOINT", "WITH"
+};
+
 /*
 * <Function name>
 *   trim_end
@@ -150,18 +155,27 @@ bool starts_with(std::string s, std::string s1)
 	return s.substr(0, s1.size()) == s1;
 }
 
-bool is_commit_or_rollback_statement(std::string query)
+
+bool is_tx_termination_statement(const std::string& query)
 {
-	std::string q = trim_copy(query);
+	int p = query.find(' ');
+	if (p == std::string::npos)
+		p = query.size();
+
+	std::string q = query.substr(0, p);
 	q = to_upper(q);
-	return (q == "COMMIT" || q == "ROLLBACK");
+	return q == "COMMIT" || q == "ROLLBACK";
 }
 
-bool is_update_or_delete_statement(std::string query)
+bool is_update_or_delete_statement(const std::string& query)
 {
-	std::string q = trim_copy(query);
+	int p = query.find(' ');
+	if (p == std::string::npos)
+		p = query.size();
+
+	std::string q = query.substr(0, p);
 	q = to_upper(q);
-	return starts_with(q, "UPDATE") || starts_with(q, "DELETE");
+	return q == "UPDATE" || q == "DELETE";
 }
 
 bool has_where_current_of(const std::string query, std::string& cursor_name)

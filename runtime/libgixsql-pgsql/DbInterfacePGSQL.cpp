@@ -19,6 +19,8 @@ USA.
 */
 
 #include <cstring>
+#include <string>
+#include <vector>
 
 
 #include "Logger.h"
@@ -125,6 +127,42 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 		}
 	}
 
+	bool startup_transaction = STARTUP_TRANSACTION_DEFAULT;
+	if (opts.find("startup_transaction") != opts.end()) {
+		std::string opt_startup_transaction = opts["startup_transaction"];
+		if (!opt_startup_transaction.empty()) {
+			if (opt_startup_transaction == "on" || opt_startup_transaction == "1" || opt_startup_transaction == "true") {
+				startup_transaction = true;
+			}
+
+			if (opt_startup_transaction == "off" || opt_startup_transaction == "0" || opt_startup_transaction == "false") {
+				startup_transaction = false;
+			}
+		}
+	}
+
+	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
+	// we will manually start a transaction depending on the default and on 
+	// the options passed to the driver
+	if (!g_opts->autocommit) {
+		if (startup_transaction) {
+			lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
+			auto r = PQexec(conn, "BEGIN TRANSACTION");
+			auto rc = PQresultStatus(r);
+			if (rc != PGRES_COMMAND_OK) {
+				last_rc = rc;
+				last_error = PQresultErrorMessage(r);
+				last_state = pg_get_sqlstate(r);
+				lib_logger->error("libpq: {}", last_error);
+				PQfinish(conn);
+				return DBERR_CONNECTION_FAILED;
+			}
+		}
+		else {
+			lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, startup transaction disabled", __FILE__, __func__);
+		}
+	}
+
 	if (opts.find("decode_binary") != opts.end()) {
 		std::string opt_decode_binary = opts["decode_binary"];
 		if (!opt_decode_binary.empty()) {
@@ -132,7 +170,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 				this->decode_binary = DECODE_BINARY_ON;
 			}
 
-			if (opt_decode_binary == "off" || opt_decode_binary == "0" || opt_decode_binary == "true") {
+			if (opt_decode_binary == "off" || opt_decode_binary == "0" || opt_decode_binary == "false") {
 				this->decode_binary = DECODE_BINARY_OFF;
 			}
 		}
@@ -201,50 +239,6 @@ int DbInterfacePGSQL::terminate_connection()
 //	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
 //}
 
-char* DbInterfacePGSQL::get_error_message()
-{
-	if (current_resultset_data != NULL)
-		return PQresultErrorMessage(current_resultset_data->resultset);
-	else
-		if (connaddr != NULL)
-			return PQerrorMessage(connaddr);
-		else
-			return NULL;
-}
-
-int DbInterfacePGSQL::get_error_code()
-{
-	return last_rc;
-}
-
-std::string DbInterfacePGSQL::get_state()
-{
-	return last_state;
-}
-
-void DbInterfacePGSQL::set_owner(IConnection* conn)
-{
-	owner = conn;
-}
-
-IConnection* DbInterfacePGSQL::get_owner()
-{
-	return owner;
-}
-
-std::string vector_join(const std::vector<std::string>& v, char sep)
-{
-	std::string s;
-
-	for (std::vector< std::string>::const_iterator p = v.begin();
-		p != v.end(); ++p) {
-		s += *p;
-		if (p != v.end() - 1)
-			s += sep;
-	}
-	return s;
-}
-
 int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
 {
 	std::string prepared_sql;
@@ -310,13 +304,13 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	}
 
 	wk_rs = new PGResultSetData();
-
 	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
-
+	
+	
 	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK) {
 		_prepared_stmts[stmt_name] = wk_rs;
 		return DBERR_NO_ERROR;
@@ -340,8 +334,8 @@ int DbInterfacePGSQL::exec(std::string query)
 
 int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 {
-	std::string q = query;
-	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+	//std::string q = query;
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
 
@@ -352,17 +346,17 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 		}
 	}
 
-	wk_rs = new PGResultSetData();
+	bool start_new_tx_when_done = !get_owner()->getConnectionOptions()->autocommit && is_tx_termination_statement(query);
 
-	wk_rs->resultset = PQexecParams(connaddr, q.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+	wk_rs = new PGResultSetData();
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), 0, NULL, NULL, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	if (last_rc == PGRES_COMMAND_OK) {
-		q = trim_copy(q);
-		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
+		if (is_update_or_delete_statement(query)) {
 			int nrows = get_num_rows(wk_rs->resultset);
 			if (nrows <= 0) {
 				last_rc = 100;
@@ -907,4 +901,49 @@ static std::string pgsql_fixup_parameters(const std::string& sql)
 	}
 
 	return out_sql;
+}
+
+
+char* DbInterfacePGSQL::get_error_message()
+{
+	if (current_resultset_data != NULL)
+		return PQresultErrorMessage(current_resultset_data->resultset);
+	else
+		if (connaddr != NULL)
+			return PQerrorMessage(connaddr);
+		else
+			return NULL;
+}
+
+int DbInterfacePGSQL::get_error_code()
+{
+	return last_rc;
+}
+
+std::string DbInterfacePGSQL::get_state()
+{
+	return last_state;
+}
+
+void DbInterfacePGSQL::set_owner(IConnection* conn)
+{
+	owner = conn;
+}
+
+IConnection* DbInterfacePGSQL::get_owner()
+{
+	return owner;
+}
+
+std::string vector_join(const std::vector<std::string>& v, char sep)
+{
+	std::string s;
+
+	for (std::vector< std::string>::const_iterator p = v.begin();
+		p != v.end(); ++p) {
+		s += *p;
+		if (p != v.end() - 1)
+			s += sep;
+	}
+	return s;
 }

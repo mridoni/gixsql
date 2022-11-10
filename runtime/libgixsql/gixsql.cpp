@@ -1397,7 +1397,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 			set_sqlerrm(st, bfr);
 	}
 #endif
-}
+	}
 
 	if (err == DBERR_NO_DATA)
 		st->sqlcode = __norec_sqlcode;
