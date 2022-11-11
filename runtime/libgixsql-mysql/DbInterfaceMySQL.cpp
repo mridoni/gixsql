@@ -56,14 +56,15 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* opts)
+int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
 {
+	int rc = 0;
 	MYSQL* conn;
 	string connstr;
 
 	connaddr = NULL;
 
-	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(), opts->autocommit, opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(),g_opts->autocommit, g_opts->client_encoding);
 
 	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
 	conn = mysql_init(NULL);
@@ -75,11 +76,22 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!opts->client_encoding.empty()) {
-		string qenc = "SET NAMES " + opts->client_encoding;
-		mysql_real_query(conn, qenc.c_str(), qenc.size());
+	if (!g_opts->client_encoding.empty()) {
+		string qenc = "SET NAMES " + g_opts->client_encoding;
+		rc = mysql_real_query(conn, qenc.c_str(), qenc.size());
+		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			return DBERR_CONNECTION_FAILED;
+		}
 	}
 
+	lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit ? "ON" : "OFF");
+	std::string q("SET AUTOCOMMIT=");
+	q += g_opts->autocommit ? "1" : "0";
+	rc = mysql_real_query(conn, q.c_str(), q.size());
+	if (mysqlRetrieveError(rc) != MYSQL_OK) {
+		return DBERR_CONNECTION_FAILED;
+	}
+	
 	connaddr = conn;
 	current_statement_data = nullptr;
 
@@ -489,7 +501,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const string query, MySQLStatem
 	}
 
 	wk_rs->resizeParams(0);
-	
+
 
 	/*
 		Prepared statements are restricted to only a few category of statements.
@@ -862,7 +874,7 @@ int DbInterfaceMySQL::get_num_rows(ICursor* crsr)
 	if (!wk_rs || !wk_rs->statement) {
 		return -1;
 	}
-	
+
 	return mysql_stmt_num_rows(wk_rs->statement);
 }
 

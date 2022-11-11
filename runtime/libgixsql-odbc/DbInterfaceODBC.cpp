@@ -101,7 +101,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* opts)
+int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
 {
 	int rc = 0;
 	char dbms_name[256];
@@ -123,14 +123,13 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* o
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!opts->autocommit) {
-		// try to set AUTOCOMMIT OFF
-		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, 0);
-		if (rc != SQL_SUCCESS) {
-			lib_logger->debug(FMT_FILE_FUNC  "ODBC: SEVERE ERROR: Can't set autocommit OFF. Error = {}", __FILE__, __func__, last_rc);
-		}
+	lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit ? "ON" : "OFF");
+	auto autocommit_state = g_opts->autocommit ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
+	rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
+	if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
+		lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
+		return DBERR_CONNECTION_FAILED;
 	}
-
 
 	int rc_warning_only = SQLGetInfo(conn_handle, SQL_DBMS_NAME, (SQLPOINTER)dbms_name, sizeof(dbms_name), NULL);
 	if (rc_warning_only != SQL_SUCCESS) {

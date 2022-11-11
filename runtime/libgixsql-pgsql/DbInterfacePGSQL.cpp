@@ -142,7 +142,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 	}
 
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
-	// we will manually start a transaction depending on the default and on 
+	// we will optionally start a transaction depending on the default and on 
 	// the options passed to the driver
 	if (!g_opts->autocommit) {
 		if (startup_transaction) {
