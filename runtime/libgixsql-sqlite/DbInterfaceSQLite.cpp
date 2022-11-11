@@ -54,7 +54,7 @@ int DbInterfaceSQLite::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* opts)
+int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_opts)
 {
 	sqlite3* conn;
 	std::string connstr;
@@ -75,45 +75,27 @@ int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* o
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!opts->client_encoding.empty()) {
-		std::string sql = "PRAGMA encoding = '" + opts->client_encoding + "';";
+	if (!g_opts->client_encoding.empty()) {
+		std::string sql = "PRAGMA encoding = '" + g_opts->client_encoding + "';";
 		sqlite_rc = sqlite3_exec(conn, sql.c_str(), 0, 0, &err_msg);
 		if (sqlite_rc != SQLITE_OK) {
+			lib_logger->error("SQLite: cannot set encoding to {} transaction: {} ({}): {}", g_opts->client_encoding, last_rc, last_state, last_error);
 			sqlite3_close(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
 
-	auto driver_opts = conn_info->getOptions();
-	//if (opts.find("default_schema") != opts.end()) {
-	//	std::string default_schema = opts["default_schema"];
-	//	if (!default_schema.empty()) {
-	//		std::string default_schema = opts["default_schema"];
-	//		std::string spq = "set search_path to " + default_schema;
-	//		auto r = PQexec(conn, spq.c_str());
-	//		auto rc = PQresultStatus(r);
-	//		if (rc != PGRES_COMMAND_OK) {
-	//			last_rc = rc;
-	//			last_error = PQresultErrorMessage(r);
-	//			LOG_ERROR("%s\n", last_error);
-	//			PQfinish(conn);
-	//			return DBERR_CONNECTION_FAILED;
-	//		}
-	//	}
-	//}
-
-	//if (opts.find("decode_binary") != opts.end()) {
-	//	std::string opt_decode_binary = opts["decode_binary"];
-	//	if (!opt_decode_binary.empty()) {
-	//		if (opt_decode_binary == "on" || opt_decode_binary == "1") {
-	//			this->decode_binary = DECODE_BINARY_ON;
-	//		}
-
-	//		if (opt_decode_binary == "off" || opt_decode_binary == "0") {
-	//			this->decode_binary = DECODE_BINARY_OFF;
-	//		}
-	//	}
-	//}
+	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
+	// we will optionally start a transaction
+	if (g_opts->autocommit == AutoCommitMode::Off) {
+		lib_logger->trace(FMT_FILE_FUNC "SQLite::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
+		auto rc = sqlite3_exec(conn, "BEGIN TRANSACTION", 0, 0, &err_msg);
+		if (sqliteRetrieveError(rc) != SQLITE_OK) {
+			lib_logger->error("SQLite: cannot start transaction: {} ({}): {}", last_rc, last_state, last_error);
+			sqlite3_close(conn);
+			return DBERR_CONNECTION_FAILED;
+		}
+	}
 
 	connaddr = conn;
 	sqlite3_extended_result_codes(connaddr, 1);
@@ -304,6 +286,7 @@ int DbInterfaceSQLite::exec(std::string query)
 int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, std::string query, SQLiteStatementData* prep_stmt_data)
 {
 	int rc = 0;
+	char* err_msg = 0;
 	uint32_t nquery_cols = 0;
 	std::string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
@@ -331,10 +314,33 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, std::string query, SQLiteStat
 	}
 
 	int step_rc = sqlite3_step(wk_rs->statement);
+
+	// we trap COMMIT/ROLLBACK
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+
+		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		if (current_statement_data) {
+			delete current_statement_data;
+			current_statement_data = nullptr;
+		}
+
+		if (sqliteRetrieveError(step_rc) == SQLITE_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			step_rc = sqlite3_exec(connaddr, "START TRANSACTION", 0, 0, &err_msg);
+			sqliteRetrieveError(step_rc);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (step_rc != SQLITE_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
+
 	if (step_rc != SQLITE_DONE && step_rc != SQLITE_ROW) {
 		rc = sqliteRetrieveError(step_rc);
 		return DBERR_SQL_ERROR;
 	}
+
+
 
 	if (crsr) {
 		if (crsr->getPrivateData())
@@ -358,6 +364,7 @@ int DbInterfaceSQLite::exec_params(std::string query, int nParams, const std::ve
 int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt_data)
 {
 	std::string q = query;
+	char* err_msg = 0;
 	int rc = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
@@ -393,6 +400,27 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, std::string query, int
 
 
 	int step_rc = sqlite3_step(wk_rs->statement);
+
+	// we trap COMMIT/ROLLBACK
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+
+		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		if (current_statement_data) {
+			delete current_statement_data;
+			current_statement_data = nullptr;
+		}
+
+		if (sqliteRetrieveError(step_rc) == SQLITE_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			step_rc = sqlite3_exec(connaddr, "START TRANSACTION", 0, 0, &err_msg);
+			sqliteRetrieveError(step_rc);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (step_rc != SQLITE_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
+
 	if (step_rc != SQLITE_DONE && step_rc != SQLITE_ROW) {
 		rc = sqliteRetrieveError(step_rc);
 		return DBERR_SQL_ERROR;

@@ -66,7 +66,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 	PGconn* conn;
 	std::string connstr;
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)g_opts->autocommit, g_opts->client_encoding);
 
 	connaddr = NULL;
 	current_resultset_data = nullptr;
@@ -129,7 +129,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
 	// we will optionally start a transaction
-	if (!g_opts->autocommit) {
+	if (g_opts->autocommit == AutoCommitMode::Off) {
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
 		auto r = PQexec(conn, "BEGIN TRANSACTION");
 		auto rc = PQresultStatus(r);
@@ -334,9 +334,9 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	// we trap COMMIT/ROLLBACK
-	if (!owner->getConnectionOptions()->autocommit && is_tx_termination_statement(query)) {
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 		
-		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		// we clean up: whether the COMMIT/ROLLBACK failed or not this is probably useless anyway
 		if (current_resultset_data) {
 			delete current_resultset_data;
 			current_resultset_data = nullptr;
@@ -458,7 +458,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int n
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	// we trap COMMIT/ROLLBACK
-	if (!owner->getConnectionOptions()->autocommit && is_tx_termination_statement(query)) {
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		if (current_resultset_data) {

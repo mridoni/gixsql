@@ -86,7 +86,7 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 
 int DbInterfaceOracle::connect(IDataSourceInfo* conn_info, IConnectionOptions* opts)
 {
-	lib_logger->trace(FMT_FILE_FUNC "ODPI::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, opts->autocommit, opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)opts->autocommit, opts->client_encoding);
 
 	std::string conn_string = "//" + conn_info->getHost();
 	if (conn_info->getPort())
@@ -389,6 +389,8 @@ int DbInterfaceOracle::_odpi_exec(ICursor* crsr, std::string query, OdpiStatemen
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 	}
 
+
+
 	if (!prep_stmt_data) {
 		q = trim_copy(q);
 		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
@@ -409,6 +411,30 @@ int DbInterfaceOracle::_odpi_exec(ICursor* crsr, std::string query, OdpiStatemen
 		}
 		else
 			current_statement_data = wk_rs;
+
+		// Since Oracle automatically starts a new transaction on the first statement after a COMMIT/ROLLBACK
+		// we only need to issue a manual COMMIT after a statement has been successfully executed
+		if (owner->getConnectionOptions()->autocommit == AutoCommitMode::On && !is_tx_termination_statement(query)) {
+
+			// the statement was not a COMMIT/ROLLBACK, so we issue a COMMIT
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is enabled, trying to commit", __FILE__, __func__);
+			std::string q = "COMMIT";
+			dpiStmt* start_tx = nullptr;
+			uint32_t start_tx_rc = dpiConn_prepareStmt(connaddr, 0, query.c_str(), query.size(), NULL, 0, &start_tx);
+			if (dpiRetrieveError(start_tx_rc) != DPI_SUCCESS) {
+				lib_logger->error(FMT_FILE_FUNC "cannot prepare autocommit statement: {} ({})", __FILE__, __func__, last_error, last_state);
+				return DBERR_SQL_ERROR;
+			}
+
+			uint32_t tx_nc = 0;
+			start_tx_rc = dpiStmt_execute(start_tx, DPI_MODE_EXEC_DEFAULT, &tx_nc);
+			if (dpiRetrieveError(start_tx_rc) != DPI_SUCCESS) {
+				lib_logger->error(FMT_FILE_FUNC "cannot execute autocommit statement: {} ({})", __FILE__, __func__, last_error, last_state);
+				return DBERR_SQL_ERROR;
+			}
+
+			lib_logger->trace(FMT_FILE_FUNC "autocommit result: {} ({})", __FILE__, __func__, last_error, last_state);
+		}
 
 		return DBERR_NO_ERROR;
 	}

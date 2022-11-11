@@ -123,12 +123,17 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit ? "ON" : "OFF");
-	auto autocommit_state = g_opts->autocommit ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
-	rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
-	if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
-		lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
-		return DBERR_CONNECTION_FAILED;
+	if (g_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (g_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
+		auto autocommit_state = (g_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
+		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
+		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
+			lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
+			return DBERR_CONNECTION_FAILED;
+		}
+	}
+	else {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to native (nothing to do)", __FILE__, __func__);
 	}
 
 	int rc_warning_only = SQLGetInfo(conn_handle, SQL_DBMS_NAME, (SQLPOINTER)dbms_name, sizeof(dbms_name), NULL);
@@ -780,7 +785,7 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 		*value_len = reslen;
 	}
 	else {
-		unsigned char *tmp_bfr = new unsigned char[bfrlen * 2];
+		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
 		uint8_t b0, b1;
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
 		if (rc == SQL_SUCCESS) {

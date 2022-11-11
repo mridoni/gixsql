@@ -117,6 +117,8 @@ private:
 
 	int decode_binary = DECODE_BINARY_DEFAULT;
 
+	bool is_autocommit_suspended = false;
+
 	int dpiRetrieveError(int rc);
 	void dpiClearError(); 
 	void dpiSetError(int err_code, std::string sqlstate, std::string err_msg); 

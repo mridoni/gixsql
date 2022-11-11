@@ -2,9 +2,14 @@
 
 #include <string>
 
+enum class AutoCommitMode {
+	On = 1,
+	Off = 2,
+	Native = 3
+};
 struct IConnectionOptions
 {
-	bool autocommit = false;
+	AutoCommitMode autocommit = AutoCommitMode::Native;
 	bool fixup_parameters = false;
 	std::string client_encoding;
 };

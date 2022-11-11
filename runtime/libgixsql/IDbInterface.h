@@ -103,7 +103,7 @@ enum class DbNativeFeature : uint64_t {
 };
 
 enum class DbProperty {
-	AutoCommitEnabled = 1
+	AutoCommitMode = 1
 };
 
 enum class DbPropertySetResult {

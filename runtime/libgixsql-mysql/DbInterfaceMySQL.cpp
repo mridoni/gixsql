@@ -64,7 +64,7 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 
 	connaddr = NULL;
 
-	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(),g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(), (int)g_opts->autocommit, g_opts->client_encoding);
 
 	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
 	conn = mysql_init(NULL);
@@ -84,12 +84,17 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 		}
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit ? "ON" : "OFF");
-	std::string q("SET AUTOCOMMIT=");
-	q += g_opts->autocommit ? "1" : "0";
-	rc = mysql_real_query(conn, q.c_str(), q.size());
-	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		return DBERR_CONNECTION_FAILED;
+	if (g_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit == AutoCommitMode::On ? "ON" : "OFF");
+		std::string q("SET AUTOCOMMIT=");
+		q += (g_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
+		rc = mysql_real_query(conn, q.c_str(), q.size());
+		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			return DBERR_CONNECTION_FAILED;
+		}
+	}
+	else {
+		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to native (nothing to do)", __FILE__, __func__);
 	}
 	
 	connaddr = conn;

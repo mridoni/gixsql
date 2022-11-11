@@ -75,7 +75,7 @@ static bool __lib_initialized = false;
 
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err);
-static bool get_autocommit(DataSourceInfo*);
+static AutoCommitMode get_autocommit(DataSourceInfo* ds);
 static bool get_fixup_params(DataSourceInfo*);
 static std::string get_client_encoding(DataSourceInfo*);
 static void init_sql_var_list(void);
@@ -165,7 +165,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 
 	spdlog::trace(FMT_FILE_FUNC "Connection string : {}", __FILE__, __func__, data_source->get());
 	spdlog::trace(FMT_FILE_FUNC "Data source info  : {}", __FILE__, __func__, data_source->dump());
-	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, opts->autocommit);
+	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, (int)opts->autocommit);
 	spdlog::trace(FMT_FILE_FUNC "Fix up parameters : {}", __FILE__, __func__, opts->fixup_parameters);
 	spdlog::trace(FMT_FILE_FUNC "Client encoding   : {}", __FILE__, __func__, opts->client_encoding);
 
@@ -174,42 +174,6 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		setStatus(st, dbi, DBERR_CONNECTION_FAILED);
 		return RESULT_FAILED;
 	}
-
-	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
-		DbPropertySetResult f_ac_set = DbPropertySetResult::Failure;
-		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, opts->autocommit);
-		if (f_ac_set == DbPropertySetResult::Failure) {
-			setStatus(st, dbi, DBERR_CONN_INIT_ERROR);
-			dbi->terminate_connection();
-			return RESULT_FAILED;
-		}
-	}
-
-	//if (opts->autocommit) {	// requesting autocommit
-	//	DbPropertySetResult f_ac_set = DbPropertySetResult::Failure;
-	//	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
-	//		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, true);
-	//	}
-	//	//else {
-	//	//	if (dbi->has(DbNativeFeature::AutoCommitDefaultOn)) {
-	//	//		// do nothing
-	//	//	}
-	//	//	else {
-	//	//		rc = dbi->begin_transaction();
-	//	//		if (rc != DBERR_NO_ERROR) {
-	//	//			setStatus(st, dbi, DBERR_BEGIN_TX_FAILED);
-	//	//			dbi->terminate_connection();
-	//	//			return RESULT_FAILED;
-	//	//		}
-	//	//	}
-	//	//}
-
-	//}
-	//else {
-	//	if (dbi->has(DbNativeFeature::AutoCommitSupport)) {
-	//		f_ac_set = dbi->set_property(DbProperty::AutoCommitEnabled, true);
-	//	}
-	//}
 
 	Connection* c = connection_manager.create();
 	c->setName(connection_id);	// it might still be empty, the connection manager will assign a default name
@@ -1405,21 +1369,32 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 	return RESULT_SUCCESS;
 }
 
-static bool get_autocommit(DataSourceInfo* ds)
+static AutoCommitMode get_autocommit(DataSourceInfo* ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
 	if (options.find("autocommit") != options.end()) {
-		std::string o = options["autocommit"];
-		return (o == "on" || o == "1") ? GIXSQL_AUTOCOMMIT_ON : GIXSQL_AUTOCOMMIT_OFF;
+		std::string o = to_lower(options["autocommit"]);
+		if (o == "on" || o == "1")
+			return AutoCommitMode::On;
+		else
+			if (o == "off" || o == "0")
+				return AutoCommitMode::Off;
+			else
+				if (o == "native")
+					return AutoCommitMode::Native;
 	}
 
 	char* v = getenv("GIXSQL_AUTOCOMMIT");
 	if (v) {
-		if (strcmp(v, "1") == 0 || strcasecmp(v, "ON") == 0)
-			return GIXSQL_AUTOCOMMIT_ON;
-
-		if (strcmp(v, "0") == 0 || strcasecmp(v, "OFF") == 0)
-			return GIXSQL_AUTOCOMMIT_OFF;
+		std::string o = to_lower(v);
+		if (o == "on" || o == "1")
+			return AutoCommitMode::On;
+		else
+			if (o == "off" || o == "0")
+				return AutoCommitMode::Off;
+			else
+				if (o == "native")
+					return AutoCommitMode::Native;
 	}
 
 	return GIXSQL_AUTOCOMMIT_DEFAULT;
@@ -1443,7 +1418,7 @@ static bool get_fixup_params(DataSourceInfo* ds)
 			return GIXSQL_FIXUP_PARAMS_OFF;
 	}
 
-	return GIXSQL_AUTOCOMMIT_DEFAULT;
+	return GIXSQL_FIXUP_PARAMS_DEFAULT;
 }
 
 
