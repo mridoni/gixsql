@@ -127,39 +127,19 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 		}
 	}
 
-	bool startup_transaction = STARTUP_TRANSACTION_DEFAULT;
-	if (opts.find("startup_transaction") != opts.end()) {
-		std::string opt_startup_transaction = opts["startup_transaction"];
-		if (!opt_startup_transaction.empty()) {
-			if (opt_startup_transaction == "on" || opt_startup_transaction == "1" || opt_startup_transaction == "true") {
-				startup_transaction = true;
-			}
-
-			if (opt_startup_transaction == "off" || opt_startup_transaction == "0" || opt_startup_transaction == "false") {
-				startup_transaction = false;
-			}
-		}
-	}
-
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
-	// we will optionally start a transaction depending on the default and on 
-	// the options passed to the driver
+	// we will optionally start a transaction
 	if (!g_opts->autocommit) {
-		if (startup_transaction) {
-			lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
-			auto r = PQexec(conn, "BEGIN TRANSACTION");
-			auto rc = PQresultStatus(r);
-			if (rc != PGRES_COMMAND_OK) {
-				last_rc = rc;
-				last_error = PQresultErrorMessage(r);
-				last_state = pg_get_sqlstate(r);
-				lib_logger->error("libpq: {}", last_error);
-				PQfinish(conn);
-				return DBERR_CONNECTION_FAILED;
-			}
-		}
-		else {
-			lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, startup transaction disabled", __FILE__, __func__);
+		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
+		auto r = PQexec(conn, "BEGIN TRANSACTION");
+		auto rc = PQresultStatus(r);
+		if (rc != PGRES_COMMAND_OK) {
+			last_rc = rc;
+			last_error = PQresultErrorMessage(r);
+			last_state = pg_get_sqlstate(r);
+			lib_logger->error("libpq: {}", last_error);
+			PQfinish(conn);
+			return DBERR_CONNECTION_FAILED;
 		}
 	}
 
@@ -346,14 +326,34 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 		}
 	}
 
-	bool start_new_tx_when_done = !get_owner()->getConnectionOptions()->autocommit && is_tx_termination_statement(query);
-
 	wk_rs = new PGResultSetData();
 	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), 0, NULL, NULL, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
+
+	// we trap COMMIT/ROLLBACK
+	if (!owner->getConnectionOptions()->autocommit && is_tx_termination_statement(query)) {
+		
+		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		if (current_resultset_data) {
+			delete current_resultset_data;
+			current_resultset_data = nullptr;
+		}
+
+		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			auto new_tx_rs = PQexec(connaddr, "START TRANSACTION");
+			last_rc = PQresultStatus(new_tx_rs);
+			last_error = PQresultErrorMessage(new_tx_rs);
+			last_state = pg_get_sqlstate(new_tx_rs);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (last_rc != PGRES_COMMAND_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
 
 	if (last_rc == PGRES_COMMAND_OK) {
 		if (is_update_or_delete_statement(query)) {
@@ -456,6 +456,28 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int n
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
+
+	// we trap COMMIT/ROLLBACK
+	if (!owner->getConnectionOptions()->autocommit && is_tx_termination_statement(query)) {
+
+		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		if (current_resultset_data) {
+			delete current_resultset_data;
+			current_resultset_data = nullptr;
+		}
+
+		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			auto new_tx_rs = PQexec(connaddr, "START TRANSACTION");
+			last_rc = PQresultStatus(new_tx_rs);
+			last_error = PQresultErrorMessage(new_tx_rs);
+			last_state = pg_get_sqlstate(new_tx_rs);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (last_rc != PGRES_COMMAND_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
 
 	if (last_rc == PGRES_COMMAND_OK) {
 		q = trim_copy(q);
