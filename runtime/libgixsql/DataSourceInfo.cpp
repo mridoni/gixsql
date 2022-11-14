@@ -281,7 +281,7 @@ std::string DataSourceInfo::dump(bool with_password)
 
 	int i = 0;
 	for (auto it = options.begin(); it != options.end(); ++it) {
-		s += "option     " + std::to_string(i++) + ": " + it->first + " => " + it->second + "\n";
+		s += "option " + std::to_string(i++) + ": " + it->first + " => " + it->second + ", ";
 	}
 
 	return s;

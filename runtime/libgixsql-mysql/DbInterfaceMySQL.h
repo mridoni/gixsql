@@ -42,8 +42,6 @@ extern "C" {
 #include "IDataSourceInfo.h"
 #include "ISchemaManager.h"
 
-using namespace std;
-
 struct MySQLStatementData
 {
 
@@ -54,9 +52,9 @@ struct MySQLStatementData
 	int resizeColumnData();
 
 	int column_count = 0;
-	vector<char*> data_buffers;
-	vector<int> data_buffer_lengths;
-	vector<unsigned long *> data_lengths;
+	std::vector<char*> data_buffers;
+	std::vector<int> data_buffer_lengths;
+	std::vector<unsigned long *> data_lengths;
 
 	MYSQL_STMT* statement = nullptr;
 
@@ -78,7 +76,7 @@ public:
 	virtual int terminate_connection() override;
 	//virtual int begin_transaction() override;
 	//virtual int end_transaction(string) override;
-	virtual int exec(string) override;
+	virtual int exec(std::string) override;
 	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
 	virtual int close_cursor(ICursor *) override;
 	virtual int cursor_declare(ICursor *, bool, int) override;
@@ -99,10 +97,10 @@ public:
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
-	virtual bool getSchemas(vector<SchemaInfo *>& res) override;
-	virtual bool getTables(string table, vector<TableInfo*>& res) override;
-	virtual bool getColumns(string schema, string table, vector<ColumnInfo*>& columns) override;
-	virtual bool getIndexes(string schema, string tabl, vector<IndexInfo*> &idxs) override;
+	virtual bool getSchemas(std::vector<SchemaInfo *>& res) override;
+	virtual bool getTables(std::string table, std::vector<TableInfo*>& res) override;
+	virtual bool getColumns(std::string schema, std::string table, std::vector<ColumnInfo*>& columns) override;
+	virtual bool getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*> &idxs) override;
 
 private:
 	MYSQL *connaddr = nullptr;
@@ -112,8 +110,8 @@ private:
 	IConnection *owner = nullptr;
 
 	int last_rc;
-	string last_error;
-	string last_state;
+	std::string last_error;
+	std::string last_state;
 
 	int mysqlRetrieveError(int rc);
 	void mysqlClearError();
@@ -123,9 +121,14 @@ private:
 	std::map<std::string, MySQLStatementData*> _prepared_stmts;
 
 	int _mysql_exec_params(ICursor*, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, MySQLStatementData* prep_stmt_data = nullptr);
-	int _mysql_exec(ICursor*, const string, MySQLStatementData* prep_stmt_data = nullptr);
+	int _mysql_exec(ICursor*, const std::string, MySQLStatementData* prep_stmt_data = nullptr);
 
+	// Updatable cursor emulation
+	bool updatable_cursors_emu = false;
 	bool is_cursor_from_prepared_statement(ICursor* cursor);
 	bool retrieve_prepared_statement(const std::string& prep_stmt_name, MySQLStatementData** prepared_stmt_data);
+	bool has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key);
+	bool prepare_bind_updatable_cursor_query(ICursor* crsr, const std::vector<std::string>& unique_key);
+
 };
 

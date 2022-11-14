@@ -20,6 +20,7 @@ namespace gixsql_tests_nunit
             string test_filter = null;
             string db_filter = null;
             bool clean_test_dir_before_run = false;
+            bool verbose = false;
             List<string> test_filter_list = new List<string>();
             List<string> db_filter_list = new List<string>();
 
@@ -28,6 +29,7 @@ namespace gixsql_tests_nunit
                 { "t=", v => test_filter = v },
                 { "d=", v => db_filter = v },
                 { "c", v => clean_test_dir_before_run = true },
+                { "v", v => verbose = true },
               };
 
             opts.Parse(args);
@@ -117,7 +119,8 @@ namespace gixsql_tests_nunit
                 GixSqlTestData test = (GixSqlTestData)t[0];
 
                 if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name)) {
-                    Console.WriteLine("Skipping: " + test.FullName);
+                    if (verbose)
+                        Console.WriteLine("Skipping: " + test.FullName);
                     continue;
                 }
 
@@ -125,18 +128,21 @@ namespace gixsql_tests_nunit
                 if (db_filter_list.Count > 0) { 
                     if (test.DataSources.Count == 0)
                     {
-                        Console.WriteLine("Skipping: " + test.FullName);
+                        if (verbose)
+                            Console.WriteLine("Skipping: " + test.FullName);
                         continue;
                     }
 
                     if (!db_filter_list.Contains(test.DataSources[0].type))
                     {
-                        Console.WriteLine("Skipping: " + test.FullName);
+                        if (verbose)
+                            Console.WriteLine("Skipping: " + test.FullName);
                         continue;
                     }
                 }
 
-                Console.WriteLine("Running: " + test.FullName);
+                if (verbose)
+                    Console.WriteLine("Running: " + test.FullName);
                 try
                 {
                     var tr = new GixSqlDynamicTestRunner();
