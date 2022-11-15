@@ -78,7 +78,7 @@ namespace gixsql_tests
                                 {
                                     var ds = dss.First(a => a.Key.Item1 == ds_type && a.Key.Item2 == i).Value;
                                     var dds = (GixSqlTestDataSourceInfo)ds.Clone();
-                                    var p = "//data-source-options[@data-source-index=\"" + i.ToString() + "\"]";
+                                    var p = "data-source-options[@data-source-index=\"" + i.ToString() + "\"]";
                                     var xopt = xe.SelectSingleNode(p);
                                     if (xopt != null && xopt.Attributes["value"] != null)
                                         dds.options = xopt.Attributes["value"].Value;

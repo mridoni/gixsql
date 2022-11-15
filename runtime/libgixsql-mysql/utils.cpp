@@ -272,3 +272,16 @@ std::string to_upper(const std::string s)
 	std::transform(s1.begin(), s1.end(), s1.begin(), ::toupper);
 	return s1;
 }
+
+std::string vector_join(const std::vector<std::string>& v, char sep)
+{
+	std::string s;
+
+	for (std::vector< std::string>::const_iterator p = v.begin();
+		p != v.end(); ++p) {
+		s += *p;
+		if (p != v.end() - 1)
+			s += sep;
+	}
+	return s;
+}

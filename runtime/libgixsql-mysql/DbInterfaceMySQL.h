@@ -120,7 +120,7 @@ private:
 	std::map<std::string, ICursor*> _declared_cursors;
 	std::map<std::string, MySQLStatementData*> _prepared_stmts;
 
-	int _mysql_exec_params(ICursor*, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, MySQLStatementData* prep_stmt_data = nullptr);
+	int _mysql_exec_params(ICursor*, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, MySQLStatementData* prep_stmt_data = nullptr);
 	int _mysql_exec(ICursor*, const std::string, MySQLStatementData* prep_stmt_data = nullptr);
 
 	// Updatable cursor emulation
@@ -128,7 +128,7 @@ private:
 	bool is_cursor_from_prepared_statement(ICursor* cursor);
 	bool retrieve_prepared_statement(const std::string& prep_stmt_name, MySQLStatementData** prepared_stmt_data);
 	bool has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key);
-	bool prepare_bind_updatable_cursor_query(ICursor* crsr, const std::vector<std::string>& unique_key);
+	bool prepare_updatable_cursor_query(const std::string& qry, ICursor* crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, MYSQL_BIND** key_params, int* key_params_size);
 
 };
 

@@ -29,7 +29,7 @@
            01 TAB00-REC.
                 03 CID        PIC 9(12).
                 03 FLD01      PIC S9(8) USAGE COMP-3.
-                03 FLD02      PIC X(12).
+                03 FLD02      PIC X(255).
 
            01 TMPNUM          PIC 9(4).
                
@@ -61,6 +61,20 @@
               CONNECT :DBUSR IDENTIFIED BY :DBPWD
                         USING :DATASRC
            END-EXEC.        
+
+           MOVE 'DROP' TO CUR-STEP.
+           EXEC SQL
+            DROP TABLE IF EXISTS TAB00
+           END-EXEC.
+
+           MOVE 'CREATE' TO CUR-STEP.
+           EXEC SQL
+            CREATE TABLE TAB00 (
+                CID INT, 
+                FLD01 INT, 
+                FLD02 VARCHAR(255), 
+                PRIMARY KEY(CID))
+           END-EXEC.
 
            MOVE 1      TO CID.
            MOVE -1     TO FLD01.
@@ -128,7 +142,7 @@
                          SET 
                            CID = CID + 10000,
                            FLD01 = FLD01 + 20000,
-                           FLD02 = FLD02 || 'XXXX'
+                           FLD02 = CONCAT(FLD02, 'XXXX')
                          WHERE CURRENT OF CRSR_TAB00
                    END-EXEC
 

@@ -407,35 +407,35 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-	//if (is_commit_or_rollback_statement(query)) {
-	//	cursor_manager.closeConnectionCursors(conn->getId(), false);
+		//if (is_commit_or_rollback_statement(query)) {
+		//	cursor_manager.closeConnectionCursors(conn->getId(), false);
 
-	//	if (conn->getConnectionOptions()->autocommit) {
-	//		rc = dbi->end_transaction(query);
-	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+		//	if (conn->getConnectionOptions()->autocommit) {
+		//		rc = dbi->end_transaction(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
-	//			rc = dbi->begin_transaction();
-	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-	//	}
-	//	else {
-	//		rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-	//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-	//	}
-	//}
-	//else {
-	//	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-	//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//			rc = dbi->begin_transaction();
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//	}
+		//	else {
+		//		rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//	}
+		//}
+		//else {
+		//	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+		//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-	//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-	//			rc = dbi->end_transaction(query);
-	//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+		//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
+		//			rc = dbi->end_transaction(query);
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
-	//				rc = dbi->begin_transaction();
-	//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-	//		}
-	//}
+		//				rc = dbi->begin_transaction();
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//		}
+		//}
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -1359,7 +1359,7 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 		if (st->sqlerrm.sqlerrmc[0] == ' ') {
 			sprintf(bfr, "%d : %s", err, err != 0 ? "Generic GIXSQL error" : "No error");
 			set_sqlerrm(st, bfr);
-	}
+		}
 #endif
 	}
 
@@ -1470,7 +1470,7 @@ static std::string get_debug_log_file() {
 	return DEFAULT_GIXSQL_LOG_FILE;
 }
 
-static spdlog::level::level_enum get_debug_log_level() {
+static spdlog::level::level_enum get_log_level() {
 	char* c = getenv("GIXSQL_LOG_LEVEL");
 	if (!c) {
 		return DEFAULT_GIXSQL_LOG_LEVEL;
@@ -1508,6 +1508,24 @@ static spdlog::level::level_enum get_debug_log_level() {
 								return DEFAULT_GIXSQL_LOG_LEVEL;
 }
 
+bool get_log_truncation_flag() {
+	char* c = getenv("GIXSQL_LOG_TRUNCATE");
+	if (!c) {
+		return DEFAULT_GIXSQL_LOG_TRUNC;
+	}
+
+	std::string s = to_lower(c);
+	if (s == "on" || s == "1") {
+		return true;
+	}
+	else
+		if (s == "off" || s == "0") {
+			return false;
+		}
+		else
+			return DEFAULT_GIXSQL_LOG_TRUNC;
+}
+
 void setup_no_rec_code()
 {
 	char* c = getenv("GIXSQL_NOREC_CODE");
@@ -1527,7 +1545,8 @@ static bool lib_initialize()
 
 	spdlog::sink_ptr gixsql_std_sink;
 
-	spdlog::level::level_enum level = get_debug_log_level();
+	bool truncate_log = get_log_truncation_flag();
+	spdlog::level::level_enum level = get_log_level();
 	if (level == spdlog::level::off) {
 		gixsql_std_sink = std::make_shared<spdlog::sinks::null_sink_st>();
 	}
@@ -1537,7 +1556,7 @@ static bool lib_initialize()
 			filename = string_replace(filename, "$$", std::to_string(pid));
 		}
 
-		gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename);
+		gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, truncate_log);
 	}
 
 	//gixsql_logger = std::make_shared<spdlog::logger>("libgixsql", gixsql_std_sink);

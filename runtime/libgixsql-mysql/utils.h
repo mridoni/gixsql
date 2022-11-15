@@ -69,5 +69,18 @@ inline bool vector_contains(const std::vector<T>& v, T item)
 {
     return std::find(v.begin(), v.end(), item) != v.end();
 }
+template<typename T>
+inline bool vector_contains_all(const std::vector<T>& v, const std::vector<T>& srch)
+{
+	for (int i = 0; i < srch.size(); i++) {
+		if (!vector_contains(v, srch.at(i))) {
+			return false;
+			break;
+		}
+	}
+	return true;
+}
+
+std::string vector_join(const std::vector<std::string>& v, char sep);
 
 #endif

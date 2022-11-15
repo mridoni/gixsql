@@ -365,6 +365,8 @@ namespace gixsql_tests
 
                 env.Add("GIXSQL_LOG_LEVEL", "trace");
                 env.Add("GIXSQL_LOG_FILE", log_path);
+                env.Add("GIXSQL_LOG_TRUNCATE", "on");
+
                 foreach (var kve in td.Environment)
                 {
                     env.Add(kve.Key, kve.Value);

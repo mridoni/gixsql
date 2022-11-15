@@ -143,6 +143,7 @@ namespace gixsql_tests_nunit
 
                 if (verbose)
                     Console.WriteLine("Running: " + test.FullName);
+
                 try
                 {
                     var tr = new GixSqlDynamicTestRunner();
