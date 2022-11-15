@@ -42,7 +42,7 @@ namespace gixsql_tests
                 bool isWindows = System.Runtime.InteropServices.RuntimeInformation
                                                                .IsOSPlatform(OSPlatform.Windows);
 
-                if (isWindows)
+                if (!File.Exists(@"/proc/sys/kernel/ostype"))
                 {
                     string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
                     cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
