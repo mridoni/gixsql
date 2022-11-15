@@ -39,8 +39,18 @@ namespace gixsql_tests
 
                 cc.compiler_id = c_id;
 
-                string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
-                cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
+                bool isWindows = System.Runtime.InteropServices.RuntimeInformation
+                                                               .IsOSPlatform(OSPlatform.Windows);
+
+                if (isWindows)
+                {
+                    string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+                    cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
+                }
+                else
+                {
+                    cc.gix_data_dir = Path.Combine("~/.gix");
+                }
 
                 string cdef_file = Path.Combine(cc.gix_data_dir, "compiler-defs", cc.compiler_id + ".def");
                 if (!File.Exists(cdef_file)) throw new Exception("Compiler definition file does not exist: " + cdef_file); ;
