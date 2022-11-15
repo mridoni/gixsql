@@ -455,7 +455,9 @@ namespace gixsql_tests
                                 }
                             }
 
-                            Assert.IsTrue(content.Contains(t), $"Output mismatch (index: {i}, expected: {t}");
+                            //Assert.IsTrue(content.Contains(t), $"Output mismatch (index: {i}, expected: {t}");
+                            var content_lines = content.Split("\r\n").ToList();
+                            Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
                         }
                         b2 = true;
                     }

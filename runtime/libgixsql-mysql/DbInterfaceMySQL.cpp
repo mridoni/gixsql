@@ -458,6 +458,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 
 	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs);
 	free(bound_param_defs);
+
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		delete wk_rs; 
 		lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);

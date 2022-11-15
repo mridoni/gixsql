@@ -29,7 +29,7 @@
            01 TAB00-REC.
                 03 CID        PIC 9(12).
                 03 FLD01      PIC S9(8) USAGE COMP-3.
-                03 FLD02      PIC X(12).
+                03 FLD02      PIC X(32).
 
            01 TMPNUM          PIC 9(4).
 
