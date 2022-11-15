@@ -39,9 +39,6 @@ namespace gixsql_tests
 
                 cc.compiler_id = c_id;
 
-                bool isWindows = System.Runtime.InteropServices.RuntimeInformation
-                                                               .IsOSPlatform(OSPlatform.Windows);
-
                 if (!File.Exists(@"/proc/sys/kernel/ostype"))
                 {
                     string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
