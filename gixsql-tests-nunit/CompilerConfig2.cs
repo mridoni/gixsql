@@ -46,7 +46,8 @@ namespace gixsql_tests
                 }
                 else
                 {
-                    cc.gix_data_dir = Path.Combine("~/.gix");
+                    string home = Environment.GetEnvironmentVariable("HOME");
+                    cc.gix_data_dir = Path.Combine(home, ".gix");
                 }
 
                 string cdef_file = Path.Combine(cc.gix_data_dir, "compiler-defs", cc.compiler_id + ".def");
