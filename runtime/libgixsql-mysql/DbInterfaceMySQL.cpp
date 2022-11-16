@@ -169,21 +169,6 @@ int DbInterfaceMySQL::terminate_connection()
 
 }
 
-//int DbInterfaceMySQL::begin_transaction()
-//{
-//	int rc = exec("START TRANSACTION");
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-//}
-//
-//int DbInterfaceMySQL::end_transaction(string completion_type)
-//{
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	int rc = exec(completion_type);
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-//}
-
 char* DbInterfaceMySQL::get_error_message()
 {
 	return (char*)last_error.c_str();

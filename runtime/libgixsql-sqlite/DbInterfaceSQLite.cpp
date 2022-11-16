@@ -63,12 +63,6 @@ int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* g
 	connaddr = nullptr;
 	current_statement_data = nullptr;
 
-	//connstr = (conn_info->getDbName().empty() ? "" : "dbname=" + conn_info->getDbName() + " ") +
-	//	(conn_info->getHost().empty() ? "" : "host=" + conn_info->getHost() + " ") +
-	//	(conn_info->getPort() == 0 ? "" : "port=" + std::to_string(conn_info->getPort()) + " ") +
-	//	(conn_info->getUsername().empty() ? "" : "user=" + conn_info->getUsername() + " ") +
-	//	(conn_info->getPassword().empty() ? "" : "password=" + conn_info->getPassword() + " ");
-
 	int sqlite_rc = sqlite3_open(conn_info->getHost().c_str(), &conn);
 
 	if (sqlite_rc != SQLITE_OK || conn == NULL) {
@@ -96,6 +90,25 @@ int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* g
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
+
+	auto opts = conn_info->getOptions();
+	if (opts.find("updatable_cursors") != opts.end()) {
+		std::string opt_updatable_cursors = opts["updatable_cursors"];
+		if (!opt_updatable_cursors.empty()) {
+			if (opt_updatable_cursors == "on" || opt_updatable_cursors == "1" || opt_updatable_cursors == "true") {
+				this->updatable_cursors_emu = true;
+			}
+
+			if (opt_updatable_cursors == "off" || opt_updatable_cursors == "0" || opt_updatable_cursors == "false") {
+				this->updatable_cursors_emu = false;
+			}
+		}
+	}
+
+	if (this->updatable_cursors_emu)
+		lib_logger->trace(FMT_FILE_FUNC "SQLite::enabled updatable cursor support", __FILE__, __func__);
+	else
+		lib_logger->trace(FMT_FILE_FUNC "SQLite::updatable cursor support is disabled", __FILE__, __func__);
 
 	connaddr = conn;
 	sqlite3_extended_result_codes(connaddr, 1);
@@ -144,20 +157,6 @@ int DbInterfaceSQLite::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-//int DbInterfaceSQLite::begin_transaction()
-//{
-//	int rc = exec("BEGIN TRANSACTION");
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-//}
-//
-//int DbInterfaceSQLite::end_transaction(std::string completion_type)
-//{
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	int rc = exec(completion_type);
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-//}
 
 char* DbInterfaceSQLite::get_error_message()
 {
@@ -286,6 +285,9 @@ int DbInterfaceSQLite::exec(std::string query)
 int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, std::string query, SQLiteStatementData* prep_stmt_data)
 {
 	int rc = 0;
+	bool is_delete = false;
+	std::string cursor_name, table_name, update_query;
+	std::vector<std::string> unique_key;
 	char* err_msg = 0;
 	uint32_t nquery_cols = 0;
 	std::string q = query;
@@ -293,6 +295,26 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, std::string query, SQLiteStat
 
 	SQLiteStatementData* wk_rs = nullptr;
 	
+	//if (!prep_stmt_data) {
+	//	wk_rs = (SQLiteStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+
+	//	if (wk_rs) {
+	//		if (wk_rs && wk_rs == current_statement_data) {
+	//			delete current_statement_data;
+	//			current_statement_data = nullptr;
+	//		}
+	//	}
+
+	//	wk_rs = new SQLiteStatementData();
+	//	rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &wk_rs->statement, nullptr);
+	//	if (sqliteRetrieveError(rc) != SQLITE_OK) {
+	//		return DBERR_SQL_ERROR;
+	//	}
+	//}
+	//else {
+	//	wk_rs = prep_stmt_data;	// Already prepared
+	//}
+
 	if (!prep_stmt_data) {
 		wk_rs = (SQLiteStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
 
@@ -304,8 +326,47 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, std::string query, SQLiteStat
 		}
 
 		wk_rs = new SQLiteStatementData();
-		rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &wk_rs->statement, nullptr);
+
+		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
+
+			// No cursor was passed, we need to find it
+			if (cursor_name.empty() || this->_declared_cursors.find(cursor_name) == this->_declared_cursors.end() || !this->_declared_cursors[cursor_name]) {
+				spdlog::error("Cannot find updatable cursor {}", cursor_name);
+				return DBERR_SQL_ERROR;
+			}
+
+			ICursor* updatable_crsr = this->_declared_cursors[cursor_name];
+
+			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
+				std::string new_query;
+
+				if (!prepare_updatable_cursor_query(query, updatable_crsr, unique_key, &upd_del_statement, &key_params, &key_params_size) || !upd_del_statement) {
+					spdlog::error("Cannot rewrite query for updatable cursor {}", updatable_crsr->getName());
+					return DBERR_SQL_ERROR;
+				}
+
+				rc = mysql_stmt_bind_param(upd_del_statement, key_params);
+				free(key_params);
+				if (mysqlRetrieveError(rc) != MYSQL_OK) {
+					lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
+					return DBERR_SQL_ERROR;
+				}
+
+				wk_rs->statement = upd_del_statement;
+			}
+			else {
+				spdlog::error("No unique key found on table while trying to update a cursor row (cursor: {}, table: {}", cursor_name, table_name);
+				return DBERR_SQL_ERROR;
+			}
+		}
+		else {
+				wk_rs = new SQLiteStatementData();
+				rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &wk_rs->statement, nullptr);
+		}
+
 		if (sqliteRetrieveError(rc) != SQLITE_OK) {
+			delete wk_rs;
+			spdlog::error("Prepare error: {} ({}) - {}", last_rc, last_state, last_error);
 			return DBERR_SQL_ERROR;
 		}
 	}
@@ -455,6 +516,11 @@ bool DbInterfaceSQLite::is_cursor_from_prepared_statement(ICursor* cursor)
 	//squery = to_lower(squery);
 
 	//return squery.size() > 1 && starts_with(squery, "@") && _prepared_stmts.find(squery.substr(1)) != _prepared_stmts.end();
+	return false;
+}
+
+bool DbInterfaceSQLite::has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key)
+{
 	return false;
 }
 

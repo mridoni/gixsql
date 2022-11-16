@@ -126,6 +126,10 @@ private:
 
 	bool retrieve_prepared_statement(const std::string& prep_stmt_name, SQLiteStatementData** prepared_stmt);
 	bool is_cursor_from_prepared_statement(ICursor* cursor);
+
+	// Updatable cursor emulation
+	bool updatable_cursors_emu = false;
+	bool has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key);
 	
 };
 
