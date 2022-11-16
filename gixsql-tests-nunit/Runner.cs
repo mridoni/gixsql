@@ -21,10 +21,12 @@ namespace gixsql_tests_nunit
             string db_filter = null;
             bool clean_test_dir_before_run = false;
             bool verbose = false;
+            bool list_failed = false;
             List<string> test_filter_list = new List<string>();
             List<string> db_filter_list = new List<string>();
 
             var opts = new OptionSet() {
+                { "F", v => list_failed = true },
                 { "r=", v => runsettings = v },
                 { "t=", v => test_filter = v },
                 { "d=", v => db_filter = v },
@@ -163,6 +165,22 @@ namespace gixsql_tests_nunit
             {
                 Console.ForegroundColor = (de.Value == "OK") ? ConsoleColor.Green : ConsoleColor.Red;
                 Console.WriteLine("{0}: {1}", de.Key.PadRight(mlen), de.Value);
+                Console.ForegroundColor = orig_color;
+            }
+
+            if (list_failed)
+            {
+                orig_color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\nFailed tests:");
+                foreach (var de in results)
+                {
+                    if (de.Value == "OK")
+                        continue;
+
+                    Console.WriteLine("{0}: {1}", de.Key.PadRight(mlen), de.Value);
+                    
+                }
                 Console.ForegroundColor = orig_color;
             }
 

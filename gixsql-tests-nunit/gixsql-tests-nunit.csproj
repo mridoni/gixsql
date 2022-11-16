@@ -78,7 +78,8 @@
     <None Remove="data\TSQL035A.cbl" />
     <None Remove="data\TSQL036A.cbl" />
     <None Remove="data\TSQL037A.cbl" />
-    <None Remove="data\TSQL037B.cbl" />
+    <None Remove="data\TSQL037B-MYSQL.cbl" />
+    <None Remove="data\TSQL037B-PGSQL.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -114,7 +115,8 @@
     <EmbeddedResource Include="data\TSQL009A.cbl" />
     <EmbeddedResource Include="data\TSQL010A.cbl" />
     <EmbeddedResource Include="data\TSQL011A.cbl" />
-    <EmbeddedResource Include="data\TSQL037B.cbl" />
+    <EmbeddedResource Include="data\TSQL037B-MYSQL.cbl" />
+    <EmbeddedResource Include="data\TSQL037B-PGSQL.cbl" />
     <EmbeddedResource Include="data\TSQL037A.cbl" />
     <EmbeddedResource Include="data\TSQL036A.cbl" />
     <EmbeddedResource Include="data\TSQL012A.cbl" />

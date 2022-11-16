@@ -150,7 +150,7 @@
                          SET 
                            CID = CID + :VAR1,
                            FLD01 = FLD01 + :VAR2,
-                           FLD02 = CONCAT(FLD02, :VAR3)
+                           FLD02 = CONCAT(FLD02, CAST(:VAR3 AS CHAR))
                          WHERE CURRENT OF CRSR_TAB00
                    END-EXEC
 

@@ -31,7 +31,7 @@ namespace gixsql_tests
             DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
             DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
         }
-        
+
         public void Init(GixSqlTestData td)
         {
             testMutex.WaitOne(TimeSpan.FromSeconds(20));
@@ -358,7 +358,8 @@ namespace gixsql_tests
 
                 Dictionary<string, string> env = new Dictionary<string, string>();
 
-                string log_path = Path.Combine(TestTempDir, "gixsql-" + td.Name + ".log");
+                string dbid = td.DataSources.Count > 0 ? td.DataSources[0].type : "all";
+                string log_path = Path.Combine(TestTempDir, $"gixsql-{td.Name}-{td.Architecture}-{dbid}-{td.CompilerType}.log");
 
                 if (File.Exists(log_path))
                     File.Delete(log_path);
@@ -455,9 +456,11 @@ namespace gixsql_tests
                                 }
                             }
 
-                            //Assert.IsTrue(content.Contains(t), $"Output mismatch (index: {i}, expected: {t}");
                             var content_lines = content.Split("\r\n").ToList();
-                            Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
+                            if (t.StartsWith("{{SW}}"))
+                                Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(6).Trim())) > 0, $"Output mismatch (index: {i}, expected: {t}");
+                            else
+                                Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
                         }
                         b2 = true;
                     }

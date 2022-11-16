@@ -425,12 +425,11 @@ int DbInterfacePGSQL::exec_params(std::string query, int nParams, const std::vec
 	return _pgsql_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
-	std::string q = query;
 	std::vector<int> empty;
 
-	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
 
@@ -448,14 +447,16 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int n
 	}
 
 	wk_rs = new PGResultSetData();
-	wk_rs->resultset = PQexecParams(connaddr, q.c_str(), nParams, NULL, pvals, empty.data(), empty.data(), 0);
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), nParams, NULL, pvals, empty.data(), empty.data(), 0);
 	wk_rs->num_rows = get_num_rows(wk_rs->resultset);
 
-	delete[] pvals;
+
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
+
+	delete[] pvals;
 
 	// we trap COMMIT/ROLLBACK
 	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
@@ -480,9 +481,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int n
 	}
 
 	if (last_rc == PGRES_COMMAND_OK) {
-		q = trim_copy(q);
-		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
-			
+		if (is_update_or_delete_statement(query)) {
 			if (wk_rs->num_rows <= 0) {
 				last_rc = 100;
 				return DBERR_SQL_ERROR;

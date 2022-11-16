@@ -97,8 +97,8 @@ private:
 
 	int decode_binary = DECODE_BINARY_DEFAULT;
 
-	int _pgsql_exec(ICursor *crsr, std::string);
-	int _pgsql_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
+	int _pgsql_exec(ICursor *crsr, const std::string);
+	int _pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
 
 	bool retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src);
 
