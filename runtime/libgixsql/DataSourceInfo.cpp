@@ -80,7 +80,7 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 		std::string sqlite_opts;
 		std::string path_opts = data_source.substr(9);
 
-		if (path_opts.find('?') != std::string::npos) {
+		if (path_opts.find('?') == std::string::npos) {
 			sqlite_path = path_opts;
 		}
 		else {

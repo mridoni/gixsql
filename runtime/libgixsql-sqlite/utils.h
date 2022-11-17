@@ -63,7 +63,8 @@ bool is_dml_statement(std::string query);
 bool is_begin_transaction_statement(std::string query);
 bool is_update_or_delete_statement(const std::string& query);
 bool is_tx_termination_statement(const std::string& query);
-bool has_where_current_of(const std::string query, std::string& cursor_name);
+bool is_update_or_delete_where_current_of(const std::string& query, std::string& table_name, std::string& cursor_name, bool* is_delete);
+
 void ltrim(std::string& s);
 
 // trim from end (in place)
@@ -82,10 +83,14 @@ std::string rtrim_copy(std::string s);
 std::string trim_copy(std::string s);
 
 bool starts_with(std::string s, std::string s1);
+bool ends_with(std::string const& s1, std::string const& s2);
 
 bool caseInsensitiveStringCompare(const std::string& str1, const std::string& str2);
 
 std::string to_lower(const std::string s);
 std::string to_upper(const std::string s);
+
+std::string string_replace(const std::string& subject, const std::string& search, const std::string& replace);
+
 
 

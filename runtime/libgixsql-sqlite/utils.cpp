@@ -149,6 +149,16 @@ bool starts_with(std::string s, std::string s1)
 	return s.substr(0, s1.size()) == s1;
 }
 
+bool ends_with(std::string const& s1, std::string const& s2)
+{
+	if (s1.length() >= s2.length()) {
+		return (0 == s1.compare(s1.length() - s2.length(), s2.length(), s2));
+	}
+	else {
+		return false;
+	}
+}
+
 bool is_tx_termination_statement(const std::string& query)
 {
 	int p = query.find(' ');
@@ -240,4 +250,58 @@ std::string to_upper(const std::string s)
 	std::string s1 = s;
 	std::transform(s1.begin(), s1.end(), s1.begin(), ::toupper);
 	return s1;
+}
+
+std::string string_replace(const std::string& subject, const std::string& search, const std::string& replace)
+{
+	std::string s = subject;
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::string::npos) {
+		s.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return s;
+}
+
+bool is_update_or_delete_where_current_of(const std::string& query, std::string& table_name, std::string& cursor_name, bool* is_delete)
+{
+	bool b = false;
+	std::string q = trim_copy(query), c;
+	q = to_upper(q);
+	q = string_replace(q, "\n", " ");
+	q = string_replace(q, "\r", " ");
+	q = string_replace(q, "\t", " ");
+
+	if (starts_with(q, "UPDATE ")) {
+		b = false;
+	}
+	else {
+		if (starts_with(q, "DELETE ")) {
+			b = true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	int n = q.find("WHERE CURRENT OF");
+	if (n == std::string::npos)
+		return false;
+
+	c = q.substr(n + 16); // 16 -> length of "WHERE CURRENT OF"
+	trim(c);
+
+	std::string t = q.substr(q.find(" ") + 1);
+	n = t.find(" ");
+	if (n == std::string::npos)
+		return false;
+
+	t = t.substr(0, n);
+	trim(t);
+
+
+	table_name = t;
+	cursor_name = c;
+	*is_delete = b;
+	return true;
 }

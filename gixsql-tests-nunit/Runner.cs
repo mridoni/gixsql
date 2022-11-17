@@ -21,12 +21,10 @@ namespace gixsql_tests_nunit
             string db_filter = null;
             bool clean_test_dir_before_run = false;
             bool verbose = false;
-            bool list_failed = false;
             List<string> test_filter_list = new List<string>();
             List<string> db_filter_list = new List<string>();
 
             var opts = new OptionSet() {
-                { "F", v => list_failed = true },
                 { "r=", v => runsettings = v },
                 { "t=", v => test_filter = v },
                 { "d=", v => db_filter = v },
@@ -101,7 +99,8 @@ namespace gixsql_tests_nunit
 
             if (!String.IsNullOrWhiteSpace(test_filter))
             {
-                foreach (var f in test_filter.Split(new String[] {",", ";"}, StringSplitOptions.RemoveEmptyEntries)) {
+                foreach (var f in test_filter.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))
+                {
                     test_filter_list.Add(f);
                 }
             }
@@ -120,14 +119,16 @@ namespace gixsql_tests_nunit
             {
                 GixSqlTestData test = (GixSqlTestData)t[0];
 
-                if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name)) {
+                if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name))
+                {
                     if (verbose)
                         Console.WriteLine("Skipping: " + test.FullName);
                     continue;
                 }
 
 
-                if (db_filter_list.Count > 0) { 
+                if (db_filter_list.Count > 0)
+                {
                     if (test.DataSources.Count == 0)
                     {
                         if (verbose)
@@ -168,7 +169,8 @@ namespace gixsql_tests_nunit
                 Console.ForegroundColor = orig_color;
             }
 
-            if (list_failed)
+
+            if (results.Count(a => a.Value == "KO") > 0)
             {
                 orig_color = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -179,7 +181,7 @@ namespace gixsql_tests_nunit
                         continue;
 
                     Console.WriteLine("{0}: {1}", de.Key.PadRight(mlen), de.Value);
-                    
+
                 }
                 Console.ForegroundColor = orig_color;
             }

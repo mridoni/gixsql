@@ -398,6 +398,8 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 					return DBERR_SQL_ERROR;
 				}
 
+				// Parameters are bound later
+
 				wk_rs->statement = upd_del_statement;
 			}
 			else {
@@ -1181,7 +1183,7 @@ static std::string __get_trimmed_hostref_or_literal(void* data, int l)
 //	return true;
 //}
 
-std::vector<std::string> get_resultset_column_names(MYSQL_STMT* stmt)
+std::vector<std::string> DbInterfaceMySQL::get_resultset_column_names(MYSQL_STMT* stmt)
 {
 	MYSQL_RES* rsdata = mysql_stmt_result_metadata(stmt);
 	std::vector<std::string> crsr_cols;

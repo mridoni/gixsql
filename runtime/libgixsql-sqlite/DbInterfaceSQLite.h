@@ -119,8 +119,8 @@ private:
 	void sqliteClearError();
 	void sqliteSetError(int err_code, std::string sqlstate, std::string err_msg);
 
-	int _sqlite_exec(ICursor* crsr, std::string, SQLiteStatementData* prep_stmt = nullptr);
-	int _sqlite_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt = nullptr);
+	int _sqlite_exec(ICursor* crsr, const std::string, SQLiteStatementData* prep_stmt = nullptr);
+	int _sqlite_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt = nullptr);
 
 	int _sqlite_get_num_rows(sqlite3_stmt* r);
 
@@ -130,6 +130,7 @@ private:
 	// Updatable cursor emulation
 	bool updatable_cursors_emu = false;
 	bool has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key);
-	
+	bool prepare_updatable_cursor_query(const std::string& qry, ICursor* crsr, const std::vector<std::string>& unique_key, sqlite3_stmt** update_stmt, std::vector<std::string>& key_params);
+	std::vector<std::string> get_resultset_column_names(sqlite3_stmt* stmt);
 };
 

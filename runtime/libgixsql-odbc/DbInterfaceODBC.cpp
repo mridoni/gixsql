@@ -782,23 +782,42 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 
 	if (!is_binary) {
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, bfr, bfrlen, &reslen);
-		*value_len = reslen;
+		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
+			return false;
+		}
+		// TODO: fix this, with proper null handling
+		if (reslen != SQL_NULL_DATA)
+			*value_len = reslen;
+		else {
+			bfr[0] = '\0';
+			*value_len = 0;
+		}
 	}
 	else {
 		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
 		uint8_t b0, b1;
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
-		if (rc == SQL_SUCCESS) {
-			for (int i = 0; i < bfrlen; i++) {
-				uint8_t b1 = tmp_bfr[i * 2];
-				uint8_t b0 = tmp_bfr[(i * 2) + 1];
-				if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
-				if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
-				bfr[i] = b0 + (b1 << 4);
-			}
+		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
+			return false;
 		}
+
+		for (int i = 0; i < bfrlen; i++) {
+			uint8_t b1 = tmp_bfr[i * 2];
+			uint8_t b0 = tmp_bfr[(i * 2) + 1];
+			if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
+			if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
+			bfr[i] = b0 + (b1 << 4);
+		}
+
 		delete[] tmp_bfr;
-		*value_len = reslen / 2;
+
+		// TODO: fix this, with proper null handling
+		if (reslen != SQL_NULL_DATA)
+			*value_len = reslen / 2;
+		else {
+			bfr[0] = '\0';
+			*value_len = 0;
+		}
 	}
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return false;
