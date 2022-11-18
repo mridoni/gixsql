@@ -77,6 +77,7 @@
     <None Remove="data\TSQL034A.cbl" />
     <None Remove="data\TSQL035A.cbl" />
     <None Remove="data\TSQL036A.cbl" />
+    <None Remove="data\TSQL038A.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -95,6 +96,7 @@
     <EmbeddedResource Include="data\dbdata.sql" />
     <EmbeddedResource Include="data\EMPREC.cpy" />
     <EmbeddedResource Include="data\TEST001.cbl" />
+    <EmbeddedResource Include="data\TSQL038A.cbl" />
     <EmbeddedResource Include="data\TSQL001A.cbl" />
     <EmbeddedResource Include="data\TSQL002A.cbl" />
     <EmbeddedResource Include="data\TSQL003A.cbl" />
