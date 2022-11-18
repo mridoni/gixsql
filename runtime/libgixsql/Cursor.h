@@ -54,10 +54,12 @@ public:
 	int getNumParams() override;
 	bool isOpen() override;
 	bool isWithHold() override;
-	void setOpened(bool) override;
+	
 	std::vector<std::string> getParameterValues() override;
 	std::vector<int> getParameterTypes() override;
 	std::vector<int> getParameterLengths() override;
+
+	void setOpened(bool);
 
 	// For private DbInterfaceData
 	void *getPrivateData() override;

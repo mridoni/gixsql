@@ -51,7 +51,7 @@ public:
 	virtual int getNumParams() = 0;
 	virtual bool isWithHold() = 0;
 	virtual bool isOpen() = 0;
-	virtual void setOpened(bool) = 0;
+	//virtual void setOpened(bool) = 0;
 
 	virtual std::vector<std::string> getParameterValues() = 0;
 	virtual std::vector<int> getParameterTypes() = 0;
