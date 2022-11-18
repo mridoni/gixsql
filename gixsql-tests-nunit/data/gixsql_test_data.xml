@@ -3260,5 +3260,32 @@
 			<expected-preprocessed-file-content>
 			</expected-preprocessed-file-content>
 		</test>
+	
+		<test name="TSQL038A" enabled="false">
+			<description>Implementation of updatable cursors (with parameters)</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL038A.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<environment>
+			</environment>
+
+			<expected-output>
+				<line>hello world</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
 	</tests>
 </test-data>
