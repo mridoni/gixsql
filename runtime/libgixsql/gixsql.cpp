@@ -551,20 +551,25 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 		SqlVar* v = _res_sql_var_list.at(i);
 		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, stmt_name, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
-			free(buffer);
-			return RESULT_FAILED;
+			sqlcode = DBERR_INVALID_COLUMN_DATA;
+			continue;
 		}
 
-		v->createCobolData(buffer, datalen, &sqlcode);
-		if (sqlcode) {
-			setStatus(st, dbi, sqlcode);
-			free(buffer);
-			return RESULT_FAILED;
+		int sql_code_local = DBERR_NO_ERROR;
+		v->createCobolData(buffer, datalen, &sql_code_local);
+		if (sql_code_local) {
+			setStatus(st, dbi, sql_code_local);
+			sqlcode = sql_code_local;
+			continue;
 		}
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
 	free(buffer);
+
+	if (sqlcode != 0) {
+		return RESULT_FAILED;
+	}
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
@@ -854,20 +859,26 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
 		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, cursor, 0, i++, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
-			free(buffer);
-			return RESULT_FAILED;
+			sqlcode = DBERR_INVALID_COLUMN_DATA;
+			continue;
 		}
 
-		(*it)->createCobolData(buffer, datalen, &sqlcode);
-		if (sqlcode) {
-			setStatus(st, dbi, sqlcode);
-			free(buffer);
-			return RESULT_FAILED;
+		int sql_code_local = DBERR_NO_ERROR;
+		(*it)->createCobolData(buffer, datalen, &sql_code_local);
+		if (sql_code_local) {
+			setStatus(st, dbi, sql_code_local);
+			sqlcode = sql_code_local;
+			continue;
 		}
-		// may add trace code here (or remove from GIXSQLExecSelectIntoOne)
+
+		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (*it)->getAddr());
 
 	}
 	free(buffer);
+
+	if (sqlcode != 0) {
+		return RESULT_FAILED;
+	}
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
@@ -1027,20 +1038,25 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 		SqlVar* v = _res_sql_var_list.at(i);
 		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, NULL, 0, i, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
-			free(buffer);
-			return RESULT_FAILED;
+			sqlcode = DBERR_INVALID_COLUMN_DATA;
+			continue;
 		}
 
-		v->createCobolData(buffer, datalen, &sqlcode);
-		if (sqlcode) {
-			setStatus(st, dbi, sqlcode);
-			free(buffer);
-			return RESULT_FAILED;
+		int sql_code_local = DBERR_NO_ERROR;
+		v->createCobolData(buffer, datalen, &sql_code_local);
+		if (sql_code_local) {
+			setStatus(st, dbi, sql_code_local);
+			sqlcode = sql_code_local;
+			continue;
 		}
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
 	free(buffer);
+
+	if (sqlcode != 0) {
+		return RESULT_FAILED;
+	}
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
