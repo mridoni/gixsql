@@ -32,10 +32,10 @@
 char* trim_end(char*);
 int strim(char* buf);
 char* safe_strdup(char* s);
-bool is_commit_or_rollback_statement(std::string query);
+bool is_tx_termination_statement(const std::string& query);
 bool is_dml_statement(std::string query);
 bool is_begin_transaction_statement(std::string query);
-bool is_update_or_delete_statement(std::string query);
+bool is_update_or_delete_statement(const std::string& query);
 bool has_where_current_of(const std::string query, std::string& cursor_name);
 void ltrim(std::string& s);
 
@@ -58,7 +58,13 @@ bool starts_with(std::string s, std::string s1);
 
 bool caseInsensitiveStringCompare(const std::string& str1, const std::string& str2);
 
-std::string to_lower(const std::string s);
-std::string to_upper(const std::string s);
+std::string to_lower(const std::string& s);
+std::string to_upper(const std::string& s);
 
 bool split_in_args(std::vector<std::string> &qargs, std::string command, bool remove_empty);
+
+template<typename T>
+inline bool vector_contains(const std::vector<T>& v, T item)
+{
+    return std::find(v.begin(), v.end(), item) != v.end();
+}

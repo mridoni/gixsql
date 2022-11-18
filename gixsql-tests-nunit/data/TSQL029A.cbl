@@ -81,13 +81,13 @@
               GO TO 100-EXIT
            END-IF.
 
-           EXEC SQL AT CONN1
-              START TRANSACTION
-	       END-EXEC.         
+      *     EXEC SQL AT CONN1
+      *        START TRANSACTION
+      *     END-EXEC.         
 
-           EXEC SQL AT CONN2
-              START TRANSACTION
-	       END-EXEC.                 
+      *     EXEC SQL AT CONN2
+      *        START TRANSACTION
+      *     END-EXEC.                 
            
 
        100-MAIN.       
@@ -138,11 +138,11 @@
            DISPLAY 'T2   : ' T2.
            DISPLAY 'TOTAL: ' TOT.
 
-           EXEC SQL AT CONN1 SAVEPOINT SP1 END-EXEC.
-           DISPLAY 'SQLCODE SAVEPOINT SP1: ' SQLCODE.
-
-           EXEC SQL AT CONN2 SAVEPOINT SP2 END-EXEC.
-           DISPLAY 'SQLCODE SAVEPOINT SP2: ' SQLCODE.
+      *     EXEC SQL AT CONN1 SAVEPOINT SP1 END-EXEC.
+      *     DISPLAY 'SQLCODE SAVEPOINT SP1: ' SQLCODE.
+      *
+      *     EXEC SQL AT CONN2 SAVEPOINT SP2 END-EXEC.
+      *     DISPLAY 'SQLCODE SAVEPOINT SP2: ' SQLCODE.
            
       *    THIS SHOULD FAIL
            EXEC SQL AT CONN2
@@ -156,11 +156,11 @@
            END-EXEC. 
            DISPLAY 'SQLSTATE FAIL2 (OK IF <> 00000): ' SQLSTATE.  
 
-           EXEC SQL AT CONN1 ROLLBACK TO SAVEPOINT SP1 END-EXEC.
-           DISPLAY 'SQLCODE ROLLBACK SP1 : ' SQLCODE.
-
-           EXEC SQL AT CONN2 ROLLBACK TO SAVEPOINT SP2 END-EXEC.
-           DISPLAY 'SQLCODE ROLLBACK SP2 : ' SQLCODE.
+      *     EXEC SQL AT CONN1 ROLLBACK TO SAVEPOINT SP1 END-EXEC.
+      *     DISPLAY 'SQLCODE ROLLBACK SP1 : ' SQLCODE.
+      *
+      *     EXEC SQL AT CONN2 ROLLBACK TO SAVEPOINT SP2 END-EXEC.
+      *     DISPLAY 'SQLCODE ROLLBACK SP2 : ' SQLCODE.
 
        100-CURSOR1-TEST.            
       *  open cursor

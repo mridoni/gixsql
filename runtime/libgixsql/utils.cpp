@@ -394,3 +394,17 @@ std::vector<std::string> string_split(const std::string str, const std::string r
 	}
 	return list;
 }
+
+std::string to_lower(const std::string& s)
+{
+	std::string s1 = s;
+	std::transform(s1.begin(), s1.end(), s1.begin(), ::tolower);
+	return s1;
+}
+
+std::string to_upper(const std::string& s)
+{
+	std::string s1 = s;
+	std::transform(s1.begin(), s1.end(), s1.begin(), ::toupper);
+	return s1;
+}

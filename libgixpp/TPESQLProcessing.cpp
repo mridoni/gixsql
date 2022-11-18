@@ -942,7 +942,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 			std::string call_id;
 			if (!stmt->res_host_list->size()) {
-				call_id = get_call_id(stmt->cursorName.empty() ? "Exec" : "CursorDeclare");
+				call_id = get_call_id("Exec");
 				if (stmt->host_list->size())
 					call_id += "Params";
 			}
@@ -950,30 +950,29 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				call_id = get_call_id("ExecSelectIntoOne");
 			}
 
-			if (stmt->cursorName.empty()) {
-				ESQLCall select_call(call_id, emit_static);
-				select_call.addParameter("SQLCA", BY_REFERENCE);
-				select_call.addParameter(&main_module_driver, stmt->connectionId);
-				select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-				select_call.addParameter(stmt->host_list->size(), BY_VALUE);
-				select_call.addParameter(res_params_count, BY_VALUE);
-				if (!put_call(select_call, false))
-					return false;
+			ESQLCall select_call(call_id, emit_static);
+			select_call.addParameter("SQLCA", BY_REFERENCE);
+			select_call.addParameter(&main_module_driver, stmt->connectionId);
+			select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
+
+			if (ends_with(call_id, "Exec")) {
+				// Nothing to add
 			}
 			else {
-				ESQLCall select_call(call_id, emit_static);
-				select_call.addParameter("SQLCA", BY_REFERENCE);
-				select_call.addParameter(&main_module_driver, stmt->connectionId);
-				select_call.addParameter("\"" + stmt->cursorName + "\" & x\"00\"", BY_REFERENCE);
-				select_call.addParameter(stmt->cursor_hold, BY_VALUE);
-				select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-				select_call.addParameter(0, BY_VALUE);
-				if (stmt->host_list->size())
+				if (ends_with(call_id, "ExecParams")) {
 					select_call.addParameter(stmt->host_list->size(), BY_VALUE);
-
-				if (!put_call(select_call, false))
-					return false;
+				}
+				else {
+					if (ends_with(call_id, "ExecSelectIntoOne")) {
+						select_call.addParameter(stmt->host_list->size(), BY_VALUE);
+						select_call.addParameter(res_params_count, BY_VALUE);
+					}
+				}
 			}
+
+			if (!put_call(select_call, false))
+				return false;
+
 			put_end_exec_sql(false);
 
 			put_whenever_handler(stmt->period);
@@ -1037,12 +1036,6 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 	case ESQL_Command::Fetch:
 	{
-		//if (opt_smart_crsr_init) {
-		//	std::string crsr_init_var = "GIXSQL-CI-F-" + string_replace(stmt->cursorName, "_", "-");
-		//	put_smart_cursor_init_check(stmt->cursorName);
-		//	put_output_line(string_format(AREA_B_CPREFIX "IF %s = 'X' THEN", crsr_init_var));
-		//}
-
 		put_start_exec_sql(false);
 
 		int res_params_count = 0;
@@ -1141,12 +1134,12 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 	{
 		// Note: RELEASE not supported, in case check the stmt->transaction_release flag
 		put_start_exec_sql(false);
-		ESQLCall fetch_call(get_call_id("Exec"), emit_static);
-		fetch_call.addParameter("SQLCA", BY_REFERENCE);
-		fetch_call.addParameter(&main_module_driver, stmt->connectionId);
-		fetch_call.addParameter("\"COMMIT\" & x\"00\"", BY_REFERENCE);
+		ESQLCall commit_call(get_call_id("Exec"), emit_static);
+		commit_call.addParameter("SQLCA", BY_REFERENCE);
+		commit_call.addParameter(&main_module_driver, stmt->connectionId);
+		commit_call.addParameter("\"COMMIT\" & x\"00\"", BY_REFERENCE);
 
-		if (!put_call(fetch_call, false))
+		if (!put_call(commit_call, false))
 			return false;
 
 		put_end_exec_sql(false);
@@ -1159,12 +1152,12 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 	{
 		// Note: RELEASE not supported, in case check the stmt->transaction_release flag
 		put_start_exec_sql(false);
-		ESQLCall fetch_call(get_call_id("Exec"), emit_static);
-		fetch_call.addParameter("SQLCA", BY_REFERENCE);
-		fetch_call.addParameter(&main_module_driver, stmt->connectionId);
-		fetch_call.addParameter("\"ROLLBACK\" & x\"00\"", BY_REFERENCE);
+		ESQLCall rollback_call(get_call_id("Exec"), emit_static);
+		rollback_call.addParameter("SQLCA", BY_REFERENCE);
+		rollback_call.addParameter(&main_module_driver, stmt->connectionId);
+		rollback_call.addParameter("\"ROLLBACK\" & x\"00\"", BY_REFERENCE);
 
-		if (!put_call(fetch_call, false))
+		if (!put_call(rollback_call, false))
 			return false;
 
 		put_end_exec_sql(false);
@@ -1267,11 +1260,13 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			}
 		}
 
-		ESQLCall dml_call(get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams"), emit_static);
+		std::string dml_call_id = get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams");
+		ESQLCall dml_call(dml_call_id, emit_static);
 		dml_call.addParameter("SQLCA", BY_REFERENCE);
 		dml_call.addParameter(&main_module_driver, stmt->connectionId);
 		dml_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-		dml_call.addParameter(sql_params_count, BY_VALUE);
+		if (ends_with(dml_call_id, "Params"))
+			dml_call.addParameter(sql_params_count, BY_VALUE);
 
 		if (!put_call(dml_call, false))
 			return false;
@@ -1559,11 +1554,13 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		if (!put_host_parameters(stmt))
 			return false;
 
-		ESQLCall dml_call(get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams"), emit_static);
+		std::string dml_call_id = get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams");
+		ESQLCall dml_call(dml_call_id, emit_static);
 		dml_call.addParameter("SQLCA", BY_REFERENCE);
 		dml_call.addParameter(&main_module_driver, stmt->connectionId);
 		dml_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
-		dml_call.addParameter(stmt->host_list->size(), BY_VALUE);
+		if (ends_with(dml_call_id, "Params"))
+			dml_call.addParameter(stmt->host_list->size(), BY_VALUE);
 
 		if (!put_call(dml_call, false))
 			return false;

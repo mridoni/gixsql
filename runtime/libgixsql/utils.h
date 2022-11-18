@@ -68,4 +68,7 @@ std::string string_replace(std::string subject, const std::string &search, const
 
 bool caseInsensitiveStringCompare(const std::string& str1, const std::string& str2);
 
+std::string to_lower(const std::string& s);
+std::string to_upper(const std::string& s);
+
 #endif

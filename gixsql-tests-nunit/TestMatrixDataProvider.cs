@@ -77,7 +77,13 @@ namespace gixsql_tests
                                 for (int i = 1; i <= ds_count; i++)
                                 {
                                     var ds = dss.First(a => a.Key.Item1 == ds_type && a.Key.Item2 == i).Value;
-                                    td.DataSources.Add(ds);
+                                    var dds = (GixSqlTestDataSourceInfo)ds.Clone();
+                                    var p = "data-source-options[@data-source-index=\"" + i.ToString() + "\"]";
+                                    var xopt = xe.SelectSingleNode(p);
+                                    if (xopt != null && xopt.Attributes["value"] != null)
+                                        dds.options = xopt.Attributes["value"].Value;
+
+                                    td.DataSources.Add(dds);
                                 }
 
                                 foreach (var kve in global_env)

@@ -108,9 +108,7 @@ static struct sqlca_t sqlca_init =
 //#define GIXSQL_USE_DEFAULT_CONNECTION -999
 
 // autocommit
-#define GIXSQL_AUTOCOMMIT_OFF false
-#define GIXSQL_AUTOCOMMIT_ON  true
-#define GIXSQL_AUTOCOMMIT_DEFAULT GIXSQL_AUTOCOMMIT_OFF
+#define GIXSQL_AUTOCOMMIT_DEFAULT AutoCommitMode::Native
 
 // fix up parameter markers
 #define GIXSQL_FIXUP_PARAMS_OFF false

@@ -31,6 +31,8 @@ namespace gixsql_tests
 
         public static CompilerConfig2 init(string ctype, string architecture, string c_id)
         {
+            bool isWindows = !File.Exists(@"/proc/sys/kernel/ostype");
+
             try
             {
                 CompilerConfig2 cc = new CompilerConfig2();
@@ -39,8 +41,16 @@ namespace gixsql_tests
 
                 cc.compiler_id = c_id;
 
-                string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
-                cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
+                if (isWindows)
+                {
+                    string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
+                    cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
+                }
+                else
+                {
+                    string home = Environment.GetEnvironmentVariable("HOME");
+                    cc.gix_data_dir = Path.Combine(home, ".gix");
+                }
 
                 string cdef_file = Path.Combine(cc.gix_data_dir, "compiler-defs", cc.compiler_id + ".def");
                 if (!File.Exists(cdef_file)) throw new Exception("Compiler definition file does not exist: " + cdef_file); ;
@@ -78,16 +88,34 @@ namespace gixsql_tests
                 cc.link_lib_name = cc.IsVsBased ? "libgixsql.lib" : "libgixsql.a";
                 if (!File.Exists(Path.Combine(cc.link_lib_dir_path, cc.link_lib_name))) throw new Exception(Path.Combine(cc.link_lib_dir_path, cc.link_lib_name));
 
-                cc.gixpp_exe = Path.Combine(cc.gix_bin_path, "gixpp.exe");
-                if (!File.Exists(cc.gixpp_exe)) throw new Exception(cc.gixpp_exe);
+                if (isWindows)
+                {
+                    cc.gixpp_exe = Path.Combine(cc.gix_bin_path, "gixpp.exe");
+                    if (!File.Exists(cc.gixpp_exe)) throw new Exception(cc.gixpp_exe);
 
-                cc.cobc_exe = Path.Combine(cc.cobc_bin_dir_path, "cobc.exe");
-                if (!File.Exists(cc.cobc_exe)) throw new Exception(cc.cobc_exe);
+                    cc.cobc_exe = Path.Combine(cc.cobc_bin_dir_path, "cobc.exe");
+                    if (!File.Exists(cc.cobc_exe)) throw new Exception(cc.cobc_exe);
 
-                cc.cobcrun_exe = Path.Combine(cc.cobc_bin_dir_path, "cobcrun.exe");
-                if (!File.Exists(cc.cobcrun_exe)) throw new Exception(cc.cobcrun_exe);
+                    cc.cobcrun_exe = Path.Combine(cc.cobc_bin_dir_path, "cobcrun.exe");
+                    if (!File.Exists(cc.cobcrun_exe)) throw new Exception(cc.cobcrun_exe);
 
-                cc.link_lib_lname = cc.IsVsBased ? "libgixsql" : "gixsql";
+                    cc.link_lib_lname = cc.IsVsBased ? "libgixsql" : "gixsql";
+                }
+                else
+                {
+                    cc.gixpp_exe = Path.Combine(cc.gix_bin_path, "gixpp");
+                    if (!File.Exists(cc.gixpp_exe)) throw new Exception(cc.gixpp_exe);
+
+                    cc.cobc_exe = Path.Combine(cc.cobc_bin_dir_path, "cobc");
+                    if (!File.Exists(cc.cobc_exe)) throw new Exception(cc.cobc_exe);
+
+                    cc.cobcrun_exe = Path.Combine(cc.cobc_bin_dir_path, "cobcrun");
+                    if (!File.Exists(cc.cobcrun_exe)) throw new Exception(cc.cobcrun_exe);
+
+                    cc.link_lib_lname = "gixsql";
+                }
+
+
 
                 return cc;
             }

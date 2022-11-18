@@ -80,7 +80,7 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 		std::string sqlite_opts;
 		std::string path_opts = data_source.substr(9);
 
-		if (path_opts.find('?') != std::string::npos) {
+		if (path_opts.find('?') == std::string::npos) {
 			sqlite_path = path_opts;
 		}
 		else {
@@ -281,7 +281,7 @@ std::string DataSourceInfo::dump(bool with_password)
 
 	int i = 0;
 	for (auto it = options.begin(); it != options.end(); ++it) {
-		s += "option     " + std::to_string(i++) + ": " + it->first + " => " + it->second + "\n";
+		s += "option " + std::to_string(i++) + ": " + it->first + " => " + it->second + ", ";
 	}
 
 	return s;

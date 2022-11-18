@@ -20,6 +20,7 @@ namespace gixsql_tests_nunit
             string test_filter = null;
             string db_filter = null;
             bool clean_test_dir_before_run = false;
+            bool verbose = false;
             List<string> test_filter_list = new List<string>();
             List<string> db_filter_list = new List<string>();
 
@@ -28,6 +29,7 @@ namespace gixsql_tests_nunit
                 { "t=", v => test_filter = v },
                 { "d=", v => db_filter = v },
                 { "c", v => clean_test_dir_before_run = true },
+                { "v", v => verbose = true },
               };
 
             opts.Parse(args);
@@ -97,7 +99,8 @@ namespace gixsql_tests_nunit
 
             if (!String.IsNullOrWhiteSpace(test_filter))
             {
-                foreach (var f in test_filter.Split(new String[] {",", ";"}, StringSplitOptions.RemoveEmptyEntries)) {
+                foreach (var f in test_filter.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))
+                {
                     test_filter_list.Add(f);
                 }
             }
@@ -116,27 +119,34 @@ namespace gixsql_tests_nunit
             {
                 GixSqlTestData test = (GixSqlTestData)t[0];
 
-                if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name)) {
-                    Console.WriteLine("Skipping: " + test.FullName);
+                if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name))
+                {
+                    if (verbose)
+                        Console.WriteLine("Skipping: " + test.FullName);
                     continue;
                 }
 
 
-                if (db_filter_list.Count > 0) { 
+                if (db_filter_list.Count > 0)
+                {
                     if (test.DataSources.Count == 0)
                     {
-                        Console.WriteLine("Skipping: " + test.FullName);
+                        if (verbose)
+                            Console.WriteLine("Skipping: " + test.FullName);
                         continue;
                     }
 
                     if (!db_filter_list.Contains(test.DataSources[0].type))
                     {
-                        Console.WriteLine("Skipping: " + test.FullName);
+                        if (verbose)
+                            Console.WriteLine("Skipping: " + test.FullName);
                         continue;
                     }
                 }
 
-                Console.WriteLine("Running: " + test.FullName);
+                if (verbose)
+                    Console.WriteLine("Running: " + test.FullName);
+
                 try
                 {
                     var tr = new GixSqlDynamicTestRunner();
@@ -156,6 +166,23 @@ namespace gixsql_tests_nunit
             {
                 Console.ForegroundColor = (de.Value == "OK") ? ConsoleColor.Green : ConsoleColor.Red;
                 Console.WriteLine("{0}: {1}", de.Key.PadRight(mlen), de.Value);
+                Console.ForegroundColor = orig_color;
+            }
+
+
+            if (results.Count(a => a.Value == "KO") > 0)
+            {
+                orig_color = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("\nFailed tests:");
+                foreach (var de in results)
+                {
+                    if (de.Value == "OK")
+                        continue;
+
+                    Console.WriteLine("{0}: {1}", de.Key.PadRight(mlen), de.Value);
+
+                }
                 Console.ForegroundColor = orig_color;
             }
 

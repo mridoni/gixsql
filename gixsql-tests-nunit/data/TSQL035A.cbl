@@ -213,9 +213,9 @@
 
       * COMMIT
 
-          MOVE 'COMMIT' TO CUR-STEP.
-          EXEC SQL AT :DBS COMMIT END-EXEC.
-
+      *    MOVE 'COMMIT' TO CUR-STEP.
+      *    EXEC SQL AT :DBS COMMIT END-EXEC.
+      
       * VM3 : READ 3 (AGAIN) + CLOSE
          
            MOVE 'FETCH-VM3-2' TO CUR-STEP.
