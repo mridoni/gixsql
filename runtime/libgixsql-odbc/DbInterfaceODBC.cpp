@@ -101,7 +101,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* opts)
+int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
 {
 	int rc = 0;
 	char dbms_name[256];
@@ -123,14 +123,18 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* o
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!opts->autocommit) {
-		// try to set AUTOCOMMIT OFF
-		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, SQL_AUTOCOMMIT_OFF, 0);
-		if (rc != SQL_SUCCESS) {
-			lib_logger->debug(FMT_FILE_FUNC  "ODBC: SEVERE ERROR: Can't set autocommit OFF. Error = {}", __FILE__, __func__, last_rc);
+	if (g_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (g_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
+		auto autocommit_state = (g_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
+		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
+		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
+			lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
+			return DBERR_CONNECTION_FAILED;
 		}
 	}
-
+	else {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to native (nothing to do)", __FILE__, __func__);
+	}
 
 	int rc_warning_only = SQLGetInfo(conn_handle, SQL_DBMS_NAME, (SQLPOINTER)dbms_name, sizeof(dbms_name), NULL);
 	if (rc_warning_only != SQL_SUCCESS) {
@@ -176,55 +180,55 @@ int DbInterfaceODBC::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::begin_transaction()
-{
-	lib_logger->debug(FMT_FILE_FUNC  "ODBC: begin transaction invoked", __FILE__, __func__);
-
-	// Nothing to do for ODBC
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceODBC::end_transaction(std::string completion_type)
-{
-	lib_logger->trace(FMT_FILE_FUNC  "ODBC: end transaction invoked", __FILE__, __func__);
-
-	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-		return DBERR_END_TX_FAILED;
-
-	if (!current_statement_data || !current_statement_data->statement) {
-		lib_logger->error("ODBC: Invalid statement reference");
-		return DBERR_END_TX_FAILED;
-	}
-
-	SQLSMALLINT sql_completion_type = (completion_type == "COMMIT") ? SQL_COMMIT : SQL_ROLLBACK;
-	delete current_statement_data;
-	current_statement_data = nullptr;
-
-	int rc = SQLEndTran(SQL_HANDLE_DBC, conn_handle, sql_completion_type);
-	if (odbcRetrieveError(rc, ErrorSource::Statement) != SQL_SUCCESS) {
-		lib_logger->debug(FMT_FILE_FUNC  "ODBC: Error while ending transaction (2)({}): {}", __FILE__, __func__, completion_type, last_rc);
-		lib_logger->error("ODBC: Error while ending transaction (1)({}): {}", completion_type, last_rc);
-		return DBERR_END_TX_FAILED;
-	}
-
-	std::map<std::string, ICursor*>::iterator it;
-	std::vector<ICursor*> cur_to_remove;
-	std::vector<ICursor*>::iterator it2;
-
-	for (it = _declared_cursors.begin(); it != _declared_cursors.end(); it++) {
-		ICursor* c = (it)->second;
-		if (!c->isWithHold())
-			cur_to_remove.push_back(c);
-	}
-
-	for (it2 = cur_to_remove.begin(); it2 != cur_to_remove.end(); it2++) {
-		ICursor* c = (*it2);
-		_declared_cursors.erase(c->getName());
-		close_cursor(c);
-	}
-
-	return DBERR_NO_ERROR;
-}
+//int DbInterfaceODBC::begin_transaction()
+//{
+//	lib_logger->debug(FMT_FILE_FUNC  "ODBC: begin transaction invoked", __FILE__, __func__);
+//
+//	// Nothing to do for ODBC
+//	return DBERR_NO_ERROR;
+//}
+//
+//int DbInterfaceODBC::end_transaction(std::string completion_type)
+//{
+//	lib_logger->trace(FMT_FILE_FUNC  "ODBC: end transaction invoked", __FILE__, __func__);
+//
+//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
+//		return DBERR_END_TX_FAILED;
+//
+//	if (!current_statement_data || !current_statement_data->statement) {
+//		lib_logger->error("ODBC: Invalid statement reference");
+//		return DBERR_END_TX_FAILED;
+//	}
+//
+//	SQLSMALLINT sql_completion_type = (completion_type == "COMMIT") ? SQL_COMMIT : SQL_ROLLBACK;
+//	delete current_statement_data;
+//	current_statement_data = nullptr;
+//
+//	int rc = SQLEndTran(SQL_HANDLE_DBC, conn_handle, sql_completion_type);
+//	if (odbcRetrieveError(rc, ErrorSource::Statement) != SQL_SUCCESS) {
+//		lib_logger->debug(FMT_FILE_FUNC  "ODBC: Error while ending transaction (2)({}): {}", __FILE__, __func__, completion_type, last_rc);
+//		lib_logger->error("ODBC: Error while ending transaction (1)({}): {}", completion_type, last_rc);
+//		return DBERR_END_TX_FAILED;
+//	}
+//
+//	std::map<std::string, ICursor*>::iterator it;
+//	std::vector<ICursor*> cur_to_remove;
+//	std::vector<ICursor*>::iterator it2;
+//
+//	for (it = _declared_cursors.begin(); it != _declared_cursors.end(); it++) {
+//		ICursor* c = (it)->second;
+//		if (!c->isWithHold())
+//			cur_to_remove.push_back(c);
+//	}
+//
+//	for (it2 = cur_to_remove.begin(); it2 != cur_to_remove.end(); it2++) {
+//		ICursor* c = (*it2);
+//		_declared_cursors.erase(c->getName());
+//		close_cursor(c);
+//	}
+//
+//	return DBERR_NO_ERROR;
+//}
 
 char* DbInterfaceODBC::get_error_message()
 {
@@ -341,6 +345,11 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 	}
 
 	return DBERR_NO_ERROR;
+}
+
+DbPropertySetResult DbInterfaceODBC::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
 }
 
 
@@ -773,23 +782,42 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 
 	if (!is_binary) {
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, bfr, bfrlen, &reslen);
-		*value_len = reslen;
+		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
+			return false;
+		}
+		// TODO: fix this, with proper null handling
+		if (reslen != SQL_NULL_DATA)
+			*value_len = reslen;
+		else {
+			bfr[0] = '\0';
+			*value_len = 0;
+		}
 	}
 	else {
-		unsigned char *tmp_bfr = new unsigned char[bfrlen * 2];
+		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
 		uint8_t b0, b1;
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
-		if (rc == SQL_SUCCESS) {
-			for (int i = 0; i < bfrlen; i++) {
-				uint8_t b1 = tmp_bfr[i * 2];
-				uint8_t b0 = tmp_bfr[(i * 2) + 1];
-				if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
-				if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
-				bfr[i] = b0 + (b1 << 4);
-			}
+		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
+			return false;
 		}
+
+		for (int i = 0; i < bfrlen; i++) {
+			uint8_t b1 = tmp_bfr[i * 2];
+			uint8_t b0 = tmp_bfr[(i * 2) + 1];
+			if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
+			if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
+			bfr[i] = b0 + (b1 << 4);
+		}
+
 		delete[] tmp_bfr;
-		*value_len = reslen / 2;
+
+		// TODO: fix this, with proper null handling
+		if (reslen != SQL_NULL_DATA)
+			*value_len = reslen / 2;
+		else {
+			bfr[0] = '\0';
+			*value_len = 0;
+		}
 	}
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return false;
@@ -847,10 +875,11 @@ bool DbInterfaceODBC::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfaceODBC::supports_num_rows()
+uint64_t DbInterfaceODBC::get_native_features()
 {
-	return 0;
+	return (uint64_t)0;
 }
+
 
 int DbInterfaceODBC::get_num_rows(ICursor* crsr)
 {

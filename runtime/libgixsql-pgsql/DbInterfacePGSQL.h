@@ -55,8 +55,8 @@ public:
 	virtual int connect(IDataSourceInfo *, IConnectionOptions *opts) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
-	virtual int begin_transaction() override;
-	virtual int end_transaction(std::string) override;
+	//virtual int begin_transaction() override;
+	//virtual int end_transaction(std::string) override;
 	virtual int exec(std::string) override;
 	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
 	virtual int close_cursor(ICursor *) override;
@@ -66,7 +66,7 @@ public:
 	virtual int fetch_one(ICursor *, int) override;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int *value_len);
 	virtual bool move_to_first_record(std::string stmt_name = "") override;
-	virtual int supports_num_rows() override;
+	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(ICursor* crsr) override;
 	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char *get_error_message() override;
@@ -76,6 +76,7 @@ public:
 	virtual IConnection* get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
+	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
 	virtual bool getSchemas(std::vector<SchemaInfo*>& res) override;
 	virtual bool getTables(std::string table, std::vector<TableInfo*>& res) override;
@@ -96,8 +97,8 @@ private:
 
 	int decode_binary = DECODE_BINARY_DEFAULT;
 
-	int _pgsql_exec(ICursor *crsr, std::string);
-	int _pgsql_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
+	int _pgsql_exec(ICursor *crsr, const std::string);
+	int _pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
 
 	bool retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src);
 

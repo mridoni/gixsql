@@ -21,22 +21,22 @@
 #include "DbInterfaceMySQL.h"
 
 
-bool DbInterfaceMySQL::getSchemas(vector<SchemaInfo*>& res)
+bool DbInterfaceMySQL::getSchemas(std::vector<SchemaInfo*>& res)
 {
 	return false;
 }
 
-bool DbInterfaceMySQL::getTables(string table, vector<TableInfo*>& res)
+bool DbInterfaceMySQL::getTables(std::string table, std::vector<TableInfo*>& res)
 {
 	return false;
 }
 
-bool DbInterfaceMySQL::getColumns(string schema, string table, vector<ColumnInfo*>& columns)
+bool DbInterfaceMySQL::getColumns(std::string schema, std::string table, std::vector<ColumnInfo*>& columns)
 {
 	return false;
 }
 
-bool DbInterfaceMySQL::getIndexes(string schema, string tabl, vector<IndexInfo*>& idxs)
+bool DbInterfaceMySQL::getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*>& idxs)
 {
 	return false;
 }

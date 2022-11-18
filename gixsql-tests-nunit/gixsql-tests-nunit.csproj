@@ -77,7 +77,12 @@
     <None Remove="data\TSQL034A.cbl" />
     <None Remove="data\TSQL035A.cbl" />
     <None Remove="data\TSQL036A.cbl" />
-    <None Remove="data\TSQL038A.cbl" />
+    <None Remove="data\TSQL037A-MYSQL.cbl" />
+    <None Remove="data\TSQL037A-PGSQL.cbl" />
+    <None Remove="data\TSQL037A-SQLITE.cbl" />
+    <None Remove="data\TSQL037B-MYSQL.cbl" />
+    <None Remove="data\TSQL037B-PGSQL.cbl" />
+    <None Remove="data\TSQL037B-SQLITE.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -96,7 +101,6 @@
     <EmbeddedResource Include="data\dbdata.sql" />
     <EmbeddedResource Include="data\EMPREC.cpy" />
     <EmbeddedResource Include="data\TEST001.cbl" />
-    <EmbeddedResource Include="data\TSQL038A.cbl" />
     <EmbeddedResource Include="data\TSQL001A.cbl" />
     <EmbeddedResource Include="data\TSQL002A.cbl" />
     <EmbeddedResource Include="data\TSQL003A.cbl" />
@@ -114,6 +118,12 @@
     <EmbeddedResource Include="data\TSQL009A.cbl" />
     <EmbeddedResource Include="data\TSQL010A.cbl" />
     <EmbeddedResource Include="data\TSQL011A.cbl" />
+    <EmbeddedResource Include="data\TSQL037A-MYSQL.cbl" />
+    <EmbeddedResource Include="data\TSQL037A-PGSQL.cbl" />
+    <EmbeddedResource Include="data\TSQL037B-MYSQL.cbl" />
+    <EmbeddedResource Include="data\TSQL037B-SQLITE.cbl" />
+    <EmbeddedResource Include="data\TSQL037B-PGSQL.cbl" />
+    <EmbeddedResource Include="data\TSQL037A-SQLITE.cbl" />
     <EmbeddedResource Include="data\TSQL036A.cbl" />
     <EmbeddedResource Include="data\TSQL012A.cbl" />
     <EmbeddedResource Include="data\TSQL013A.cbl" />

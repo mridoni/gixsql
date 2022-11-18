@@ -19,6 +19,8 @@ USA.
 */
 
 #include <cstring>
+#include <string>
+#include <vector>
 
 
 #include "Logger.h"
@@ -64,7 +66,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 	PGconn* conn;
 	std::string connstr;
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)g_opts->autocommit, g_opts->client_encoding);
 
 	connaddr = NULL;
 	current_resultset_data = nullptr;
@@ -125,6 +127,22 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 		}
 	}
 
+	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
+	// we will optionally start a transaction
+	if (g_opts->autocommit == AutoCommitMode::Off) {
+		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
+		auto r = PQexec(conn, "BEGIN TRANSACTION");
+		auto rc = PQresultStatus(r);
+		if (rc != PGRES_COMMAND_OK) {
+			last_rc = rc;
+			last_error = PQresultErrorMessage(r);
+			last_state = pg_get_sqlstate(r);
+			lib_logger->error("libpq: {}", last_error);
+			PQfinish(conn);
+			return DBERR_CONNECTION_FAILED;
+		}
+	}
+
 	if (opts.find("decode_binary") != opts.end()) {
 		std::string opt_decode_binary = opts["decode_binary"];
 		if (!opt_decode_binary.empty()) {
@@ -132,7 +150,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 				this->decode_binary = DECODE_BINARY_ON;
 			}
 
-			if (opt_decode_binary == "off" || opt_decode_binary == "0" || opt_decode_binary == "true") {
+			if (opt_decode_binary == "off" || opt_decode_binary == "0" || opt_decode_binary == "false") {
 				this->decode_binary = DECODE_BINARY_OFF;
 			}
 		}
@@ -186,64 +204,20 @@ int DbInterfacePGSQL::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::begin_transaction()
-{
-	int rc = exec("BEGIN TRANSACTION");
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-}
-
-int DbInterfacePGSQL::end_transaction(std::string completion_type)
-{
-	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-		return DBERR_END_TX_FAILED;
-
-	int rc = exec(completion_type);
-	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-}
-
-char* DbInterfacePGSQL::get_error_message()
-{
-	if (current_resultset_data != NULL)
-		return PQresultErrorMessage(current_resultset_data->resultset);
-	else
-		if (connaddr != NULL)
-			return PQerrorMessage(connaddr);
-		else
-			return NULL;
-}
-
-int DbInterfacePGSQL::get_error_code()
-{
-	return last_rc;
-}
-
-std::string DbInterfacePGSQL::get_state()
-{
-	return last_state;
-}
-
-void DbInterfacePGSQL::set_owner(IConnection* conn)
-{
-	owner = conn;
-}
-
-IConnection* DbInterfacePGSQL::get_owner()
-{
-	return owner;
-}
-
-std::string vector_join(const std::vector<std::string>& v, char sep)
-{
-	std::string s;
-
-	for (std::vector< std::string>::const_iterator p = v.begin();
-		p != v.end(); ++p) {
-		s += *p;
-		if (p != v.end() - 1)
-			s += sep;
-	}
-	return s;
-}
+//int DbInterfacePGSQL::begin_transaction()
+//{
+//	int rc = exec("BEGIN TRANSACTION");
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
+//}
+//
+//int DbInterfacePGSQL::end_transaction(std::string completion_type)
+//{
+//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
+//		return DBERR_END_TX_FAILED;
+//
+//	int rc = exec(completion_type);
+//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
+//}
 
 int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
 {
@@ -310,13 +284,13 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	}
 
 	wk_rs = new PGResultSetData();
-
 	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
-
+	
+	
 	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK) {
 		_prepared_stmts[stmt_name] = wk_rs;
 		return DBERR_NO_ERROR;
@@ -328,6 +302,11 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	}
 }
 
+DbPropertySetResult DbInterfacePGSQL::set_property(DbProperty p, std::variant<bool, int, std::string> v)
+{
+	return DbPropertySetResult::Unsupported;
+}
+
 int DbInterfacePGSQL::exec(std::string query)
 {
 	return _pgsql_exec(nullptr, query);
@@ -335,8 +314,8 @@ int DbInterfacePGSQL::exec(std::string query)
 
 int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 {
-	std::string q = query;
-	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+	//std::string q = query;
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
 
@@ -348,16 +327,36 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 	}
 
 	wk_rs = new PGResultSetData();
-
-	wk_rs->resultset = PQexecParams(connaddr, q.c_str(), 0, NULL, NULL, NULL, NULL, 0);
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), 0, NULL, NULL, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
+	// we trap COMMIT/ROLLBACK
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+		
+		// we clean up: whether the COMMIT/ROLLBACK failed or not this is probably useless anyway
+		if (current_resultset_data) {
+			delete current_resultset_data;
+			current_resultset_data = nullptr;
+		}
+
+		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			auto new_tx_rs = PQexec(connaddr, "START TRANSACTION");
+			last_rc = PQresultStatus(new_tx_rs);
+			last_error = PQresultErrorMessage(new_tx_rs);
+			last_state = pg_get_sqlstate(new_tx_rs);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (last_rc != PGRES_COMMAND_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
+
 	if (last_rc == PGRES_COMMAND_OK) {
-		q = trim_copy(q);
-		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
+		if (is_update_or_delete_statement(query)) {
 			int nrows = get_num_rows(wk_rs->resultset);
 			if (nrows <= 0) {
 				last_rc = 100;
@@ -426,12 +425,11 @@ int DbInterfacePGSQL::exec_params(std::string query, int nParams, const std::vec
 	return _pgsql_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
 {
-	std::string q = query;
 	std::vector<int> empty;
 
-	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
 
@@ -449,19 +447,41 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, std::string query, int n
 	}
 
 	wk_rs = new PGResultSetData();
-	wk_rs->resultset = PQexecParams(connaddr, q.c_str(), nParams, NULL, pvals, empty.data(), empty.data(), 0);
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), nParams, NULL, pvals, empty.data(), empty.data(), 0);
 	wk_rs->num_rows = get_num_rows(wk_rs->resultset);
 
-	delete[] pvals;
+
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
+	delete[] pvals;
+
+	// we trap COMMIT/ROLLBACK
+	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+
+		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
+		if (current_resultset_data) {
+			delete current_resultset_data;
+			current_resultset_data = nullptr;
+		}
+
+		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
+			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
+			auto new_tx_rs = PQexec(connaddr, "START TRANSACTION");
+			last_rc = PQresultStatus(new_tx_rs);
+			last_error = PQresultErrorMessage(new_tx_rs);
+			last_state = pg_get_sqlstate(new_tx_rs);
+			lib_logger->trace(FMT_FILE_FUNC "transaction start result: {} ({})", __FILE__, __func__, last_error, last_state);
+			return (last_rc != PGRES_COMMAND_OK) ? DBERR_SQL_ERROR : DBERR_NO_ERROR;
+		}
+
+		// if COMMIT/ROLLBACK failed, the error code/state is already set, it will be handled below
+	}
+
 	if (last_rc == PGRES_COMMAND_OK) {
-		q = trim_copy(q);
-		if (starts_with(q, "delete ") || starts_with(q, "DELETE ") || starts_with(q, "update ") || starts_with(q, "UPDATE ")) {
-			
+		if (is_update_or_delete_statement(query)) {
 			if (wk_rs->num_rows <= 0) {
 				last_rc = 100;
 				return DBERR_SQL_ERROR;
@@ -754,9 +774,9 @@ bool DbInterfacePGSQL::move_to_first_record(std::string stmt_name)
 	return true;
 }
 
-int DbInterfacePGSQL::supports_num_rows()
+uint64_t DbInterfacePGSQL::get_native_features()
 {
-	return 1;
+	return (uint64_t)DbNativeFeature::ResultSetRowCount;
 }
 
 int DbInterfacePGSQL::get_num_rows(ICursor* crsr)
@@ -902,4 +922,49 @@ static std::string pgsql_fixup_parameters(const std::string& sql)
 	}
 
 	return out_sql;
+}
+
+
+char* DbInterfacePGSQL::get_error_message()
+{
+	if (current_resultset_data != NULL)
+		return PQresultErrorMessage(current_resultset_data->resultset);
+	else
+		if (connaddr != NULL)
+			return PQerrorMessage(connaddr);
+		else
+			return NULL;
+}
+
+int DbInterfacePGSQL::get_error_code()
+{
+	return last_rc;
+}
+
+std::string DbInterfacePGSQL::get_state()
+{
+	return last_state;
+}
+
+void DbInterfacePGSQL::set_owner(IConnection* conn)
+{
+	owner = conn;
+}
+
+IConnection* DbInterfacePGSQL::get_owner()
+{
+	return owner;
+}
+
+std::string vector_join(const std::vector<std::string>& v, char sep)
+{
+	std::string s;
+
+	for (std::vector< std::string>::const_iterator p = v.begin();
+		p != v.end(); ++p) {
+		s += *p;
+		if (p != v.end() - 1)
+			s += sep;
+	}
+	return s;
 }

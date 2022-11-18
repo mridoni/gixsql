@@ -314,7 +314,7 @@ gix_esql_driver::cb_search_list(std::string text)
 void
 gix_esql_driver::cb_set_cursorname(std::string text)
 {
-	cursorname = filenameID + "_" + text;
+	cursorname = string_replace(filenameID, "-", "_") + "_" + text;
 }
 
 void

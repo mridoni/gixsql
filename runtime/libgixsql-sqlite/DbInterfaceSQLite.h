@@ -73,8 +73,8 @@ public:
 	virtual int connect(IDataSourceInfo*, IConnectionOptions* opts) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
-	virtual int begin_transaction() override;
-	virtual int end_transaction(std::string) override;
+	//virtual int begin_transaction() override;
+	//virtual int end_transaction(std::string) override;
 	virtual int exec(std::string) override;
 	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
 	virtual int close_cursor(ICursor*) override;
@@ -84,7 +84,7 @@ public:
 	virtual int fetch_one(ICursor*, int) override;
 	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len);
 	virtual bool move_to_first_record(std::string stmt_name = "") override;
-	virtual int supports_num_rows() override;
+	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(ICursor* crsr) override;
 	virtual int get_num_fields(ICursor* crsr) override;
 	virtual char* get_error_message() override;
@@ -94,6 +94,7 @@ public:
 	virtual IConnection* get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
+	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
 	virtual bool getSchemas(std::vector<SchemaInfo*>& res) override;
 	virtual bool getTables(std::string table, std::vector<TableInfo*>& res) override;
@@ -118,13 +119,18 @@ private:
 	void sqliteClearError();
 	void sqliteSetError(int err_code, std::string sqlstate, std::string err_msg);
 
-	int _sqlite_exec(ICursor* crsr, std::string, SQLiteStatementData* prep_stmt = nullptr);
-	int _sqlite_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt = nullptr);
+	int _sqlite_exec(ICursor* crsr, const std::string, SQLiteStatementData* prep_stmt = nullptr);
+	int _sqlite_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt = nullptr);
 
 	int _sqlite_get_num_rows(sqlite3_stmt* r);
 
 	bool retrieve_prepared_statement(const std::string& prep_stmt_name, SQLiteStatementData** prepared_stmt);
 	bool is_cursor_from_prepared_statement(ICursor* cursor);
-	
+
+	// Updatable cursor emulation
+	bool updatable_cursors_emu = false;
+	bool has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key);
+	bool prepare_updatable_cursor_query(const std::string& qry, ICursor* crsr, const std::vector<std::string>& unique_key, sqlite3_stmt** update_stmt, std::vector<std::string>& key_params);
+	std::vector<std::string> get_resultset_column_names(sqlite3_stmt* stmt);
 };
 

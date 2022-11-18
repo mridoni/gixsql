@@ -10,7 +10,7 @@ using System.Threading;
 
 namespace gixsql_tests
 {
-    public class GixSqlTestDataSourceInfo
+    public class GixSqlTestDataSourceInfo : ICloneable
     {
         public string type;
         public string hostname;
@@ -269,6 +269,21 @@ namespace gixsql_tests
                 if (client_type == "sqlite")
                     System.Data.SQLite.SQLiteConnection.ClearAllPools();
             }
+        }
+
+        public object Clone()
+        {
+            GixSqlTestDataSourceInfo ds = new GixSqlTestDataSourceInfo();
+
+            ds.type = type;
+            ds.hostname = hostname;
+            ds.port = port;
+            ds.dbname = dbname;
+            ds.username = username;
+            ds.password = password;
+            ds.options = options;
+
+            return ds;
         }
     }
 }

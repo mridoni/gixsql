@@ -203,12 +203,12 @@
 
 			<expected-output>
 				<line>CONNECT SQLCODE: +0000000000</line>
-				<line>SELECT SQLCODE: +000000000</line>
+				<line>SELECT SQLCODE : +0000000000</line>
 				<line>RES: 003</line>
 			</expected-output>
 		</test>
 
-		<test name="TSQL002" enabled="true">
+		<test name="TSQL002A" enabled="true">
 			<description>CONNECT TO :DATASRC USER :DBUSR/:DBPWD</description>
 			<issue-coverage>#000</issue-coverage>
 			<group></group>
@@ -233,7 +233,7 @@
 
 			<expected-output>
 				<line>CONNECT SQLCODE: +0000000000</line>
-				<line>SELECT SQLCODE: +000000000</line>
+				<line>SELECT SQLCODE : +0000000000</line>
 				<line>RES: 003</line>
 			</expected-output>
 		</test>
@@ -313,14 +313,6 @@
 				<variable key="DATASRC2" value="${datasource2-noauth-url}" />
 				<variable key="DATASRC_USR2" value="${datasource2-username}.${datasource2-password}" />
 			</environment>
-
-
-			Environment.SetEnvironmentVariable("DATASRC1", build_data_source_string(false, true, true, 0));
-			Environment.SetEnvironmentVariable("DBID1", "CONN1");
-			Environment.SetEnvironmentVariable("DATASRC_USR1", get_datasource_usr(0));
-			Environment.SetEnvironmentVariable("DATASRC_PWD1", get_datasource_pwd(0));
-			Environment.SetEnvironmentVariable("DATASRC2", build_data_source_string(false, true, true, 1));
-			Environment.SetEnvironmentVariable("DATASRC_USR2", get_datasource_usr(1) + "." + get_datasource_pwd(1));
 
 			<preprocess value="true" />
 			<compile value="true" />
@@ -518,7 +510,7 @@
 				<line>DIGIT1 : +0033</line>
 				<line>DIGIT2 : +0034</line>
 				<line>DIGIT83: +0000</line>
-				<line>BFLD        : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop</line>
+				<line>{{SW}}BFLD        : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop</line>
 				<line>BFLD LENGTH: 100</line>
 				<line>VBFLD-ARR  : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop]</line>
 				<line>VBFLD-LEN: 0000000080</line>
@@ -571,7 +563,7 @@
 				<line>DIGIT1 : +0033</line>
 				<line>DIGIT2 : +0034</line>
 				<line>DIGIT83: +0000</line>
-				<line>BFLD        : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop</line>
+				<line>{{SW}}BFLD        : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop</line>
 				<line>BFLD LENGTH: 100</line>
 				<line>VBFLD-ARR  : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop]</line>
 				<line>VBFLD-LEN: 0000000080</line>
@@ -1867,9 +1859,9 @@
 				<line>EXECUTE SQLSTMT1(1): +0000000000</line>
 				<line>EXECUTE SQLSTMT1(2): +0000000000</line>
 				<line>PRE-SEL-1   , DATA NOT FOUND FOR KEY = 0999</line>
-				<line>PRE-BAD-SELE, ERROR - SQLSTATE  : </line>
+				<line>{{SW}}PRE-BAD-SELE, ERROR - SQLSTATE  : </line>
 				<line>PRE-SEL-2   , DATA NOT FOUND (2) FOR KEY = 0998</line>
-				<line>PRE-SEL-3   , ERROR (2) - SQLSTATE  : </line>
+				<line>{{SW}}PRE-SEL-3   , ERROR (2) - SQLSTATE  : </line>
 			</expected-output>
 
 			<expected-preprocessed-file-content>
@@ -2101,8 +2093,8 @@
 				<line>T1   : 0009</line>
 				<line>T2   : 0900</line>
 				<line>TOTAL: 0909</line>
-				<line>SQLSTATE FAIL1 (OK IF &lt;&gt; 00000): </line>
-				<line>SQLSTATE FAIL2 (OK IF &lt;&gt; 00000): </line>
+				<line>{{SW}}SQLSTATE FAIL1 (OK IF &lt;&gt; 00000): </line>
+				<line>{{SW}}SQLSTATE FAIL2 (OK IF &lt;&gt; 00000): </line>
 				<line>CRSR01 rec #0001 : [0001]</line>
 				<line>CRSR01 rec #0002 : [0003]</line>
 				<line>CRSR01 rec #0003 : [0005]</line>
@@ -2392,28 +2384,881 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL038A" enabled="false">
-			<description>Unexpected WORD on simple program</description>
-			<issue-coverage>#130</issue-coverage>
-			<group></group>
+
+		<test name="TSQL037A" enabled="true" applies-to="pgsql">
+			<description>Implementation of updatable cursors</description>
+			<issue-coverage>#000</issue-coverage>
 			<architecture>all</architecture>
 			<compiler-type>all</compiler-type>
 
 			<cobol-sources>
-				<src name="TSQL038A.cbl" />
+				<src name="TSQL037A-PGSQL.cbl" />
 			</cobol-sources>
 
-			<environment>
-			</environment>
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="native_cursors=on&amp;autocommit=off" />
+			<!--<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255) )</pre-run-sql-statement>-->
 
 			<preprocess value="true" />
 			<compile value="true" />
 			<run value="true" />
 
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
 			<expected-output>
-				<line>hello world</line>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 2 - FLD01(FETCH): +00020101</line>
+				<line>01 - 2 - FLD02(FETCH): 0201XXXX</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 2 - FLD01(FETCH): +00020102</line>
+				<line>02 - 2 - FLD02(FETCH): 0202XXXX</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 2 - FLD01(FETCH): +00020103</line>
+				<line>03 - 2 - FLD02(FETCH): 0203XXXX</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 2 - FLD01(FETCH): +00020104</line>
+				<line>04 - 2 - FLD02(FETCH): 0204XXXX</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 2 - FLD01(FETCH): +00020105</line>
+				<line>05 - 2 - FLD02(FETCH): 0205XXXX</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 2 - FLD01(FETCH): +00020106</line>
+				<line>06 - 2 - FLD02(FETCH): 0206XXXX</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 2 - FLD01(FETCH): +00020107</line>
+				<line>07 - 2 - FLD02(FETCH): 0207XXXX</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 2 - FLD01(FETCH): +00020108</line>
+				<line>08 - 2 - FLD02(FETCH): 0208XXXX</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 2 - FLD01(FETCH): +00020109</line>
+				<line>09 - 2 - FLD02(FETCH): 0209XXXX</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 2 - FLD01(FETCH): +00020110</line>
+				<line>10 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 2 - FLD01(FETCH): +00020110</line>
+				<line>11 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
 			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
 		</test>
 
+		<test name="TSQL037A" enabled="true" applies-to="mysql">
+			<description>Implementation of updatable cursors</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL037A-MYSQL.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="updatable_cursors=on" />
+			<!--<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255), PRIMARY KEY(CID) )</pre-run-sql-statement>-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 2 - FLD01(FETCH): +00020101</line>
+				<line>01 - 2 - FLD02(FETCH): 0201XXXX</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 2 - FLD01(FETCH): +00020102</line>
+				<line>02 - 2 - FLD02(FETCH): 0202XXXX</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 2 - FLD01(FETCH): +00020103</line>
+				<line>03 - 2 - FLD02(FETCH): 0203XXXX</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 2 - FLD01(FETCH): +00020104</line>
+				<line>04 - 2 - FLD02(FETCH): 0204XXXX</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 2 - FLD01(FETCH): +00020105</line>
+				<line>05 - 2 - FLD02(FETCH): 0205XXXX</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 2 - FLD01(FETCH): +00020106</line>
+				<line>06 - 2 - FLD02(FETCH): 0206XXXX</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 2 - FLD01(FETCH): +00020107</line>
+				<line>07 - 2 - FLD02(FETCH): 0207XXXX</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 2 - FLD01(FETCH): +00020108</line>
+				<line>08 - 2 - FLD02(FETCH): 0208XXXX</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 2 - FLD01(FETCH): +00020109</line>
+				<line>09 - 2 - FLD02(FETCH): 0209XXXX</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 2 - FLD01(FETCH): +00020110</line>
+				<line>10 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 2 - FLD01(FETCH): +00020110</line>
+				<line>11 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL037A" enabled="true" applies-to="sqlite">
+			<description>Implementation of updatable cursors</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL037A-SQLITE.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="updatable_cursors=on" />
+			<!--<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255), PRIMARY KEY(CID) )</pre-run-sql-statement>-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 2 - FLD01(FETCH): +00020101</line>
+				<line>01 - 2 - FLD02(FETCH): 0201XXXX</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 2 - FLD01(FETCH): +00020102</line>
+				<line>02 - 2 - FLD02(FETCH): 0202XXXX</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 2 - FLD01(FETCH): +00020103</line>
+				<line>03 - 2 - FLD02(FETCH): 0203XXXX</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 2 - FLD01(FETCH): +00020104</line>
+				<line>04 - 2 - FLD02(FETCH): 0204XXXX</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 2 - FLD01(FETCH): +00020105</line>
+				<line>05 - 2 - FLD02(FETCH): 0205XXXX</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 2 - FLD01(FETCH): +00020106</line>
+				<line>06 - 2 - FLD02(FETCH): 0206XXXX</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 2 - FLD01(FETCH): +00020107</line>
+				<line>07 - 2 - FLD02(FETCH): 0207XXXX</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 2 - FLD01(FETCH): +00020108</line>
+				<line>08 - 2 - FLD02(FETCH): 0208XXXX</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 2 - FLD01(FETCH): +00020109</line>
+				<line>09 - 2 - FLD02(FETCH): 0209XXXX</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 2 - FLD01(FETCH): +00020110</line>
+				<line>10 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 2 - FLD01(FETCH): +00020110</line>
+				<line>11 - 2 - FLD02(FETCH): 0210XXXX</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+		
+		<test name="TSQL037B" enabled="true" applies-to="pgsql">
+			<description>Implementation of updatable cursors (with parameters)</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL037B-PGSQL.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="native_cursors=on&amp;autocommit=off" />
+			<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255) )</pre-run-sql-statement>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000030001</line>
+				<line>01 - 2 - FLD01(FETCH): +00000101</line>
+				<line>01 - 2 - FLD02(FETCH): 0201YYYY</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000030002</line>
+				<line>02 - 2 - FLD01(FETCH): +00000102</line>
+				<line>02 - 2 - FLD02(FETCH): 0202YYYY</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000030003</line>
+				<line>03 - 2 - FLD01(FETCH): +00000103</line>
+				<line>03 - 2 - FLD02(FETCH): 0203YYYY</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000030004</line>
+				<line>04 - 2 - FLD01(FETCH): +00000104</line>
+				<line>04 - 2 - FLD02(FETCH): 0204YYYY</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000030005</line>
+				<line>05 - 2 - FLD01(FETCH): +00000105</line>
+				<line>05 - 2 - FLD02(FETCH): 0205YYYY</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000030006</line>
+				<line>06 - 2 - FLD01(FETCH): +00000106</line>
+				<line>06 - 2 - FLD02(FETCH): 0206YYYY</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000030007</line>
+				<line>07 - 2 - FLD01(FETCH): +00000107</line>
+				<line>07 - 2 - FLD02(FETCH): 0207YYYY</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000030008</line>
+				<line>08 - 2 - FLD01(FETCH): +00000108</line>
+				<line>08 - 2 - FLD02(FETCH): 0208YYYY</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000030009</line>
+				<line>09 - 2 - FLD01(FETCH): +00000109</line>
+				<line>09 - 2 - FLD02(FETCH): 0209YYYY</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000030010</line>
+				<line>10 - 2 - FLD01(FETCH): +00000110</line>
+				<line>10 - 2 - FLD02(FETCH): 0210YYYY</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000030010</line>
+				<line>11 - 2 - FLD01(FETCH): +00000110</line>
+				<line>11 - 2 - FLD02(FETCH): 0210YYYY</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL037B" enabled="true" applies-to="mysql">
+			<description>Implementation of updatable cursors (with parameters)</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL037B-MYSQL.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="updatable_cursors=on" />
+			<!--<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255), PRIMARY KEY(CID) )</pre-run-sql-statement>-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000030001</line>
+				<line>01 - 2 - FLD01(FETCH): +00000101</line>
+				<line>01 - 2 - FLD02(FETCH): 0201YYYY</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000030002</line>
+				<line>02 - 2 - FLD01(FETCH): +00000102</line>
+				<line>02 - 2 - FLD02(FETCH): 0202YYYY</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000030003</line>
+				<line>03 - 2 - FLD01(FETCH): +00000103</line>
+				<line>03 - 2 - FLD02(FETCH): 0203YYYY</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000030004</line>
+				<line>04 - 2 - FLD01(FETCH): +00000104</line>
+				<line>04 - 2 - FLD02(FETCH): 0204YYYY</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000030005</line>
+				<line>05 - 2 - FLD01(FETCH): +00000105</line>
+				<line>05 - 2 - FLD02(FETCH): 0205YYYY</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000030006</line>
+				<line>06 - 2 - FLD01(FETCH): +00000106</line>
+				<line>06 - 2 - FLD02(FETCH): 0206YYYY</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000030007</line>
+				<line>07 - 2 - FLD01(FETCH): +00000107</line>
+				<line>07 - 2 - FLD02(FETCH): 0207YYYY</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000030008</line>
+				<line>08 - 2 - FLD01(FETCH): +00000108</line>
+				<line>08 - 2 - FLD02(FETCH): 0208YYYY</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000030009</line>
+				<line>09 - 2 - FLD01(FETCH): +00000109</line>
+				<line>09 - 2 - FLD02(FETCH): 0209YYYY</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000030010</line>
+				<line>10 - 2 - FLD01(FETCH): +00000110</line>
+				<line>10 - 2 - FLD02(FETCH): 0210YYYY</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000030010</line>
+				<line>11 - 2 - FLD01(FETCH): +00000110</line>
+				<line>11 - 2 - FLD02(FETCH): 0210YYYY</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+		<test name="TSQL037B" enabled="true" applies-to="sqlite">
+			<description>Implementation of updatable cursors (with parameters)</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL037B-SQLITE.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="updatable_cursors=on" />
+			<!--<pre-run-drop-table data-source-index="1">TAB00</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB00 ( CID INT, FLD01 INT, FLD02 VARCHAR(255), PRIMARY KEY(CID) )</pre-run-sql-statement>-->
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<expected-output>
+				<line>01 - INSERT SQLCODE: 01+0000000000</line>
+				<line>02 - INSERT SQLCODE: 02+0000000000</line>
+				<line>03 - INSERT SQLCODE: 03+0000000000</line>
+				<line>04 - INSERT SQLCODE: 04+0000000000</line>
+				<line>05 - INSERT SQLCODE: 05+0000000000</line>
+				<line>06 - INSERT SQLCODE: 06+0000000000</line>
+				<line>07 - INSERT SQLCODE: 07+0000000000</line>
+				<line>08 - INSERT SQLCODE: 08+0000000000</line>
+				<line>09 - INSERT SQLCODE: 09+0000000000</line>
+				<line>10 - INSERT SQLCODE: 10+0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (1): +0000000000</line>
+				<line>01 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 1 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 1 - FLD01(FETCH): +00000101</line>
+				<line>01 - 1 - FLD02(FETCH): 0201</line>
+				<line>01 - UPDATE-SQLCODE: +0000000000</line>
+				<line>02 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 1 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 1 - FLD01(FETCH): +00000102</line>
+				<line>02 - 1 - FLD02(FETCH): 0202</line>
+				<line>02 - UPDATE-SQLCODE: +0000000000</line>
+				<line>03 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 1 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 1 - FLD01(FETCH): +00000103</line>
+				<line>03 - 1 - FLD02(FETCH): 0203</line>
+				<line>03 - UPDATE-SQLCODE: +0000000000</line>
+				<line>04 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 1 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 1 - FLD01(FETCH): +00000104</line>
+				<line>04 - 1 - FLD02(FETCH): 0204</line>
+				<line>04 - UPDATE-SQLCODE: +0000000000</line>
+				<line>05 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 1 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 1 - FLD01(FETCH): +00000105</line>
+				<line>05 - 1 - FLD02(FETCH): 0205</line>
+				<line>05 - UPDATE-SQLCODE: +0000000000</line>
+				<line>06 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 1 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 1 - FLD01(FETCH): +00000106</line>
+				<line>06 - 1 - FLD02(FETCH): 0206</line>
+				<line>06 - UPDATE-SQLCODE: +0000000000</line>
+				<line>07 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 1 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 1 - FLD01(FETCH): +00000107</line>
+				<line>07 - 1 - FLD02(FETCH): 0207</line>
+				<line>07 - UPDATE-SQLCODE: +0000000000</line>
+				<line>08 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 1 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 1 - FLD01(FETCH): +00000108</line>
+				<line>08 - 1 - FLD02(FETCH): 0208</line>
+				<line>08 - UPDATE-SQLCODE: +0000000000</line>
+				<line>09 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 1 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 1 - FLD01(FETCH): +00000109</line>
+				<line>09 - 1 - FLD02(FETCH): 0209</line>
+				<line>09 - UPDATE-SQLCODE: +0000000000</line>
+				<line>10 - 1 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 1 - FLD01(FETCH): +00000110</line>
+				<line>10 - 1 - FLD02(FETCH): 0210</line>
+				<line>10 - UPDATE-SQLCODE: +0000000000</line>
+				<line>11 - 1 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 1 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 1 - FLD01(FETCH): +00000110</line>
+				<line>11 - 1 - FLD02(FETCH): 0210</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (1): +0000000000</line>
+				<line>SQLCODE OPEN CRSR_TAB00 (2): +0000000000</line>
+				<line>01 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>01 - 2 - CID(FETCH)  : 000000000001</line>
+				<line>01 - 2 - FLD01(FETCH): +00030101</line>
+				<line>01 - 2 - FLD02(FETCH): 02010000YYYY</line>
+				<line>02 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>02 - 2 - CID(FETCH)  : 000000000002</line>
+				<line>02 - 2 - FLD01(FETCH): +00030102</line>
+				<line>02 - 2 - FLD02(FETCH): 02020000YYYY</line>
+				<line>03 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>03 - 2 - CID(FETCH)  : 000000000003</line>
+				<line>03 - 2 - FLD01(FETCH): +00030103</line>
+				<line>03 - 2 - FLD02(FETCH): 02030000YYYY</line>
+				<line>04 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>04 - 2 - CID(FETCH)  : 000000000004</line>
+				<line>04 - 2 - FLD01(FETCH): +00030104</line>
+				<line>04 - 2 - FLD02(FETCH): 02040000YYYY</line>
+				<line>05 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>05 - 2 - CID(FETCH)  : 000000000005</line>
+				<line>05 - 2 - FLD01(FETCH): +00030105</line>
+				<line>05 - 2 - FLD02(FETCH): 02050000YYYY</line>
+				<line>06 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>06 - 2 - CID(FETCH)  : 000000000006</line>
+				<line>06 - 2 - FLD01(FETCH): +00030106</line>
+				<line>06 - 2 - FLD02(FETCH): 02060000YYYY</line>
+				<line>07 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>07 - 2 - CID(FETCH)  : 000000000007</line>
+				<line>07 - 2 - FLD01(FETCH): +00030107</line>
+				<line>07 - 2 - FLD02(FETCH): 02070000YYYY</line>
+				<line>08 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>08 - 2 - CID(FETCH)  : 000000000008</line>
+				<line>08 - 2 - FLD01(FETCH): +00030108</line>
+				<line>08 - 2 - FLD02(FETCH): 02080000YYYY</line>
+				<line>09 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>09 - 2 - CID(FETCH)  : 000000000009</line>
+				<line>09 - 2 - FLD01(FETCH): +00030109</line>
+				<line>09 - 2 - FLD02(FETCH): 02090000YYYY</line>
+				<line>10 - 2 - FETCH SQLCODE: +0000000000</line>
+				<line>10 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>10 - 2 - FLD01(FETCH): +00030110</line>
+				<line>10 - 2 - FLD02(FETCH): 02100000YYYY</line>
+				<line>11 - 2 - FETCH SQLCODE: +0000000100</line>
+				<line>11 - 2 - CID(FETCH)  : 000000000010</line>
+				<line>11 - 2 - FLD01(FETCH): +00030110</line>
+				<line>11 - 2 - FLD02(FETCH): 02100000YYYY</line>
+				<line>SQLCODE CLOSE CRSR_TAB00 (2): +0000000000</line>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
 	</tests>
 </test-data>

@@ -10,3 +10,8 @@ aclocal.m4
 configure
 config.status
 config.h
+.vs
+**/Win32
+**/x64
+*/bin
+*/obj

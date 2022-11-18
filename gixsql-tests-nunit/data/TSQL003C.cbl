@@ -97,13 +97,13 @@
               GO TO 100-EXIT
            END-IF.
 
-           EXEC SQL AT :CONN1-ID
-              START TRANSACTION
-	       END-EXEC.         
-
-           EXEC SQL AT :CONN2-ID
-              START TRANSACTION
-	       END-EXEC.                 
+      *     EXEC SQL AT :CONN1-ID
+      *        START TRANSACTION
+      *     END-EXEC.         
+      *
+      *     EXEC SQL AT :CONN2-ID
+      *        START TRANSACTION
+      *     END-EXEC.                 
            
 
        100-MAIN.       
@@ -178,8 +178,8 @@
            DISPLAY 'T2   : ' T2.
            DISPLAY 'TOTAL: ' TOT.
 
-           EXEC SQL AT :CONN1-ID SAVEPOINT SP1 END-EXEC.
-           EXEC SQL AT :CONN2-ID SAVEPOINT SP2 END-EXEC.
+      *     EXEC SQL AT :CONN1-ID SAVEPOINT SP1 END-EXEC.
+      *     EXEC SQL AT :CONN2-ID SAVEPOINT SP2 END-EXEC.
            
       *    THIS SHOULD FAIL
            EXEC SQL AT :CONN2-ID
@@ -203,8 +203,8 @@
                 DISPLAY 'SQLSTATE FAIL2: KO'
            END-IF.
 
-           EXEC SQL AT :CONN1-ID ROLLBACK TO SAVEPOINT SP1 END-EXEC.
-           EXEC SQL AT :CONN2-ID ROLLBACK TO SAVEPOINT SP2 END-EXEC.
+      *     EXEC SQL AT :CONN1-ID ROLLBACK TO SAVEPOINT SP1 END-EXEC.
+      *     EXEC SQL AT :CONN2-ID ROLLBACK TO SAVEPOINT SP2 END-EXEC.
            
        100-CURSOR1-TEST.            
       *  open cursor

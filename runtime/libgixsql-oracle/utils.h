@@ -60,7 +60,8 @@ char* safe_strdup(char* s);
 bool is_commit_or_rollback_statement(std::string query);
 bool is_dml_statement(std::string query);
 bool is_begin_transaction_statement(std::string query);
-bool is_update_or_delete_statement(std::string query);
+bool is_update_or_delete_statement(const std::string& query);
+bool is_tx_termination_statement(const std::string& query);
 bool has_where_current_of(const std::string query, std::string& cursor_name);
 void ltrim(std::string& s);
 

@@ -68,7 +68,7 @@
                SELECT COUNT(*) INTO :T1 FROM EMPTABLE
            END-EXEC. 
 
-           DISPLAY 'SELECT SQLCODE: ' SQLCODE.
+           DISPLAY 'SELECT SQLCODE : ' SQLCODE.
            
            IF SQLCODE <> 0 THEN
               GO TO 100-EXIT

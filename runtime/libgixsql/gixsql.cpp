@@ -75,7 +75,7 @@ static bool __lib_initialized = false;
 
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err);
-static bool get_autocommit(DataSourceInfo*);
+static AutoCommitMode get_autocommit(DataSourceInfo* ds);
 static bool get_fixup_params(DataSourceInfo*);
 static std::string get_client_encoding(DataSourceInfo*);
 static void init_sql_var_list(void);
@@ -165,7 +165,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 
 	spdlog::trace(FMT_FILE_FUNC "Connection string : {}", __FILE__, __func__, data_source->get());
 	spdlog::trace(FMT_FILE_FUNC "Data source info  : {}", __FILE__, __func__, data_source->dump());
-	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, opts->autocommit);
+	spdlog::trace(FMT_FILE_FUNC "Autocommit        : {}", __FILE__, __func__, (int)opts->autocommit);
 	spdlog::trace(FMT_FILE_FUNC "Fix up parameters : {}", __FILE__, __func__, opts->fixup_parameters);
 	spdlog::trace(FMT_FILE_FUNC "Client encoding   : {}", __FILE__, __func__, opts->client_encoding);
 
@@ -175,18 +175,9 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		return RESULT_FAILED;
 	}
 
-	if (opts->autocommit) {
-		rc = dbi->begin_transaction();
-		if (rc != DBERR_NO_ERROR) {
-			setStatus(st, dbi, DBERR_BEGIN_TX_FAILED);
-			dbi->terminate_connection();
-			return RESULT_FAILED;
-		}
-	}
-
 	Connection* c = connection_manager.create();
 	c->setName(connection_id);	// it might still be empty, the connection manager will assign a default name
-	c->setConnectionOptions(opts.get());	// Generic/gobal connection options, separate from driver-specific options that reside only in the data source info
+	c->setConnectionOptions(opts.get());	// Generic/global connection options, separate from driver-specific options that reside only in the data source info
 	c->setConnectionInfo(data_source);
 	c->setDbInterface(dbi);
 	c->setOpened(true);
@@ -315,33 +306,40 @@ static int _gixsqlExec(Connection* conn, struct sqlca_t* st, char* _query)
 
 	if (is_commit_or_rollback_statement(query)) {
 		cursor_manager.closeConnectionCursors(conn->getId(), false);
-
-		if (conn->getConnectionOptions()->autocommit) {
-			rc = dbi->end_transaction(query);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-				rc = dbi->begin_transaction();
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-		}
-		else {
-			rc = dbi->exec(query);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-		}
-	}
-	else {
-		rc = dbi->exec(query);
-		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-
-			if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-				rc = dbi->end_transaction("COMMIT");
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-					rc = dbi->begin_transaction();
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-			}
 	}
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+	rc = dbi->exec(query);
+	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+
+		//if (is_commit_or_rollback_statement(query)) {
+		//	cursor_manager.closeConnectionCursors(conn->getId(), false);
+
+		//	if (conn->getConnectionOptions()->autocommit) {
+		//		rc = dbi->end_transaction(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+		//			rc = dbi->begin_transaction();
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//	}
+		//	else {
+		//		rc = dbi->exec(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//	}
+		//}
+		//else {
+		//	rc = dbi->exec(query);
+		//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+
+		//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
+		//			rc = dbi->end_transaction("COMMIT");
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+		//				rc = dbi->begin_transaction();
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//		}
+		//}
+
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -398,38 +396,46 @@ static int _gixsqlExecParams(Connection* conn, struct sqlca_t* st, char* _query,
 	std::string query = _query;
 	int rc = 0;
 	IDbInterface* dbi = conn->getDbInterface();
-	if (!dbi)
-		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
+	if (!dbi) {
+		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR);
+	}
 
-		if (is_commit_or_rollback_statement(query)) {
-			cursor_manager.closeConnectionCursors(conn->getId(), false);
+	if (is_commit_or_rollback_statement(query)) {
+		cursor_manager.closeConnectionCursors(conn->getId(), false);
+	}
 
-			if (conn->getConnectionOptions()->autocommit) {
-				rc = dbi->end_transaction(query);
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-					rc = dbi->begin_transaction();
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-			}
-			else {
-				rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-				FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-			}
-		}
-		else {
-			rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-			FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//if (is_commit_or_rollback_statement(query)) {
+		//	cursor_manager.closeConnectionCursors(conn->getId(), false);
 
-				if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-					rc = dbi->end_transaction(query);
-					FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+		//	if (conn->getConnectionOptions()->autocommit) {
+		//		rc = dbi->end_transaction(query);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
 
-						rc = dbi->begin_transaction();
-					FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-				}
-		}
+		//			rc = dbi->begin_transaction();
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//	}
+		//	else {
+		//		rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
+		//	}
+		//}
+		//else {
+		//	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+		//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
+		//			rc = dbi->end_transaction(query);
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
+
+		//				rc = dbi->begin_transaction();
+		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
+		//		}
+		//}
+
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -491,7 +497,7 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	if (!dbi)
 		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
 
-	rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
+		rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 		setStatus(st, NULL, DBERR_NO_ERROR);
@@ -526,7 +532,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	}
 
 	// Some drivers (notably DB2, both natevely and under ODBC, do not support SQLNumRows, so we have to check here
-	if (dbi->supports_num_rows()) {
+	if (dbi->has(DbNativeFeature::ResultSetRowCount)) {
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
@@ -802,7 +808,7 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 	rc = dbi->cursor_open(cursor);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_OPEN_CURSOR_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -843,7 +849,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_FETCH_ROW_FAILED)
 
-	int nResParams = _res_sql_var_list.size();
+		int nResParams = _res_sql_var_list.size();
 	int nfields = dbi->get_num_fields(cursor);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
@@ -923,7 +929,7 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -1013,7 +1019,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	}
 
 	// Some drivers (notably DB2, both natevely and under ODBC, do not support SQLNumRows, so we have to check here
-	if (dbi->supports_num_rows()) {
+	if (dbi->has(DbNativeFeature::ResultSetRowCount)) {
 
 		// check numtuples
 		if (dbi->get_num_rows(nullptr) < 1) {
@@ -1087,7 +1093,7 @@ GIXSQLDisconnect(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 }
 
 LIBGIXSQL_API int
-GIXSQLStartSQL(void) 
+GIXSQLStartSQL(void)
 {
 	CHECK_LIB_INIT();
 
@@ -1098,7 +1104,7 @@ GIXSQLStartSQL(void)
 }
 
 LIBGIXSQL_API int
-GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr) 
+GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
 {
 	CHECK_LIB_INIT();
 
@@ -1379,21 +1385,32 @@ static int setStatus(struct sqlca_t* st, IDbInterface* dbi, int err)
 	return RESULT_SUCCESS;
 }
 
-static bool get_autocommit(DataSourceInfo* ds)
+static AutoCommitMode get_autocommit(DataSourceInfo* ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
 	if (options.find("autocommit") != options.end()) {
-		std::string o = options["autocommit"];
-		return (o == "on" || o == "1") ? GIXSQL_AUTOCOMMIT_ON : GIXSQL_AUTOCOMMIT_OFF;
+		std::string o = to_lower(options["autocommit"]);
+		if (o == "on" || o == "1")
+			return AutoCommitMode::On;
+		else
+			if (o == "off" || o == "0")
+				return AutoCommitMode::Off;
+			else
+				if (o == "native")
+					return AutoCommitMode::Native;
 	}
 
 	char* v = getenv("GIXSQL_AUTOCOMMIT");
 	if (v) {
-		if (strcmp(v, "1") == 0 || strcasecmp(v, "ON") == 0)
-			return GIXSQL_AUTOCOMMIT_ON;
-
-		if (strcmp(v, "0") == 0 || strcasecmp(v, "OFF") == 0)
-			return GIXSQL_AUTOCOMMIT_OFF;
+		std::string o = to_lower(v);
+		if (o == "on" || o == "1")
+			return AutoCommitMode::On;
+		else
+			if (o == "off" || o == "0")
+				return AutoCommitMode::Off;
+			else
+				if (o == "native")
+					return AutoCommitMode::Native;
 	}
 
 	return GIXSQL_AUTOCOMMIT_DEFAULT;
@@ -1417,7 +1434,7 @@ static bool get_fixup_params(DataSourceInfo* ds)
 			return GIXSQL_FIXUP_PARAMS_OFF;
 	}
 
-	return GIXSQL_AUTOCOMMIT_DEFAULT;
+	return GIXSQL_FIXUP_PARAMS_DEFAULT;
 }
 
 
@@ -1469,7 +1486,7 @@ static std::string get_debug_log_file() {
 	return DEFAULT_GIXSQL_LOG_FILE;
 }
 
-static spdlog::level::level_enum get_debug_log_level() {
+static spdlog::level::level_enum get_log_level() {
 	char* c = getenv("GIXSQL_LOG_LEVEL");
 	if (!c) {
 		return DEFAULT_GIXSQL_LOG_LEVEL;
@@ -1507,6 +1524,24 @@ static spdlog::level::level_enum get_debug_log_level() {
 								return DEFAULT_GIXSQL_LOG_LEVEL;
 }
 
+bool get_log_truncation_flag() {
+	char* c = getenv("GIXSQL_LOG_TRUNCATE");
+	if (!c) {
+		return DEFAULT_GIXSQL_LOG_TRUNC;
+	}
+
+	std::string s = to_lower(c);
+	if (s == "on" || s == "1") {
+		return true;
+	}
+	else
+		if (s == "off" || s == "0") {
+			return false;
+		}
+		else
+			return DEFAULT_GIXSQL_LOG_TRUNC;
+}
+
 void setup_no_rec_code()
 {
 	char* c = getenv("GIXSQL_NOREC_CODE");
@@ -1526,7 +1561,8 @@ static bool lib_initialize()
 
 	spdlog::sink_ptr gixsql_std_sink;
 
-	spdlog::level::level_enum level = get_debug_log_level();
+	bool truncate_log = get_log_truncation_flag();
+	spdlog::level::level_enum level = get_log_level();
 	if (level == spdlog::level::off) {
 		gixsql_std_sink = std::make_shared<spdlog::sinks::null_sink_st>();
 	}
@@ -1536,7 +1572,7 @@ static bool lib_initialize()
 			filename = string_replace(filename, "$$", std::to_string(pid));
 		}
 
-		gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename);
+		gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, truncate_log);
 	}
 
 	//gixsql_logger = std::make_shared<spdlog::logger>("libgixsql", gixsql_std_sink);
@@ -1546,7 +1582,7 @@ static bool lib_initialize()
 			p->flush();
 			delete p;
 		}
-	});
+		});
 
 #ifdef _DEBUG
 	gixsql_logger->flush_on(spdlog::level::trace);
