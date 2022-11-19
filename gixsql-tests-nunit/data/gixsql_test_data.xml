@@ -3287,5 +3287,33 @@
 			<expected-preprocessed-file-content>
 			</expected-preprocessed-file-content>
 		</test>
+
+		<test name="TSQL039A" enabled="true">
+			<description>Parser error on semicolon and error continuation does not work</description>
+			<issue-coverage>#128</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL039A.cbl" />
+			</cobol-sources>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="false" />
+
+			<additional-preprocess-params value="-P varchar" />
+
+			<environment>
+			</environment>
+
+			<expected-output>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
+
+
 	</tests>
 </test-data>

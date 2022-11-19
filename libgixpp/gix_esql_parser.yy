@@ -256,7 +256,7 @@ UPDATE {$$ = driver.cb_text_list_add (NULL, $1);}
 
 
 disconnectsql:
-EXECSQL disconnect ALL END_EXEC
+EXECSQL disconnect ALL opt_semicolon END_EXEC
 {
 	driver.connectionid = new hostref_or_literal_t("*", true);;
 	driver.put_exec_list();
@@ -294,11 +294,11 @@ INSERT {$$ = driver.cb_text_list_add (NULL, $1);}
 
 
 rollbacksql:
-execsql_with_opt_at ROLLBACK_WORK END_EXEC {
+execsql_with_opt_at ROLLBACK_WORK opt_semicolon END_EXEC {
 	// The necessary fields have been populated by the lexer code
 	driver.put_exec_list();
 }
-| execsql_with_opt_at ROLLBACK_WORK TO SAVEPOINT TOKEN END_EXEC {
+| execsql_with_opt_at ROLLBACK_WORK TO SAVEPOINT TOKEN opt_semicolon END_EXEC {
 	// We intercept the ROLLBACK TO SAVEPOINT and pass it back as an SQL statement
 	// of type "other" (unknown).
 
@@ -313,7 +313,7 @@ execsql_with_opt_at ROLLBACK_WORK END_EXEC {
 }
 
 commitsql:
-execsql_with_opt_at COMMIT_WORK END_EXEC {
+execsql_with_opt_at COMMIT_WORK opt_semicolon END_EXEC {
 	driver.put_exec_list();
 }
 
@@ -341,7 +341,7 @@ host_reference {driver.cb_res_host_list_add (driver.res_host_reference_list, $1)
 | res_host_references host_reference {driver.cb_res_host_list_add (driver.res_host_reference_list, $2);}
 
 closesql:
-EXECSQL unexpected_at CLOSE expr END_EXEC {
+EXECSQL unexpected_at CLOSE expr opt_semicolon END_EXEC {
 	driver.cb_set_cursorname($4);
 	driver.put_exec_list();
 }
@@ -1032,6 +1032,16 @@ opt_indexed_by:
 | INDEXED_BY WORD
 ;
 
+opt_semicolon:
+%empty
+| TOKEN {
+	auto t = $1;
+	if (t.empty() || t.at(0) != ';' ) {
+		yy::location loc;
+		error(loc, "Semicolon expected");
+	}
+}
+;
 
 numeric_or_word:
 NUMERIC

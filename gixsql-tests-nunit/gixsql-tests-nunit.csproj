@@ -83,6 +83,7 @@
     <None Remove="data\TSQL037B-MYSQL.cbl" />
     <None Remove="data\TSQL037B-PGSQL.cbl" />
     <None Remove="data\TSQL037B-SQLITE.cbl" />
+    <None Remove="data\TSQL039A.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -162,6 +163,7 @@
     <EmbeddedResource Include="data\TSQL033A.cbl" />
     <EmbeddedResource Include="data\TSQL035A.cbl" />
     <EmbeddedResource Include="data\TSQL034A.cbl" />
+    <EmbeddedResource Include="data\TSQL039A.cbl" />
   </ItemGroup>
 
   <ItemGroup>
