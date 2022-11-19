@@ -588,7 +588,6 @@ int DbInterfaceOracle::close_cursor(ICursor* cursor)
 	}
 
 	cursor->setPrivateData(nullptr);
-	cursor->setOpened(false);
 
 	return DBERR_NO_ERROR;
 }
@@ -664,11 +663,9 @@ int DbInterfaceOracle::cursor_open(ICursor* cursor)
 	}
 
 	if (dpiRetrieveError(rc) == DPI_SUCCESS) {
-		cursor->setOpened(true);
 		return DBERR_NO_ERROR;
 	}
 	else {
-		cursor->setOpened(false);
 		return DBERR_OPEN_CURSOR_FAILED;
 	}
 }

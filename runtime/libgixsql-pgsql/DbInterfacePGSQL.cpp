@@ -523,8 +523,6 @@ int DbInterfacePGSQL::close_cursor(ICursor* cursor)
 		cursor->setPrivateData(nullptr);
 	}
 
-	cursor->setOpened(false);
-
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_CLOSE_CURSOR_FAILED;
 }
 
@@ -601,7 +599,6 @@ int DbInterfacePGSQL::cursor_open(ICursor* cursor)
 	auto pvalues = cursor->getParameterValues();
 	int rc = _pgsql_exec_params(cursor, full_query, cursor->getNumParams(), empty, pvalues, empty, empty);
 
-	cursor->setOpened(rc == DBERR_NO_ERROR);
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_OPEN_CURSOR_FAILED;
 }
 

@@ -568,7 +568,6 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 
 		delete (ODBCStatementData*)cursor->getPrivateData();
 		cursor->setPrivateData(nullptr);
-		cursor->setOpened(false);
 
 		if (rc != SQL_SUCCESS) {
 			lib_logger->error("ODBC: Error while closing cursor ({}) {}", last_rc, cursor->getName());
@@ -578,7 +577,6 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 	}
 	else {
 		cursor->setPrivateData(nullptr);
-		cursor->setOpened(false);
 	}
 
 	return DBERR_NO_ERROR;
@@ -689,11 +687,9 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 	}
 
 	if (rc == SQL_SUCCESS) {
-		cursor->setOpened(true);
 		return DBERR_NO_ERROR;
 	}
 	else {
-		cursor->setOpened(false);
 		return DBERR_OPEN_CURSOR_FAILED;
 	}
 }

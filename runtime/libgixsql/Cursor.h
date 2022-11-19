@@ -84,16 +84,16 @@ private:
 	std::string query; // default NULL
 	void* query_source_addr = nullptr;
 	int query_source_len = 0;
-	int nParams; // params for query
-	bool is_opened; //open flag
-	bool is_with_hold;
-	int tuples; //fetched row number
+	int nParams = 0; // params for query
+	bool is_opened = false; //open flag
+	bool is_with_hold = false;
+	int tuples = 0; //fetched row number
 
 	SqlVarList parameter_list; // parameter list
 
 	void* dbi_data = nullptr;
 
-	uint64_t rownum;
+	uint64_t rownum = 0;
 
 	void *connref_data = nullptr;
 	int connref_datalen = 0;

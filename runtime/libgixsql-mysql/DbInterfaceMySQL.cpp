@@ -721,7 +721,6 @@ int DbInterfaceMySQL::close_cursor(ICursor* cursor)
 	}
 
 	cursor->setPrivateData(nullptr);
-	cursor->setOpened(false);
 
 	return DBERR_NO_ERROR;
 }
@@ -799,11 +798,9 @@ int DbInterfaceMySQL::cursor_open(ICursor* cursor)
 	}
 
 	if (mysqlRetrieveError(rc) == MYSQL_OK) {
-		cursor->setOpened(true);
 		return DBERR_NO_ERROR;
 	}
 	else {
-		cursor->setOpened(false);
 		return DBERR_OPEN_CURSOR_FAILED;
 	}
 }

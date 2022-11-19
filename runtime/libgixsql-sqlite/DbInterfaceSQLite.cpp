@@ -826,7 +826,6 @@ int DbInterfaceSQLite::cursor_open(ICursor* cursor)
 	}
 
 	if (sqliteRetrieveError(rc) == SQLITE_OK) {
-		cursor->setOpened(true);
 
 		// SQLite automatically positions it on the first row, so we need a mechanism to avoid fetching (and skipping) it
 		SQLiteStatementData* wk_rs = (SQLiteStatementData*)cursor->getPrivateData();
@@ -835,7 +834,6 @@ int DbInterfaceSQLite::cursor_open(ICursor* cursor)
 		return DBERR_NO_ERROR;
 	}
 	else {
-		cursor->setOpened(false);
 		return DBERR_OPEN_CURSOR_FAILED;
 	}
 }
