@@ -575,5 +575,3 @@ jobs:
             gixsql-windows-x86-msvc-artifacts 
             gixsql-windows-x86-mingw-artifacts 
             gixsql-windows-x64-mingw-artifacts  
-
-          
