@@ -1,7 +1,7 @@
 ## Process this file with automake to generate Makefile.in
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = libcpputils libgixpp gixpp runtime/libgixsql
-EXTRA_DIST = copy/SQLCA.cpy misc/gixsql-wrapper
+EXTRA_DIST = copy/SQLCA.cpy misc/gixsql-wrapper README doc examples extra_files.mk
 CLEANFILES = *~
 
 if ENABLE_MYSQL
@@ -24,6 +24,22 @@ if ENABLE_SQLITE
 SUBDIRS += runtime/libgixsql-sqlite
 endif
 
-pkgconfigdir = $(prefix)/share/gix/copy
-pkgconfig_DATA = copy/SQLCA.cpy
+copydir = $(prefix)/share/gixsql/copy
+copy_DATA = copy/SQLCA.cpy
+
+include extra_files.mk
+
+docdir = $(prefix)/share/gixsql/doc
+dist_doc_DATA = $(DOC_FILES)
+
+examplesdir = $(prefix)/share/gixsql/examples
+dist_examples_DATA = $(EXAMPLES_FILES)
+#dist_examples_DATA = examples/TSQL001A.cbl
+
+#dist-hook:
+#	mkdir $(distdir)/doc && mkdir $(distdir)/examples
+#	cp $(srcdir)/gixsql-tests-nunit/data/*.cbl $(srcdir)/gixsql-tests-nunit/data/*.cpy $(srcdir)/gixsql-tests-nunit/data/*.sql $(distdir)/examples
+#	cp $(srcdir)/README $(distdir)/doc
+
+
 

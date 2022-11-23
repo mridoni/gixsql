@@ -306,7 +306,7 @@ Options:
   --no-rec-code arg           custom code for "no record" condition(=nnn)
 ```	  
 
-When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gix/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
+When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gixsql/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
 
 As an alternative you may call **gixsql** which is a wrapper around the gixsql binary.
 
