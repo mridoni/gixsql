@@ -350,6 +350,7 @@ jobs:
       env:
         WORKSPACE: ${{ github.workspace }}
         GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+        HOST_PLATFORM: x64
       run: |
         iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
         ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
@@ -419,6 +420,7 @@ jobs:
       env:
         WORKSPACE: ${{ github.workspace }}
         GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+        HOST_PLATFORM: x86
       run: |
         iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
         ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
@@ -488,6 +490,7 @@ jobs:
       env:
         WORKSPACE: ${{ github.workspace }}
         GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+        HOST_PLATFORM: x64
       run: |
         iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
         ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
@@ -550,6 +553,7 @@ jobs:
       env:
         WORKSPACE: ${{ github.workspace }}
         GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+        HOST_PLATFORM: x86
       run: |
         iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
         ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-mingw-${{ env.GIX_VER }}.exe
