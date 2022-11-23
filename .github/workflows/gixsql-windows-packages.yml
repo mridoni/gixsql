@@ -1,0 +1,579 @@
+name: gixsql-windows-packages
+
+on:
+  workflow_dispatch
+  
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+env:
+  GIXSQLMAJ: 1
+  GIXSQLMIN: 0
+  GIXSQLREL: 19dev1
+  GIX_REVISION: 826
+  GIXSQL_BRANCH: main
+  VCPKG_ROOT: C:\vcpkg
+  GIXSQL_MSVC_X64_BIN_DIR: gixsql-windows-x64-msvc-artifacts
+  GIXSQL_MSVC_X86_BIN_DIR: gixsql-windows-x86-msvc-artifacts  
+  GIXSQL_MINGW_X86_BIN_DIR: gixsql-windows-x86-mingw-artifacts
+  GIXSQL_MINGW_X64_BIN_DIR: gixsql-windows-x64-mingw-artifacts
+  MSVC_RUNTIME_x86: https://aka.ms/vs/17/release/vc_redist.x86.exe
+  MSVC_RUNTIME_x64: https://aka.ms/vs/17/release/vc_redist.x64.exe
+  WORKSPACE: ${{ github.workspace }}
+  DIST_DIR: ${{ github.workspace }}\DIST
+
+permissions:
+  contents: read
+
+jobs:
+  gixsql-windows-x64-msvc:
+    name: gixsql-windows-x64-msvc
+    env:
+      BUILD_CONFIGURATION: Release
+      HOST_PLATFORM: x64      
+      PLATFORM_ID: x64    
+      SOLUTION_FILE_PATH: gixsql.sln
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+      
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}      
+
+    - name: Install vcpkg packages (1)
+      uses: mridoni/my-vcpkg-action@v1
+      with:
+          pkgs: libpq libmariadb nng
+          triplet: ${{env.PLATFORM_ID}}-windows
+          cache-key: '${{env.PLATFORM_ID}}-rdynamic'
+          disable-cache: false
+          
+    - name: Install vcpkg packages (2)
+      uses: mridoni/my-vcpkg-action@v1
+      with:
+          pkgs: spdlog
+          triplet: ${{env.PLATFORM_ID}}-windows-static-md
+          cache-key: '${{env.PLATFORM_ID}}-rstatic'
+          disable-cache: false
+          
+    - name: Build
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      env:
+          PATH: ${{ env.PATH}};c:\tools
+      run: |
+        echo VCPKG_ROOT         : ${{env.VCPKG_ROOT}}
+        echo HOST_PLATFORM      : ${{env.HOST_PLATFORM}}
+        echo BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}
+        echo SOLUTION_FILE_PATH : ${{env.SOLUTION_FILE_PATH}}
+        echo JOB                : ${{ github.job }}
+        echo Preparing build (${{ github.workspace }}\prepbuild.cmd)
+        call ${{ github.workspace }}\prepbuild.cmd /E
+        echo Initializing vcpkg
+        %VCPKG_ROOT%\vcpkg integrate install
+        echo Running MSBuild
+        msbuild /p:Platform=${{env.HOST_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}  
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.job }}-artifacts
+        path: |
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+          
+  gixsql-windows-x86-msvc:
+    name: gixsql-windows-x86-msvc
+    env:
+      BUILD_CONFIGURATION: Release
+      HOST_PLATFORM: Win32      
+      PLATFORM_ID: x86    
+      SOLUTION_FILE_PATH: gixsql.sln
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+
+    - name: Add MSBuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+      
+    - name: Restore NuGet packages
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: nuget restore ${{env.SOLUTION_FILE_PATH}}       
+        
+    - name: Install vcpkg packages (1)
+      uses: mridoni/my-vcpkg-action@v1
+      with:
+          pkgs: libpq libmariadb nng
+          triplet: ${{env.PLATFORM_ID}}-windows
+          cache-key: '${{env.PLATFORM_ID}}-rdynamic'
+          disable-cache: false
+          
+    - name: Install vcpkg packages (2)
+      uses: mridoni/my-vcpkg-action@v1
+      with:
+          pkgs: spdlog
+          triplet: ${{env.PLATFORM_ID}}-windows-static-md
+          cache-key: '${{env.PLATFORM_ID}}-rstatic'
+          disable-cache: false
+
+    - name: Build
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      env:
+          PATH: ${{ env.PATH}};c:\tools
+      run: |
+        echo "VCPKG_ROOT         : ${{env.VCPKG_ROOT}}"
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        echo "SOLUTION_FILE_PATH : ${{env.SOLUTION_FILE_PATH}}"
+        echo "JOB                : ${{ github.job }}" 
+        call ${{ github.workspace }}\prepbuild.cmd /E
+        %VCPKG_ROOT%\vcpkg integrate install
+        msbuild /p:Platform=${{env.HOST_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{ github.job }}-artifacts
+        path: |
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe          
+          
+  gixsql-windows-x64-mingw:
+    name: gixsql-windows-x64-mingw
+    env:
+      BUILD_CONFIGURATION: Release
+      HOST_PLATFORM: mingw64      
+      PLATFORM_ID: x86_64    
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'    
+
+    - name: Set up MinGW
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: ${{env.HOST_PLATFORM}}
+        install: >-
+            mingw-w64-${{env.PLATFORM_ID}}-pkg-config
+            autoconf
+            make
+            automake
+            libtool
+            bison
+            flex
+            mingw-w64-${{env.PLATFORM_ID}}-gcc
+            mingw-w64-${{env.PLATFORM_ID}}-postgresql 
+            mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
+            mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
+            mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+
+    - shell: msys2 {0}
+      name: Build
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+         echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
+         ls -l
+         autoreconf --install --force
+         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
+         make
+         make install-strip
+ 
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      with:
+         name: ${{ github.job }}-artifacts
+         path: |
+           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
+           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/*.*
+           
+    - shell: msys2 {0}
+      name: List outputs
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+         ls -lR $(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")     
+ 
+  gixsql-windows-x86-mingw:
+     name: gixsql-windows-x86-mingw
+     env:
+       BUILD_CONFIGURATION: Release
+       HOST_PLATFORM: mingw32      
+       PLATFORM_ID: i686    
+     runs-on: windows-latest
+     steps:
+     - uses: actions/checkout@v3
+       with:
+           repository: 'mridoni/gixsql'      
+ 
+     - name: Set up MinGW
+       uses: msys2/setup-msys2@v2
+       with:
+         msystem: ${{env.HOST_PLATFORM}}
+         install: >-
+             mingw-w64-${{env.PLATFORM_ID}}-pkg-config
+             autoconf
+             make
+             automake
+             libtool
+             bison
+             flex
+             mingw-w64-${{env.PLATFORM_ID}}-gcc
+             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
+             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
+             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
+             mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+ 
+     - shell: msys2 {0}
+       name: Build
+       working-directory: ${{env.GITHUB_WORKSPACE}}
+       run: |
+         echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
+         autoreconf --install --force
+         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
+         make
+         make install-strip
+ 
+     - name: Archive production artifacts
+       uses: actions/upload-artifact@v3
+       with:
+         name: ${{ github.job }}-artifacts
+         path: |
+           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
+           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/*.*
+           
+     - shell: msys2 {0}
+       name: List outputs
+       working-directory: ${{env.GITHUB_WORKSPACE}}
+       run: |
+         ls -lR $(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")                
+
+    
+  gixsql-installer-windows-x64-msvc-mingw:
+    name: gixsql-installer-windows-x64-msvc-mingw
+    needs: [ gixsql-windows-x64-msvc, gixsql-windows-x86-msvc, gixsql-windows-x64-mingw, gixsql-windows-x86-mingw ]
+    env:
+      HOST_PLATFORM: x64      
+
+    runs-on: windows-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+          
+    - name: Download GixSQL x64 (MSVC)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x64-msvc-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x64-msvc-artifacts
+
+    - name: Download GixSQL x86 (MSVC)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-msvc-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-msvc-artifacts   
+
+    - name: Download GixSQL x64 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x64-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x64-mingw-artifacts
+
+    - name: Download GixSQL x86 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts          
+
+    - name: Prepare distribution directory
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          mkdir ${{ env.DIST_DIR }}\bin
+          mkdir ${{ env.DIST_DIR }}\lib
+          mkdir ${{ env.DIST_DIR }}\lib\x64\msvc
+          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc
+          mkdir ${{ env.DIST_DIR }}\lib\x86\msvc
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
+          mkdir ${{ env.DIST_DIR }}\lib\copy    
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\gixpp.exe ${{ env.DIST_DIR }}\bin
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql.lib ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x64\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql.lib ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\msvc        
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc        
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x64\gcc      
+          
+    - name: Build installer package
+      shell: cmd
+      env:
+        WORKSPACE: ${{ github.workspace }}
+        GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      run: |
+        iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
+        ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+        
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      env:
+            GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      with:
+        name: gixsql-installer-windows-${{ env.HOST_PLATFORM }}
+        path: ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+
+  gixsql-installer-windows-x86-msvc-mingw:
+    name: gixsql-installer-windows-x86-msvc-mingw
+    needs: [ gixsql-windows-x86-msvc,  gixsql-windows-x86-mingw ]
+    env:
+      HOST_PLATFORM: x86      
+
+    runs-on: windows-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+          
+    - name: Download gixsql x86
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-msvc-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-msvc-artifacts   
+
+    - name: Download GixSQL x86 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts     
+
+    - name: Prepare distribution directory
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          mkdir ${{ env.DIST_DIR }}\bin
+          mkdir ${{ env.DIST_DIR }}\lib
+          mkdir ${{ env.DIST_DIR }}\lib\x86\msvc
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
+          mkdir ${{ env.DIST_DIR }}\lib\copy    
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\gixpp.exe ${{ env.DIST_DIR }}\bin
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql.lib ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\msvc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\msvc     
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc          
+
+    - name: Build installer package
+      shell: cmd
+      env:
+        WORKSPACE: ${{ github.workspace }}
+        GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      run: |
+        iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
+        ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+        
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      env:
+            GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      with:
+        name: gixsql-installer-windows-${{ env.HOST_PLATFORM }}
+        path: ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+
+  gixsql-installer-windows-x64-mingw:
+    name: gixsql-installer-windows-x64-mingw
+    needs: [ gixsql-windows-x64-mingw, gixsql-windows-x86-mingw ]
+    env:
+      HOST_PLATFORM: x64      
+
+    runs-on: windows-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+
+    - name: Download GixSQL x64 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x64-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x64-mingw-artifacts
+
+    - name: Download GixSQL x86 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts          
+
+    - name: Prepare distribution directory
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          mkdir ${{ env.DIST_DIR }}\bin
+          mkdir ${{ env.DIST_DIR }}\lib
+          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
+          mkdir ${{ env.DIST_DIR }}\lib\copy    
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\gixpp.exe ${{ env.DIST_DIR }}\bin      
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc        
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x64\gcc
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x64\gcc      
+          
+    - name: Build installer package
+      shell: cmd
+      env:
+        WORKSPACE: ${{ github.workspace }}
+        GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      run: |
+        iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
+        ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+        
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      env:
+            GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      with:
+        name: gixsql-installer-windows-${{ env.HOST_PLATFORM }}
+        path: ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-windows-${{HOST_PLATFORM}}-msvc-mingw-${{ env.GIX_VER }}.exe
+
+  gixsql-installer-windows-x86-mingw:
+    name: gixsql-installer-windows-x86-mingw
+    needs: [ gixsql-windows-x86-mingw ]
+    env:
+      HOST_PLATFORM: x86      
+
+    runs-on: windows-latest
+    steps:
+    
+    - uses: actions/checkout@v3
+      with:
+          repository: 'mridoni/gixsql'
+          submodules: true
+          ref: ${{ env.GIXSQL_BRANCH }}
+          
+    - name: Download gixsql x86
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-msvc-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-msvc-artifacts   
+
+    - name: Download GixSQL x86 (MinGW)
+      uses: actions/download-artifact@v3
+      with:
+        name: gixsql-windows-x86-mingw-artifacts
+        path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts      
+        
+    - name: Prepare distribution directory
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          mkdir ${{ env.DIST_DIR }}\bin
+          mkdir ${{ env.DIST_DIR }}\lib
+          mkdir ${{ env.DIST_DIR }}\lib\x86\msvc
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
+          mkdir ${{ env.DIST_DIR }}\lib\copy    
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\gixpp.exe ${{ env.DIST_DIR }}\bin  
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-mysql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-odbc.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc          
+
+    - name: Build installer package
+      shell: cmd
+      env:
+        WORKSPACE: ${{ github.workspace }}
+        GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      run: |
+        iscc.exe ${{ github.workspace }}\deploy\installers\windows\gixsql.iss
+        ren ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-${{ env.GIX_VER }}-installer.exe gixsql-windows-${{HOST_PLATFORM}}-mingw-${{ env.GIX_VER }}.exe
+        
+    - name: Archive production artifacts
+      uses: actions/upload-artifact@v3
+      env:
+            GIX_VER: ${{ env.GIXIDEMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}
+      with:
+        name: gixsql-installer-windows-${{ env.HOST_PLATFORM }}
+        path: ${{ github.workspace }}\deploy\installers\gixsql-${{ env.HOST_PLATFORM }}\gixsql-windows-${{HOST_PLATFORM}}-mingw-${{ env.GIX_VER }}.exe
+
+  build-cleanup:
+    name: build-cleanup
+    needs: [ gixsql-installer-windows-x64-msvc-mingw, gixsql-installer-windows-x86-msvc-mingw, gixsql-installer-windows-x64-mingw, gixsql-installer-windows-x86-mingw ]
+    runs-on: windows-latest
+    steps:
+    
+    - uses: geekyeggo/delete-artifact@v2
+      with:
+          name: |
+            gixsql-windows-x64-msvc-artifacts 
+            gixsql-windows-x86-msvc-artifacts 
+            gixsql-windows-x86-mingw-artifacts 
+            gixsql-windows-x64-mingw-artifacts  
+
+          
