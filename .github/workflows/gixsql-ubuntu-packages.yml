@@ -54,7 +54,6 @@ jobs:
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
-        
         PKGDEBDIR: ${{ github.workspace }}/pkg
         
       run: |
