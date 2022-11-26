@@ -19,7 +19,8 @@ IF "%1" == "/E" goto :fromenv
 SET MYPATH=%~dp0
 set SCRIPT_DIR=%MYPATH:~0,-1%
 
-echo Configuring version (%GIXSQLMAJ%.%GIXSQLMIN%.%GIXSQLREL%) in header file for GixSQL
-echo #define VERSION "%GIXSQLMAJ%.%GIXSQLMIN%.%GIXSQLREL%" > %SCRIPT_DIR%\gixsql\config.h
+echo SCRIPT_DIR IS %SCRIPT_DIR%
+echo Configuring version (%GIXSQLMAJ%.%GIXSQLMIN%.%GIXSQLREL%) in header file (%SCRIPT_DIR%\config.h) for GixSQL
+echo #define VERSION "%GIXSQLMAJ%.%GIXSQLMIN%.%GIXSQLREL%" > %SCRIPT_DIR%\config.h
 
 echo Done

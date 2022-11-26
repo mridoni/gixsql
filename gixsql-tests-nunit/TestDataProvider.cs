@@ -1,19 +1,30 @@
 ﻿//using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Intrinsics.X86;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 
 namespace gixsql_tests
 {
-    public class TestMatrixDataProvider : Attribute //, ITestDataSource
+
+    public class TestDataProvider : Attribute
     {
-        private static XmlDocument doc;
+        public static string TestTempDir => test_temp_dir;
+        public static string TestGixInstallBase => test_install_base;
+        public static string TestGixDataDir => test_datadir;
+        public static bool TestKeepTemps => test_keep_temps;
+        public static bool TestVerbose => test_verbose;
+        public static int TestCount => test_count;
+        public static List<string> TestFilterList => test_filter_list;
+        public static List<string> TestDbTypeFilterList => db_filter_list;
 
         private static List<string> available_architectures = new List<string>();
         private static List<string> available_compiler_types = new List<string>();
@@ -24,16 +35,215 @@ namespace gixsql_tests
 
         private static Dictionary<string, string> global_env = new Dictionary<string, string>();
 
-        static TestMatrixDataProvider()
+        private static string test_temp_dir = null;
+        private static bool test_keep_temps = false;
+        private static string test_install_base = null;
+        private static string test_datadir = null;
+        private static bool test_verbose = false;
+        private static int test_count = 0;
+        private static List<string> test_filter_list = new List<string>();
+        private static List<string> db_filter_list = new List<string>();
+
+        //private static string test_data;
+
+        static TestDataProvider()
         {
-            ReadConfiguration();
+            DbProviderFactories.RegisterFactory("MySql.Data.MySqlClient", MySqlConnector.MySqlConnectorFactory.Instance);
+            DbProviderFactories.RegisterFactory("Npgsql", Npgsql.NpgsqlFactory.Instance);
+            DbProviderFactories.RegisterFactory("System.Data.SQLite", System.Data.SQLite.EF6.SQLiteProviderFactory.Instance);
+            DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
+
+            // Currently unsupported. Bug?
+            //DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
         }
 
-        public static IEnumerable<object[]> GetData()
+        private static void ReadLocalConfiguration()
         {
             try
             {
-                List<object[]> data = new List<object[]>();
+                Console.WriteLine("Reading local configuration");
+                string[] bool_values = { "0", "1", "on", "off" };
+
+                // local config file
+                string local_config = Environment.GetEnvironmentVariable("GIXTEST_LOCAL_CONFIG");
+                if (String.IsNullOrWhiteSpace(local_config) || !File.Exists(local_config))
+                    throw new Exception("Invalid value for GIXTEST_LOCAL_CONFIG: " + local_config);
+
+                XmlDocument doc = new XmlDocument();
+                doc.Load(local_config);
+
+                // Install base (required)
+                XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-install-base");
+                if (xg == null || !Directory.Exists(xg.InnerText))
+                {
+                    throw new Exception("Invalid \"gix-install-base\" in " + local_config);
+                }
+                test_install_base = xg.InnerText;
+                Console.WriteLine("Install base: " + test_install_base);
+
+                // data dir (required, compiler packages, etc.)
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-data-dir");
+                if (xg == null || !Directory.Exists(xg.InnerText))
+                {
+                    throw new Exception("Invalid \"gix-data-dir\" in " + local_config);
+                }
+                test_datadir = xg.InnerText;
+                Console.WriteLine("Data dir: " + test_datadir);
+
+                // Keep temps (optional)
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/keep-temps");
+                if (xg != null && !bool_values.Contains(xg.InnerText.ToLower()))
+                {
+                    throw new Exception("Invalid \"gix-keep-temps\" in " + local_config);
+                }
+                if (xg != null)
+                    test_keep_temps = xg.InnerText.ToLower() == "1" || xg.InnerText.ToLower() == "on";
+
+                // Test temporary directory (optional)
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/temp-dir");
+                if (xg != null && !Directory.Exists(xg.InnerText))
+                {
+                    throw new Exception("Invalid \"temp-dir\" in " + local_config);
+                }
+                if (xg != null)
+                    test_temp_dir = xg.InnerText;
+
+                // Verbose output (optional)
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/verbose");
+                if (xg != null && !bool_values.Contains(xg.InnerText.ToLower()))
+                {
+                    throw new Exception("Invalid \"verbose\" in " + local_config);
+                }
+                if (xg != null)
+                    test_verbose = xg.InnerText.ToLower() == "1" || xg.InnerText.ToLower() == "on";
+
+                // test filter
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/test-filter");
+                if (xg != null && !String.IsNullOrWhiteSpace(xg.InnerText)) {
+                    foreach (var f in xg.InnerText.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))  {
+                        test_filter_list.Add(f);
+                    }
+                }
+
+                // db type filter
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/dbtype-filter");
+                if (xg != null && !String.IsNullOrWhiteSpace(xg.InnerText))
+                {
+                    foreach (var f in xg.InnerText.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        db_filter_list.Add(f);
+                    }
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/architectures/architecture"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    available_architectures.Add(xe.Attributes["id"].Value);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/compiler-types/compiler-type"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    available_compiler_types.Add(xe.Attributes["id"].Value);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/compilers/compiler"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    string compiler_type = xe.Attributes["type"].Value;
+                    string compiler_arch = xe.Attributes["architecture"].Value;
+                    string compiler_id = xe.Attributes["id"].Value;
+                    if (!available_compiler_types.Contains(compiler_type))
+                        continue;
+
+                    CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
+                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    available_compilers.Add(k, cc);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/data-source-clients/data-source-client"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    Dictionary<string, string> env = new Dictionary<string, string>();
+                    foreach (var xenv in xe.SelectNodes("environment/variable"))
+                    {
+                        env.Add(((XmlElement)xenv).Attributes["key"].Value, ((XmlElement)xenv).Attributes["value"].Value);
+                    }
+                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    GixSqlTestDataSourceClientInfo ci = new GixSqlTestDataSourceClientInfo();
+                    ci.environment = env;
+                    ci.provider = xe["provider"].Attributes["value"].Value;
+                    XmlElement xapp = xe["additional-preprocess-params"];
+                    if (xapp != null)
+                    {
+                        if (xapp.HasAttribute("value") && !String.IsNullOrWhiteSpace(xapp.Attributes["value"].Value))
+                        {
+                            ci.additional_preprocess_params = xapp.Attributes["value"].Value;
+                        }
+                    }
+                    available_data_source_clients.Add(k, ci);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/data-sources/data-source"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+
+                    Tuple<string, int> k = new Tuple<string, int>(xe.Attributes["type"].Value, Int32.Parse(xe.Attributes["index"].Value));
+                    GixSqlTestDataSourceInfo ds = new GixSqlTestDataSourceInfo();
+                    ds.type = k.Item1;
+                    ds.hostname = xe["hostname"].InnerText;
+                    ds.port = xe["port"].InnerText;
+                    ds.dbname = xe["dbname"].InnerText;
+                    ds.username = xe["username"].InnerText;
+                    ds.password = xe["password"].InnerText;
+                    ds.options = xe["options"].InnerText;
+
+                    available_data_sources.Add(k, ds);
+                }
+
+                foreach (var xn in doc.SelectNodes("/test-local-config/environment/variable"))
+                {
+                    XmlElement xe = (XmlElement)xn;
+                    global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
+                }
+                Console.WriteLine("Done reading local configuration");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                Console.Error.WriteLine(ex.StackTrace);
+                throw ex;
+            }
+
+        }
+
+
+        public static IEnumerable GetData()
+        {
+            try
+            {
+                ReadLocalConfiguration();
+
+                List<TestCaseData> data = new List<TestCaseData>();
+
+                XmlDocument doc = new XmlDocument();
+
+                // if not initialized, we use the embedded test matrix
+                string testmatrix_config = Environment.GetEnvironmentVariable("GIXTEST_TESTMATRIX_CONFIG");
+                if (!String.IsNullOrWhiteSpace(testmatrix_config) && !File.Exists(testmatrix_config))
+                    throw new Exception("Invalid value for GIXTEST_TESTMATRIX_CONFIG");
+
+                if (!String.IsNullOrWhiteSpace(testmatrix_config))
+                {
+                    doc.Load(testmatrix_config);
+                    Console.WriteLine("Using test matrix from file " + testmatrix_config);
+                }
+                else
+                {
+                    doc.LoadXml(Utils.GetResource("gixsql_test_data.xml"));
+                    Console.WriteLine("Using embedded test matrix");
+                }
+
 
                 foreach (string arch in available_architectures)
                 {
@@ -60,6 +270,7 @@ namespace gixsql_tests
                                 td.Name = xe.Attributes["name"].Value;
                                 td.Architecture = arch;
                                 td.CompilerType = ctype;
+
                                 foreach (var ev in ds_client.environment)
                                 {
                                     td.AddToEnvironment(ev.Key, ev.Value);
@@ -113,6 +324,33 @@ namespace gixsql_tests
 
                                 td.Description = xe.SelectSingleNode("description").InnerText;
                                 td.IssueCoverage = xe.SelectSingleNode("issue-coverage").InnerText;
+
+                                if (test_filter_list.Count > 0 && !test_filter_list.Contains(td.Name))
+                                {
+                                    if (TestVerbose)
+                                        Console.WriteLine("Skipping: " + td.FullName);
+
+                                    continue;
+                                }
+
+                                if (db_filter_list.Count > 0)
+                                {
+                                    if (td.DataSources.Count == 0)
+                                    {
+                                        if (TestVerbose)
+                                            Console.WriteLine("Skipping: " + td.FullName);
+
+                                        continue;
+                                    }
+
+                                    if (!db_filter_list.Contains(td.DataSources[0].type))
+                                    {
+                                        if (TestVerbose)
+                                            Console.WriteLine("Skipping: " + td.FullName);
+
+                                        continue;
+                                    }
+                                }
 
                                 Dictionary<string, string> translated_env = new Dictionary<string, string>();
                                 foreach (var ev in td.Environment)
@@ -280,11 +518,20 @@ namespace gixsql_tests
                                         td.ExpectedPreprocessedFileContent.Add(xeo.InnerText);
                                     }
                                 }
-                                data.Add(new object[] { td });
+
+
+                                var tcd = new TestCaseData(td);
+                                tcd.SetName(td.FullName);
+                                tcd.SetProperty("DB Type", (td.DataSources.Count > 0) ? td.DataSources[0].type : "N/A");
+                                tcd.SetProperty("Architecture", td.Architecture);
+                                tcd.SetProperty("Compiler Type", td.CompilerType);
+                                data.Add(tcd);
+                                test_count++;
                             }
                         }
                     }
                 }
+                Console.WriteLine("Done reading test data");
                 return data;
             }
             catch (Exception ex)
@@ -317,102 +564,44 @@ namespace gixsql_tests
 
             GixSqlTestData td = (GixSqlTestData)data[0];
 
-            //return string.Format(CultureInfo.CurrentCulture, "Custom - {0} ({1})", methodInfo.Name, string.Join(",", data) + " - " + data[0].GetHashCode());
             return string.Format(CultureInfo.CurrentCulture, td.ToString());
         }
 
-        private static void ReadConfiguration()
-        {
-            try
-            {
-                
-                doc = new XmlDocument();
-#if false
-                var cfg = System.Environment.GetEnvironmentVariable("GIXSQL_TEST_MATRIX_CONFIG");
-                doc.Load(cfg);
-#else
-                string xmlcontent = Utils.GetResource("gixsql_test_data.xml");
-                doc.LoadXml(xmlcontent);
-#endif
-                foreach (var xn in doc.SelectNodes("/test-data/environment/variable"))
-                {
-                    XmlElement xe = (XmlElement)xn;
-                    global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
-                }
+        //private static void ReadConfiguration()
+        //{
+        //    try
+        //    {
+        //        // if not initialized, we use the embedded test matrix
+        //        string testmatrix_config = Environment.GetEnvironmentVariable("GIXTEST_TESTMATRIX_CONFIG");
+        //        if (!String.IsNullOrWhiteSpace(testmatrix_config) && !File.Exists(testmatrix_config))
+        //            throw new Exception("Invalid value for GIXTEST_TESTMATRIX_CONFIG");
 
-                foreach (var xn in doc.SelectNodes("/test-data/architectures/architecture"))
-                {
-                    XmlElement xe = (XmlElement)xn;
-                    available_architectures.Add(xe.Attributes["id"].Value);
-                }
+        //        XmlDocument doc = new XmlDocument();
 
-                foreach (var xn in doc.SelectNodes("/test-data/compiler-types/compiler-type"))
-                {
-                    XmlElement xe = (XmlElement)xn;
-                    available_compiler_types.Add(xe.Attributes["id"].Value);
-                }
+        //        if (!String.IsNullOrWhiteSpace(testmatrix_config)) {
+        //            doc.Load(testmatrix_config);
+        //            Console.WriteLine("Using test matrix from file " + testmatrix_config);
+        //        }
+        //        else {
+        //            doc.LoadXml(Utils.GetResource("gixsql_test_data.xml"));
+        //            Console.WriteLine("Using embedded test matrix");
+        //        }
 
-                foreach (var xn in doc.SelectNodes("/test-data/compilers/compiler"))
-                {
-                    XmlElement xe = (XmlElement)xn;
-                    string compiler_type = xe.Attributes["type"].Value;
-                    string compiler_arch = xe.Attributes["architecture"].Value;
-                    string compiler_id = xe.Attributes["id"].Value;
-                    if (!available_compiler_types.Contains(compiler_type))
-                        continue;
+        //        foreach (var xn in doc.SelectNodes("/test-data/environment/variable"))
+        //        {
+        //            XmlElement xe = (XmlElement)xn;
+        //            global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
+        //        }
 
-                    CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
-                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
-                    available_compilers.Add(k, cc);
-                }
 
-                foreach (var xn in doc.SelectNodes("/test-data/data-source-clients/data-source-client"))
-                {
-                    XmlElement xe = (XmlElement)xn;
-                    Dictionary<string, string> env = new Dictionary<string, string>();
-                    foreach (var xenv in xe.SelectNodes("environment/variable"))
-                    {
-                        env.Add(((XmlElement)xenv).Attributes["key"].Value, ((XmlElement)xenv).Attributes["value"].Value);
-                    }
-                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
-                    GixSqlTestDataSourceClientInfo ci = new GixSqlTestDataSourceClientInfo();
-                    ci.environment = env;
-                    ci.provider = xe["provider"].Attributes["value"].Value;
-                    XmlElement xapp = xe["additional-preprocess-params"];
-                    if (xapp != null)
-                    {
-                        if (xapp.HasAttribute("value") && !String.IsNullOrWhiteSpace(xapp.Attributes["value"].Value))
-                        {
-                            ci.additional_preprocess_params = xapp.Attributes["value"].Value;
-                        }
-                    }
-                    available_data_source_clients.Add(k, ci);
-                }
 
-                foreach (var xn in doc.SelectNodes("/test-data/data-sources/data-source"))
-                {
-                    XmlElement xe = (XmlElement)xn;
 
-                    Tuple<string, int> k = new Tuple<string, int>(xe.Attributes["type"].Value, Int32.Parse(xe.Attributes["index"].Value));
-                    GixSqlTestDataSourceInfo ds = new GixSqlTestDataSourceInfo();
-                    ds.type = k.Item1;
-                    ds.hostname = xe["hostname"].InnerText;
-                    ds.port = xe["port"].InnerText;
-                    ds.dbname = xe["dbname"].InnerText;
-                    ds.username = xe["username"].InnerText;
-                    ds.password = xe["password"].InnerText;
-                    ds.options = xe["options"].InnerText;
+        //    }
+        //    catch (Exception ex)
+        //    {
 
-                    available_data_sources.Add(k, ds);
-                }
-
-            }
-            catch (Exception ex)
-            {
-
-                throw ex;
-            }
-        }
-
+        //        throw ex;
+        //    }
+        //}
     }
 }

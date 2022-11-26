@@ -8,6 +8,7 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,27 +23,29 @@ namespace gixsql_tests
         private string TestTempDir;
         private string cwd;
 
+        private bool except = false;
+
+        private static bool factories_init = false;
+
         static GixSqlDynamicTestRunner()
         {
-            //DbProviderFactories.RegisterFactory("MySql.Data.MySqlClient", MySql.Data.MySqlClient.MySqlClientFactory.Instance);
-            DbProviderFactories.RegisterFactory("MySql.Data.MySqlClient", MySqlConnector.MySqlConnectorFactory.Instance);
-            DbProviderFactories.RegisterFactory("Npgsql", Npgsql.NpgsqlFactory.Instance);
-            DbProviderFactories.RegisterFactory("System.Data.SQLite", System.Data.SQLite.EF6.SQLiteProviderFactory.Instance);
-            DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
-            DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
+
         }
 
         public void Init(GixSqlTestData td)
         {
             testMutex.WaitOne(TimeSpan.FromSeconds(20));
 
-            if (!String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("TEST_TEMP_DIR")))
-                TestTempDir = Environment.GetEnvironmentVariable("TEST_TEMP_DIR");
+            if (!String.IsNullOrWhiteSpace(TestDataProvider.TestTempDir))
+                TestTempDir = TestDataProvider.TestTempDir;
             else
                 TestTempDir = Path.Combine(Path.GetTempPath(), Utils.RandomString());
 
             Directory.CreateDirectory(TestTempDir);
-            Console.WriteLine($"Test temporary directory: {TestTempDir}");
+            if (TestDataProvider.TestVerbose)
+            {
+                Console.WriteLine($"Test temporary directory: {TestTempDir}");
+            }
 
             cwd = Environment.CurrentDirectory;
             Environment.CurrentDirectory = TestTempDir;
@@ -57,8 +60,12 @@ namespace gixsql_tests
 
         }
 
+        int cur_index = 1;
+
         public void Execute(GixSqlTestData td)
         {
+            Console.WriteLine("Running {0:000}/{1:000}: {2}", cur_index++, TestDataProvider.TestCount, td.FullName);
+
             Init(td);
 
             foreach (var ds in td.DataSources)
@@ -158,12 +165,21 @@ namespace gixsql_tests
 
         }
 
-        [Test]
-        [TestMatrixDataProvider]
-        public void GixSqlDynamicTestRunnerInstance(
-            [ValueSource(typeof(TestMatrixDataProvider), nameof(TestMatrixDataProvider.GetData))] GixSqlTestData td)
+        [TestCaseSource(typeof(TestDataProvider), nameof(TestDataProvider.GetData))]
+        public void GixSqlDynamicTestRunnerInstance(GixSqlTestData test_case)
         {
-            Execute(td);
+            except = false;
+            try
+            {
+                Execute(test_case);
+            }
+            catch (Exception ex)
+            {
+                except = true;
+                Console.WriteLine(ex.StackTrace);
+                throw ex;
+            }
+
         }
 
         private void compile(GixSqlTestData td)
@@ -190,7 +206,7 @@ namespace gixsql_tests
                     if (td.DataSources.Count > 0)
                     {
                         string ds_type = td.DataSources[0].type;
-                        client_pp_params = TestMatrixDataProvider.GetClientAdditionalPreprocessParams(ds_type, td.Architecture);
+                        client_pp_params = TestDataProvider.GetClientAdditionalPreprocessParams(ds_type, td.Architecture);
                         if (client_pp_params == null)
                             client_pp_params = String.Empty;
                     }
@@ -198,7 +214,10 @@ namespace gixsql_tests
                     if (td.AdditionalPreProcessParams != String.Empty)
                         gixpp_args += (" " + td.AdditionalPreProcessParams);
 
-                    Console.WriteLine($"[gixpp]: {cc.gixpp_exe} {gixpp_args}");
+                    if (TestDataProvider.TestVerbose)
+                    {
+                        Console.WriteLine($"[gixpp]: {cc.gixpp_exe} {gixpp_args}");
+                    }
 
                     var r1 = Task.Run(async () =>
                     {
@@ -212,8 +231,12 @@ namespace gixsql_tests
 
                     });
 
-                    Console.WriteLine(r1.Result.StandardOutput);
-                    Console.WriteLine(r1.Result.StandardError);
+                    if (TestDataProvider.TestVerbose)
+                    {
+                        Console.WriteLine(r1.Result.StandardOutput);
+                        Console.WriteLine(r1.Result.StandardError);
+                    }
+
                     File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-pp-stdout.log"), r1.Result.StandardOutput);
                     File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-pp-stderr.log"), r1.Result.StandardError);
                     Console.Out.Flush();
@@ -227,7 +250,10 @@ namespace gixsql_tests
                     else
                     {
                         Assert.IsFalse(r1.Result.ExitCode == 0, $"Exit code : {r1.Result.ExitCode:x}");
-                        Console.WriteLine("Preprocessing failed (it was expected)");
+                        if (TestDataProvider.TestVerbose)
+                        {
+                            Console.WriteLine("Preprocessing failed (it was expected)");
+                        }
                         return;
                     }
 
@@ -263,7 +289,10 @@ namespace gixsql_tests
                     }
                     Assert.IsTrue(File.Exists(cc.cobc_exe));
 
-                    Console.WriteLine($"[cobc]: {cc.cobc_exe}");
+                    if (TestDataProvider.TestVerbose)
+                    {
+                        Console.WriteLine($"[cobc]: {cc.cobc_exe}");
+                    }
 
                     string outfile = msrc.Replace(".cbl", "." + td.BuildType);
 
@@ -272,8 +301,11 @@ namespace gixsql_tests
                     var r2 = Task.Run(async () =>
                     {
                         string cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gix_copy_path} {pp_file} -L{cc.link_lib_dir_path} -l{cc.link_lib_lname}";
-                        Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
-
+                        if (TestDataProvider.TestVerbose)
+                        {
+                            Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
+                        }
+                        
 
                         if (!td.CompilerConfiguration.IsVsBased)
                         {
@@ -296,8 +328,12 @@ namespace gixsql_tests
                            .ExecuteBufferedAsync();
                     });
 
-                    Console.WriteLine(r2.Result.StandardOutput);
-                    Console.WriteLine(r2.Result.StandardError);
+                    if (TestDataProvider.TestVerbose)
+                    {
+                        Console.WriteLine(r2.Result.StandardOutput);
+                        Console.WriteLine(r2.Result.StandardError);
+                    }
+
                     File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-cobc-stdout.log"), r2.Result.StandardOutput);
                     File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-cobc-stderr.log"), r2.Result.StandardError);
 
@@ -307,12 +343,18 @@ namespace gixsql_tests
                         Assert.IsTrue(File.Exists(outfile));
                         FileInfo fi = new FileInfo(outfile);
                         Assert.IsTrue(fi.Length > 0);
-                        Console.WriteLine($"Output: {fi.FullName} ({fi.Length} bytes)");
+                        if (TestDataProvider.TestVerbose)
+                        {
+                            Console.WriteLine($"Output: {fi.FullName} ({fi.Length} bytes)");
+                        }
                     }
                     else
                     {
                         Assert.IsFalse(r2.Result.ExitCode == 0, $"Exit code : {r2.Result.ExitCode}");
-                        Console.WriteLine("COBOL compilation failed (it was expected)");
+                        if (TestDataProvider.TestVerbose)
+                        {
+                            Console.WriteLine("COBOL compilation failed (it was expected)");
+                        }
                     }
 
                     td.LastCompiledFile = outfile;
@@ -391,7 +433,10 @@ namespace gixsql_tests
 
                 //set_db_client_path(td.Architecture, env);
 
-                Console.WriteLine($"Running {exe} {args}");
+                if (TestDataProvider.TestVerbose)
+                {
+                    Console.WriteLine($"Running {exe} {args}");
+                }
 
                 var res = Task.Run(async () =>
                 {
@@ -405,8 +450,12 @@ namespace gixsql_tests
 
                 });
 
-                Console.WriteLine(res.Result.StandardOutput);
-                Console.WriteLine(res.Result.StandardError);
+                if (TestDataProvider.TestVerbose)
+                {
+                    Console.WriteLine(res.Result.StandardOutput);
+                    Console.WriteLine(res.Result.StandardError);
+                }
+
                 File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-run-stdout.log"), res.Result.StandardOutput);
                 File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-run-stderr.log"), res.Result.StandardError);
 
@@ -466,11 +515,17 @@ namespace gixsql_tests
                     }
                 }
 
-                if (b1 || b2)
-                    Console.WriteLine("Output: OK");
-                else
-                    Console.WriteLine("WARNING: output not checked");
-
+                if (TestDataProvider.TestVerbose)
+                {
+                    if (b1 || b2)
+                    {
+                        Console.WriteLine("Output: OK");
+                    }
+                    else
+                    {
+                        Console.WriteLine("WARNING: output not checked");
+                    }
+                }
             }
 
             finally
@@ -482,13 +537,14 @@ namespace gixsql_tests
         [TearDown]
         public void End()
         {
-            testMutex.ReleaseMutex();
+            if (!except)
+                testMutex.ReleaseMutex();
 
-            string kt = Environment.GetEnvironmentVariable("KEEP_TEMPS");
-            if (kt != "1")
+            if (TestDataProvider.TestKeepTemps && String.IsNullOrWhiteSpace(TestDataProvider.TestTempDir) && !String.IsNullOrWhiteSpace(TestTempDir) && Directory.Exists(TestTempDir))
                 Directory.Delete(TestTempDir, true);
 
-            Environment.CurrentDirectory = cwd;
+            if (!String.IsNullOrWhiteSpace(cwd) && Directory.Exists(cwd))
+                Environment.CurrentDirectory = cwd;
         }
     }
 }

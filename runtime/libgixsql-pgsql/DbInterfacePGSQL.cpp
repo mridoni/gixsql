@@ -283,6 +283,7 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 		delete wk_rs;
 	}
 
+	int ret = DBERR_NO_ERROR;
 	wk_rs = new PGResultSetData();
 	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
 
@@ -296,6 +297,7 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 		return DBERR_NO_ERROR;
 	}
 	else {
+		if (wk_rs) delete wk_rs;
 		last_rc = -(10000 + last_rc);
 		PQclear(wk_rs->resultset);
 		return DBERR_SQL_ERROR;
@@ -311,6 +313,9 @@ int DbInterfacePGSQL::exec(std::string query)
 {
 	return _pgsql_exec(nullptr, query);
 }
+
+//template<typename T>
+//using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 
 int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 {

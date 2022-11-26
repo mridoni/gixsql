@@ -113,52 +113,52 @@ namespace gixsql_tests_nunit
                 }
             }
 
-            var tests = TestMatrixDataProvider.GetData();
+            var tests = TestDataProvider.GetData();
 
-            foreach (object[] t in tests)
-            {
-                GixSqlTestData test = (GixSqlTestData)t[0];
+            //foreach (object[] t in tests)
+            //{
+            //    GixSqlTestData test = (GixSqlTestData)t[0];
 
-                if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name))
-                {
-                    if (verbose)
-                        Console.WriteLine("Skipping: " + test.FullName);
-                    continue;
-                }
+            //    if (test_filter_list.Count > 0 && !test_filter_list.Contains(test.Name))
+            //    {
+            //        if (verbose)
+            //            Console.WriteLine("Skipping: " + test.FullName);
+            //        continue;
+            //    }
 
 
-                if (db_filter_list.Count > 0)
-                {
-                    if (test.DataSources.Count == 0)
-                    {
-                        if (verbose)
-                            Console.WriteLine("Skipping: " + test.FullName);
-                        continue;
-                    }
+            //    if (db_filter_list.Count > 0)
+            //    {
+            //        if (test.DataSources.Count == 0)
+            //        {
+            //            if (verbose)
+            //                Console.WriteLine("Skipping: " + test.FullName);
+            //            continue;
+            //        }
 
-                    if (!db_filter_list.Contains(test.DataSources[0].type))
-                    {
-                        if (verbose)
-                            Console.WriteLine("Skipping: " + test.FullName);
-                        continue;
-                    }
-                }
+            //        if (!db_filter_list.Contains(test.DataSources[0].type))
+            //        {
+            //            if (verbose)
+            //                Console.WriteLine("Skipping: " + test.FullName);
+            //            continue;
+            //        }
+            //    }
 
-                if (verbose)
-                    Console.WriteLine("Running: " + test.FullName);
+            //    if (verbose)
+            //        Console.WriteLine("Running: " + test.FullName);
 
-                try
-                {
-                    var tr = new GixSqlDynamicTestRunner();
-                    tr.Execute((GixSqlTestData)test);
-                    results[test.FullName] = "OK";
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    results[test.FullName] = "KO";
-                }
-            }
+            //    try
+            //    {
+            //        var tr = new GixSqlDynamicTestRunner();
+            //        tr.Execute((GixSqlTestData)test);
+            //        results[test.FullName] = "OK";
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        Console.WriteLine(ex.Message);
+            //        results[test.FullName] = "KO";
+            //    }
+            //}
 
             int mlen = results.Select(a => a.Key.Length).Max();
             var orig_color = Console.ForegroundColor;

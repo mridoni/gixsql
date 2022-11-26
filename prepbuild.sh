@@ -18,4 +18,4 @@ if [ "$1" != "/E" ] ; then
 fi
 
 echo "Configuring version ($GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL) in header file for GixSQL"
-echo "#define VERSION \"$GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL\"" > $SCRIPT_DIR/gixsql/config.h
+echo "#define VERSION \"$GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL\"" > $SCRIPT_DIR/config.h

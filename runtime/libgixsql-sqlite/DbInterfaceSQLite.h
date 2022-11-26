@@ -38,7 +38,7 @@ USA.
 #define DECODE_BINARY_OFF		0
 #define DECODE_BINARY_DEFAULT	DECODE_BINARY_ON
 
-struct SQLiteStatementData {
+struct SQLiteStatementData : public IPrivateStatementData {
 
 	SQLiteStatementData();
 	~SQLiteStatementData();

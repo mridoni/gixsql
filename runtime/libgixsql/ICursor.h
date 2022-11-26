@@ -27,9 +27,13 @@ USA.
 #include "SqlVar.h"
 #include "SqlVarList.h"
 
-
-
 class IConnection;
+
+struct IPrivateStatementData {
+
+public:
+	virtual ~IPrivateStatementData() {}
+};
 
 class ICursor
 {
@@ -51,14 +55,14 @@ public:
 	virtual int getNumParams() = 0;
 	virtual bool isWithHold() = 0;
 	virtual bool isOpen() = 0;
-	//virtual void setOpened(bool) = 0;
 
 	virtual std::vector<std::string> getParameterValues() = 0;
 	virtual std::vector<int> getParameterTypes() = 0;
 	virtual std::vector<int> getParameterLengths() = 0;
 
 	virtual void *getPrivateData() = 0;
-	virtual void setPrivateData(void *) = 0;
+	virtual void setPrivateData(IPrivateStatementData *) = 0;
+	virtual void clearPrivateData() = 0;
 
 	virtual uint64_t getRowNum() = 0;
 	virtual void increaseRowNum() = 0;

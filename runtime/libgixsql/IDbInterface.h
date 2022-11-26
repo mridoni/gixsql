@@ -121,8 +121,6 @@ public:
 	virtual int connect(IDataSourceInfo *, IConnectionOptions *) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
-	//virtual int begin_transaction() = 0;
-	//virtual int end_transaction(std::string) = 0;
 	virtual int exec(std::string) = 0;
 	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) = 0;
 	virtual int close_cursor(ICursor *) = 0;

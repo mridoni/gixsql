@@ -40,7 +40,7 @@ extern "C" {
 #define DECODE_BINARY_OFF		0
 #define DECODE_BINARY_DEFAULT	DECODE_BINARY_ON
 
-struct OdpiStatementData {
+struct OdpiStatementData : public IPrivateStatementData {
 
 	OdpiStatementData();
 	~OdpiStatementData();

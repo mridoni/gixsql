@@ -37,20 +37,10 @@ namespace gixsql_tests
             {
                 CompilerConfig2 cc = new CompilerConfig2();
 
-                string gix_base_path = Environment.GetEnvironmentVariable("GIXSQL_INSTALL_BASE");
+                string gix_base_path = TestDataProvider.TestGixInstallBase;
 
                 cc.compiler_id = c_id;
-
-                if (isWindows)
-                {
-                    string local_app_data = Environment.GetEnvironmentVariable("LOCALAPPDATA");
-                    cc.gix_data_dir = Path.Combine(local_app_data, "Gix");
-                }
-                else
-                {
-                    string home = Environment.GetEnvironmentVariable("HOME");
-                    cc.gix_data_dir = Path.Combine(home, ".gix");
-                }
+                cc.gix_data_dir = TestDataProvider.TestGixDataDir;
 
                 string cdef_file = Path.Combine(cc.gix_data_dir, "compiler-defs", cc.compiler_id + ".def");
                 if (!File.Exists(cdef_file)) throw new Exception("Compiler definition file does not exist: " + cdef_file); ;

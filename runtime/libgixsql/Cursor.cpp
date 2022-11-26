@@ -193,9 +193,19 @@ void* Cursor::getPrivateData()
 	return dbi_data;
 }
 
-void Cursor::setPrivateData(void* d)
+void Cursor::setPrivateData(IPrivateStatementData* d)
 {
+	if (dbi_data) {
+		spdlog::warn("Private data is being set without first being deleted/cleared");
+		delete dbi_data;
+	}
+
 	dbi_data = d;
+}
+
+void Cursor::clearPrivateData()
+{
+	setPrivateData(nullptr);
 }
 
 void Cursor::setConnectionReference(void* d, int l)

@@ -63,7 +63,8 @@ public:
 
 	// For private DbInterfaceData
 	void *getPrivateData() override;
-	void setPrivateData(void *) override;
+	void setPrivateData(IPrivateStatementData *) override;
+	virtual void clearPrivateData() override;
 	
 	void setParameters(SqlVarList&);
 	SqlVarList& getParameters();
@@ -91,7 +92,7 @@ private:
 
 	SqlVarList parameter_list; // parameter list
 
-	void* dbi_data = nullptr;
+	IPrivateStatementData *dbi_data = nullptr;
 
 	uint64_t rownum = 0;
 

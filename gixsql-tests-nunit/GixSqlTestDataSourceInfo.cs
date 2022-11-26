@@ -47,7 +47,7 @@ namespace gixsql_tests
             if (sql_blocks == null || sql_blocks.Length == 0)
                 return true;
 
-            string provider = TestMatrixDataProvider.GetClientProvider(client_type, arch);
+            string provider = TestDataProvider.GetClientProvider(client_type, arch);
             Assert.IsFalse(String.IsNullOrWhiteSpace(provider));
 
             try
@@ -161,7 +161,7 @@ namespace gixsql_tests
             if (String.IsNullOrWhiteSpace(sql))
                 return false;
 
-            string provider = TestMatrixDataProvider.GetClientProvider(client_type, arch);
+            string provider = TestDataProvider.GetClientProvider(client_type, arch);
             Assert.IsFalse(String.IsNullOrWhiteSpace(provider));
 
             try

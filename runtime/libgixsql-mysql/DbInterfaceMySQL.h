@@ -42,7 +42,7 @@ extern "C" {
 #include "IDataSourceInfo.h"
 #include "ISchemaManager.h"
 
-struct MySQLStatementData
+struct MySQLStatementData : public IPrivateStatementData
 {
 
 	MySQLStatementData();

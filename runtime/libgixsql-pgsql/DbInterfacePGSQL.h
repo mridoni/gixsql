@@ -36,7 +36,7 @@ USA.
 #define DECODE_BINARY_OFF		0
 #define DECODE_BINARY_DEFAULT	DECODE_BINARY_ON
 
-struct PGResultSetData {
+struct PGResultSetData : public IPrivateStatementData {
 	PGResultSetData();
 	~PGResultSetData();
 
