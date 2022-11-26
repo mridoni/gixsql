@@ -14,7 +14,7 @@ env:
   GIXSQLREL: 19
   GIX_REVISION: 900
   GIXSQL_BRANCH: main
-  INSTALL_PREFIX: /usr
+  INSTALL_PREFIX: usr
 
 permissions:
   contents: read
@@ -54,10 +54,8 @@ jobs:
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
-        HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-20.04-lts
         PKGDEBDIR: ${{ github.workspace }}/pkg
-        PKGNAME: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
         
       run: |
         chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
@@ -66,7 +64,6 @@ jobs:
       uses: actions/upload-artifact@v3
       env:
         WORKSPACE: ${{ github.workspace }}
-        HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-20.04-lts
       with:
         name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
@@ -106,10 +103,8 @@ jobs:
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
-        HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-22.04-lts
         PKGDEBDIR: ${{ github.workspace }}/pkg
-        PKGNAME: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
         
       run: |
         chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
@@ -118,7 +113,6 @@ jobs:
       uses: actions/upload-artifact@v3
       env:
         WORKSPACE: ${{ github.workspace }}
-        HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-20.04-lts
       with:
         name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
