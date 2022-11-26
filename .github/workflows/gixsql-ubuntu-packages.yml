@@ -23,9 +23,9 @@ jobs:
   ubuntu-20-04-x64:
     name: ubuntu-20.04-x64
     env:
-      BUILD_CONFIGURATION: Release
-      BUILD_PLATFORM: x64      
+      DIST: ubuntu-20.04-lts
       HOST_PLATFORM: x64    
+      
     runs-on: ubuntu-20.04
     
     steps:
@@ -54,7 +54,7 @@ jobs:
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
-        DIST: ubuntu-20.04-lts
+        
         PKGDEBDIR: ${{ github.workspace }}/pkg
         
       run: |
@@ -74,9 +74,9 @@ jobs:
   ubuntu-22-04-x64:
     name: ubuntu-22.04-x64
     env:
-      BUILD_CONFIGURATION: Release
-      BUILD_PLATFORM: x64      
-      HOST_PLATFORM: x64    
+      DIST: ubuntu-22.04-lts
+      HOST_PLATFORM: x64   
+      
     runs-on: ubuntu-22.04
     
     steps:

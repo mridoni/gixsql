@@ -1,7 +1,9 @@
 #!/bin/bash
 
-export PKGFILE=$PKGNAME.deb
+export PKGFILE=gixsql-${DIST}-${HOST_PLATFORM}-${GIXSQLMAJ}.${GIXSQLMIN}.${GIXSQLREL}-${GIX_REVISION}.deb
 
+mkdir -p $PKGDEBDIR/DEBIAN
+if [ "$?" != "0" ] ; then echo "Cannot create package directory" ; exit 1 ; fi
 
 # debian-binary
 echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
