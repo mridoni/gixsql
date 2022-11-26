@@ -57,7 +57,7 @@ jobs:
         PKGDEBDIR: ${{ github.workspace }}/pkg
         
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
+        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && sudo ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -106,7 +106,7 @@ jobs:
         PKGDEBDIR: ${{ github.workspace }}/pkg
         
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
+        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && sudo ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
