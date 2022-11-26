@@ -34,12 +34,5 @@ dist_doc_DATA = $(DOC_FILES)
 
 examplesdir = $(prefix)/share/gixsql/examples
 dist_examples_DATA = $(EXAMPLES_FILES)
-#dist_examples_DATA = examples/TSQL001A.cbl
-
-#dist-hook:
-#	mkdir $(distdir)/doc && mkdir $(distdir)/examples
-#	cp $(srcdir)/gixsql-tests-nunit/data/*.cbl $(srcdir)/gixsql-tests-nunit/data/*.cpy $(srcdir)/gixsql-tests-nunit/data/*.sql $(distdir)/examples
-#	cp $(srcdir)/README $(distdir)/doc
-
 
 
