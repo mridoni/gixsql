@@ -14,6 +14,7 @@ env:
   GIXSQLREL: 19
   GIX_REVISION: 900
   GIXSQL_BRANCH: main
+  INSTALL_PREFIX: /usr
 
 permissions:
   contents: read
@@ -38,29 +39,28 @@ jobs:
           packages: build-essential libmysqlclient-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev
           version: 1.0
 
-    - name: Build source package
+    - name: Build GixSQL
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
         sudo dpkg -i bison_3.7.5+dfsg-1_amd64.deb      
         chmod 755 prepdist.sh && ./prepdist.sh
         autoreconf --install --force
-        ./configure
-        make distcheck
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ INSTALL_PREFIX }}
+        make && sudo make install
     
-    - name: Build package
+    - name: Build .deb package
       shell: bash
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
         HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-20.04-lts
-        GIXSQLMAJ: ${{ env.GIXSQLMAJ }}
-        GIXSQLMIN: ${{ env.GIXSQLMIN }}
-        GIXSQLREL: ${{ env.GIXSQLREL }}
-        GIX_REVISION: ${{ env.GIX_REVISION }}
+        PKGDEBDIR: ${{ github.workspace }}/pkg
+        PKGNAME: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
+        
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh
+        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -93,44 +93,33 @@ jobs:
           packages: build-essential libmysqlclient-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev
           version: 1.0
 
-    - name: Build package
-      shell: bash
-      working-directory: ${{ github.workspace }}
-      env:
-        WORKSPACE: ${{ github.workspace }}
-        HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
-        DIST: ubuntu-20.04-lts
-        GIXSQLMAJ: ${{ env.GIXSQLMAJ }}
-        GIXSQLMIN: ${{ env.GIXSQLMIN }}
-        GIXSQLREL: ${{ env.GIXSQLREL }}
-        GIX_REVISION: ${{ env.GIX_REVISION }}
+    - name: Build GixSQL
+      working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh
+        chmod 755 prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ INSTALL_PREFIX }}
+        make && sudo make install
     
-    - name: Build package
+    - name: Build .deb package
       shell: bash
       working-directory: ${{ github.workspace }}
       env:
         WORKSPACE: ${{ github.workspace }}
         HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
         DIST: ubuntu-22.04-lts
-        GIXSQLMAJ: ${{ env.GIXSQLMAJ }}
-        GIXSQLMIN: ${{ env.GIXSQLMIN }}
-        GIXSQLREL: ${{ env.GIXSQLREL }}
-        GIX_REVISION: ${{ env.GIX_REVISION }}
+        PKGDEBDIR: ${{ github.workspace }}/pkg
+        PKGNAME: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
+        
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb.sh
+        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       env:
         WORKSPACE: ${{ github.workspace }}
         HOST_PLATFORM: ${{ env.HOST_PLATFORM }}
-        DIST: ubuntu-22.04-lts
-        GIXSQLMAJ: ${{ env.GIXSQLMAJ }}
-        GIXSQLMIN: ${{ env.GIXSQLMIN }}
-        GIXSQLREL: ${{ env.GIXSQLREL }}
-        GIX_REVISION: ${{ env.GIX_REVISION }}      
+        DIST: ubuntu-20.04-lts
       with:
         name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
         path: |

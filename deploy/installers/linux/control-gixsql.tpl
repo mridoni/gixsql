@@ -6,7 +6,7 @@ Architecture: amd64
 Depends: libmysqlclient21, libpq5, unixodbc
 Installed-Size: 11284
 Maintainer: Marco Ridoni <m.ridoni@gmail.com>
-Description: GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access ODBC, MySQL, PostgreSQL databases
+Description: GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access ODBC, MySQL, PostgreSQL, Oracle and SQLite databases
  .
  GixSQL comprises a preprocessor (a standalone executable or a library) 
  and a set of runtime libraries. libgixsql.dll/.so is the main library 
