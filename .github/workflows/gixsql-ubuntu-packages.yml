@@ -13,6 +13,7 @@ env:
   GIXSQLMIN: 0
   GIXSQLREL: 19
   GIX_REVISION: 900
+  GIXSQL_BRANCH: main
 
 permissions:
   contents: read
@@ -29,8 +30,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-          repository: 'mridoni/gix'
-          ref: new-debugger
+          repository: 'mridoni/gixsql'
+          ref: ${{ env.GIXSQL_BRANCH }}
     
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
@@ -84,8 +85,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
       with:
-          repository: 'mridoni/gix'
-          ref: new-debugger
+          repository: 'mridoni/gixsql'
+          ref: ${{ env.GIXSQL_BRANCH }}
     
     - uses: awalsh128/cache-apt-pkgs-action@latest
       with:
