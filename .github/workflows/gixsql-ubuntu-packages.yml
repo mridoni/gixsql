@@ -46,7 +46,7 @@ jobs:
         sudo dpkg -i bison_3.7.5+dfsg-1_amd64.deb      
         chmod 755 prepdist.sh && ./prepdist.sh
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/pkg/${{ INSTALL_PREFIX }}
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
         make && sudo make install
     
     - name: Build .deb package
@@ -98,7 +98,7 @@ jobs:
       run: |
         chmod 755 prepdist.sh && ./prepdist.sh
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/pkg/${{ INSTALL_PREFIX }}
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
         make && sudo make install
     
     - name: Build .deb package
