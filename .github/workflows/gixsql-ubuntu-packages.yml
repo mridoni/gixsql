@@ -58,14 +58,14 @@ jobs:
         PKGFILE: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}.deb
       run: |
         sudo mkdir -p $PKGDEBDIR/DEBIAN
-        echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
-        cat $WORKSPACE/deploy/installers/linux/control-gixsql.tpl | sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $PKGDEBDIR/DEBIAN/control
-        cd $WORKSPACE && find $PKGDEBDIR -type d | xargs chmod 755  
-        touch $PKGDEBDIR/DEBIAN/postinst
-        echo "#!/bin/bash" >> $PKGDEBDIR/DEBIAN/postinst
-        echo "exit 0" >> $PKGDEBDIR/DEBIAN/postinst
-        chmod 755 $PKGDEBDIR/DEBIAN/postinst
-        dpkg-deb --build $PKGDEBDIR ${{ github.workspace }}/$PKGFILE
+        sudo echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
+        sudo cat $WORKSPACE/deploy/installers/linux/control-gixsql.tpl | sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $PKGDEBDIR/DEBIAN/control
+        sudo find $PKGDEBDIR -type d | xargs chmod 755  
+        sudo touch $PKGDEBDIR/DEBIAN/postinst
+        sudo echo "#!/bin/bash" >> $PKGDEBDIR/DEBIAN/postinst
+        sudo echo "exit 0" >> $PKGDEBDIR/DEBIAN/postinst
+        sudo chmod 755 $PKGDEBDIR/DEBIAN/postinst
+        sudo dpkg-deb --build $PKGDEBDIR ${{ github.workspace }}/$PKGFILE
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -80,6 +80,7 @@ jobs:
 
   ubuntu-22-04-x64:
     name: ubuntu-22.04-x64
+    if: ${{ false }}
     env:
       DIST: ubuntu-22.04-lts
       HOST_PLATFORM: x64   
