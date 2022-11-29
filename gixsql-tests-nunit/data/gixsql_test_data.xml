@@ -294,6 +294,89 @@
 			</expected-output>
 		</test>
 
+		<test name="TSQL004B" enabled="true">
+			<description>CURSOR (open with USING)</description>
+			<issue-coverage>#000</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL004B.cbl" deps="EMPREC.cpy" />
+			</cobol-sources>
+
+			<data-sources count="2" />
+			<pre-run-sql-file>dbdata.sql</pre-run-sql-file>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>${{NOT}}employee #: [+0123]</line>
+				<line>${{NOT}}last name : [Doe       ]</line>
+				<line>${{NOT}}first name: [John      ]</line>
+				<line>${{NOT}}street    : [123, Nowhere Lane   ]</line>
+				<line>${{NOT}}city      : [Noplace        ]</line>
+				<line>${{NOT}}state     : [NA]</line>
+				<line>${{NOT}}zip code  : [00100]</line>
+				<line>${{NOT}}department: [DEP1]</line>
+				<line>${{NOT}}payrate   : [+0000000000200.00]</line>
+				<line>${{NOT}}commission: [+1.23]</line>
+				<line>${{NOT}}misc      : [abcd1234                                                                                                                        ]</line>
+				<line>${{NOT}}misc (len): [0000000008]</line>
+				<line>${{NOT}}dnum1     : [+00.00]</line>
+				<line>${{NOT}}dnum2     : [+22.33]</line>
+				<line>${{NOT}}dnum3     : [+33.44]</line>
+				<line>employee #: [+0456]</line>
+				<line>last name : [Smith     ]</line>
+				<line>first name: [Jane      ]</line>
+				<line>street    : [456, Someplace Rd.  ]</line>
+				<line>city      : [Somewhere      ]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00111]</line>
+				<line>department: [DEP2]</line>
+				<line>payrate   : [+0000000000130.00]</line>
+				<line>commission: [+3.45]</line>
+				<line>misc      : [defg5678hijk                                                                                                                    ]</line>
+				<line>misc (len): [0000000012]</line>
+				<line>dnum1     : [+55.66]</line>
+				<line>dnum2     : [+00.00]</line>
+				<line>dnum3     : [+99.11]</line>
+				<line>employee #: [+0789]</line>
+				<line>last name : [Smith2    ]</line>
+				<line>first name: [Jane2     ]</line>
+				<line>street    : [789, Someplace 2 Rd.]</line>
+				<line>city      : [Someplace Else ]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00123]</line>
+				<line>department: [DEP3]</line>
+				<line>payrate   : [+0000000000230.00]</line>
+				<line>commission: [+4.56]</line>
+				<line>misc      : [98005678hijk                                                                                                                    ]</line>
+				<line>misc (len): [0000000012]</line>
+				<line>dnum1     : [+12.34]</line>
+				<line>dnum2     : [+45.67]</line>
+				<line>dnum3     : [+00.00]</line>
+				<line>fetch 00000100</line>
+				<line>fetch +0000000100</line>
+				<line>All records in this table have been selected</line>
+				<line>reopen code:+0000000000</line>
+				<line>reopen msg :                                                                     </line>
+				<line>refetch +0000000000</line>
+				<line>refetch                                                                      </line>
+				<line>(reopen) employee #: [+0123]</line>
+				<line>(reopen) last name : [Doe       ]</line>
+				<line>(reopen) first name: [John      ]</line>
+				<line>(reopen) street    : [123, Nowhere Lane   ]</line>
+			</expected-output>
+		</test>
+
 		<test name="TSQL005A" enabled="true">
 			<description>BINARY/VARBINARY data types</description>
 			<issue-coverage>#000</issue-coverage>

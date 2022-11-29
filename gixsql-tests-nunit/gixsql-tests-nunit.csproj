@@ -30,6 +30,7 @@
     <None Remove="data\TSQL003B.cbl" />
     <None Remove="data\TSQL003C.cbl" />
     <None Remove="data\TSQL004A.cbl" />
+    <None Remove="data\TSQL004B.cbl" />
     <None Remove="data\TSQL005A.cbl" />
     <None Remove="data\TSQL005B.cbl" />
     <None Remove="data\TSQL005C.cbl" />
@@ -109,6 +110,7 @@
     <EmbeddedResource Include="data\TSQL003A.cbl" />
     <EmbeddedResource Include="data\TSQL003B.cbl" />
     <EmbeddedResource Include="data\TSQL003C.cbl" />
+    <EmbeddedResource Include="data\TSQL004B.cbl" />
     <EmbeddedResource Include="data\TSQL004A.cbl" />
     <EmbeddedResource Include="data\TSQL005A.cbl" />
     <EmbeddedResource Include="data\TSQL005B.cbl" />

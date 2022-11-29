@@ -305,7 +305,7 @@ namespace gixsql_tests
                         {
                             Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
                         }
-                        
+
 
                         if (!td.CompilerConfiguration.IsVsBased)
                         {
@@ -509,7 +509,10 @@ namespace gixsql_tests
                             if (t.StartsWith("{{SW}}"))
                                 Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(6).Trim())) > 0, $"Output mismatch (index: {i}, expected: {t}");
                             else
-                                Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
+                                if (t.StartsWith("{{NOT}}"))
+                                    Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
+                                else
+                                    Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
                         }
                         b2 = true;
                     }

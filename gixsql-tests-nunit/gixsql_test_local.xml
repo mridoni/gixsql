@@ -6,7 +6,7 @@
 		<gix-data-dir>C:\Users\marchetto\AppData\Local\Gix</gix-data-dir>
 		<keep-temps>1</keep-temps>
 		<temp-dir>D:\gix_tmp_test</temp-dir>
-		<verbose>0</verbose>
+		<verbose>1</verbose>
 		<test-filter></test-filter>
 		<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>
 	</global>
