@@ -55,9 +55,17 @@ jobs:
       env:
         WORKSPACE: ${{ github.workspace }}
         PKGDEBDIR: ${{ github.workspace }}/pkg
-        
+        PKGFILE: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.GIX_REVISION }}.deb
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && sudo ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
+        mkdir -p $PKGDEBDIR/DEBIAN
+        echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
+        cat $WORKSPACE/deploy/installers/linux/control-gixsql.tpl | sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $PKGDEBDIR/DEBIAN/control
+        cd $WORKSPACE && find $PKGDEBDIR -type d | xargs chmod 755  
+        touch $PKGDEBDIR/DEBIAN/postinst
+        echo "#!/bin/bash" >> $PKGDEBDIR/DEBIAN/postinst
+        echo "exit 0" >> $PKGDEBDIR/DEBIAN/postinst
+        chmod 755 $PKGDEBDIR/DEBIAN/postinst
+        cd $WORKSPACE && dpkg-deb --build $PKGDEBDIR $PKGFILE
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -106,7 +114,15 @@ jobs:
         PKGDEBDIR: ${{ github.workspace }}/pkg
         
       run: |
-        chmod 755 ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh && sudo ${{ github.workspace }}/deploy/installers/linux/mkdeb-gixsql.sh
+        mkdir -p $PKGDEBDIR/DEBIAN
+        echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
+        cat $WORKSPACE/deploy/installers/linux/control-gixsql.tpl | sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $PKGDEBDIR/DEBIAN/control
+        cd $WORKSPACE && find $PKGDEBDIR -type d | xargs chmod 755  
+        touch $PKGDEBDIR/DEBIAN/postinst
+        echo "#!/bin/bash" >> $PKGDEBDIR/DEBIAN/postinst
+        echo "exit 0" >> $PKGDEBDIR/DEBIAN/postinst
+        chmod 755 $PKGDEBDIR/DEBIAN/postinst
+        cd $WORKSPACE && dpkg-deb --build $PKGDEBDIR $PKGFILE
     
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
