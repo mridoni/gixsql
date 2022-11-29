@@ -1,3 +1,9 @@
+=== v1.0.19 ======================================================
+- Re-implemented autocommit and updatable cursor support (also affects #14)
+- Docs and examples are now included in the autoconf tarball (fixes #50)
+- Changed cursor state ownership (fixes #115)
+- Fix for "parser error on semicolon and error continuation does not work" (#118)
+
 === v1.0.18b =====================================================
 - Changed cursor initialization (should fix #88)
 - Fix for "1.0.17/1.0.18 regression: COMMIT and ROLLBACK delete all cursor definitions -> Status -111" (#119)

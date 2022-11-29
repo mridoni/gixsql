@@ -564,7 +564,36 @@ The return values for `SQLCODE`, as it is common knowledge, are not standard. Ma
 
 - While preprocessing, by using the `--no-rec-code` option and adding a numeric value (e.g. `--no-rec-code 1403`). This instructs the preprocessor to correctly handle the `NOT FOUND` clauses in `EXEC SQL WHENEVER` statements.
 - At runtime, by setting the `GIXSQL_NOREC_CODE` environment variable (e.g. `export GIXSQL_NOREC_CODE=1403` (Linux) or `set GIXSQL_NOREC_CODE=1403` (Windows)
-- 
+
+### Autocommit 
+Starting from v1.0.19 the autocommit feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
+
+The new implementation sees this feature being moved mainly from the main library (libgixsql) to the database driver libraries (e.g. libgixsql-pgsql), with only a few parameters passed around. The rationale behind this move is that different DBMSs behave in different ways, and trying to keep a unified approach would only lead to confusion (and bugs, a lot of bugs). What follows is the level of support featured by the various DB drivers.
+
+Autocommit will basically work in three different modes:
+
+- Native: the connection will start in the default mode used by the database
+- On: a COMMITwill be executed after each successful statement
+- Off: the connection will start by opening a transaction. A new connection will be started after each `COMMIT` and `ROLLBACK`
+
+**Driver notes:**
+
+- MySQL and ODBC (through their own drivers) directly support autocommit to be turned on or off, so the handling of this feature will be passed entirely to the native driver (e.g. libmysqlclient).
+- Oracle has no concept of autocommit, just as PostgreSQL, but the first one always work in transaction mode, while transactions must be explicitly started in PostgreSQL. While autocommit (or "transaction mode" in the case of PostgreSQL) have been - and will further be - tested, these differences (and the ones above) can probably lead to different behaviours when switching a single codebase that makes heavy use of the autocommit feature to a different DB, if precautions are not taken and tests performed.
+
+### Updatable cursors
+Starting from v1.0.19 the updatable cursor feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
+
+The new implementation sees this feature being moved mainly from the main library (libgixsql) to the database driver libraries (e.g. libgixsql-pgsql), with only a few parameters passed around. The rationale behind this move is that different DBMSs behave in different ways, and trying to keep a unified approach would only lead to confusion (and bugs, a lot of bugs). What follows is the level of support featured by the various DB drivers.
+
+Updatable cursors allow the update/deletion of a single cursor row after a fetch, using the clause `UPDATE...WHERE CURRENT OF mycursor` after a cursor has been opened `FOR UPDATE`.
+
+Driver notes:
+- Oracle directly supports updatable cursors, so the handling of this feature will be passed entirely to the native driver.
+- PostgreSQL directly supports updatable cursors when native cursors are enabled - this is the default - in the GixSQL driver (libgixsql-pgsql); in this case the handling of this feature will be passed entirely to the native driver. If cursors are emulated in PostgreSQL, updatable cursors are not available.
+- MySQL and SQLite have updatable cursor emulation: the table on which the cursor is opened must have a unique key that will be used for the update. This has been proven to work, but it is obviously (a lot) slower than native support.
+- ODBC will defer updatable cursor handling to its own drivers: it depends on them whether updatable cursors will be available or not. As a side note the ODBC driver for MySQL (MySQL Connector/ODBC) uses the same technique illustrated above to emulate updatable cursors.
+
 ## Driver notes
 
 ### PostgreSQL
