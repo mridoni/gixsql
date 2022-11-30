@@ -573,7 +573,7 @@ The new implementation sees this feature being moved mainly from the main librar
 Autocommit will basically work in three different modes:
 
 - Native: the connection will start in the default mode used by the database
-- On: a COMMITwill be executed after each successful statement
+- On: a `COMMIT` will be executed after each successful statement
 - Off: the connection will start by opening a transaction. A new connection will be started after each `COMMIT` and `ROLLBACK`
 
 **Driver notes:**
