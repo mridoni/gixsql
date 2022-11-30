@@ -13,7 +13,7 @@ env:
   GIXSQLMAJ: 1
   GIXSQLMIN: 0
   GIXSQLREL: 19dev1
-  GIX_REVISION: ${{ github.run_id }}
+  GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: v1.0.19dev1
   VCPKG_ROOT: C:\vcpkg
   GIXSQL_MSVC_X64_BIN_DIR: gixsql-windows-x64-msvc-artifacts
