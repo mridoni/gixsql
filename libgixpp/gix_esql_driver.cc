@@ -130,7 +130,7 @@ void gix_esql_driver::error (const yy::location& l, const std::string& m, int er
 	if (line == -1)
 		line = lexer.getLineNo();
 
-	std::string msg = string_format("%s:%d: error: %s", filename, line, m);
+	std::string msg = string_format("%s(%d): error: %s", filename, line, m);
 	this->pp_inst->err_data.err_messages.push_back(msg);
 	if (!this->pp_inst->err_data.err_code || err_code != ERR_ALREADY_SET)
 		this->pp_inst->err_data.err_code = err_code;
@@ -144,7 +144,7 @@ void gix_esql_driver::error (const std::string& m, int err_code, std::string fil
 
 void gix_esql_driver::warning(const yy::location &l, const std::string &m)
 {
-	std::string msg = string_format("%s:%d: warning: %s", this->lexer.src_location_stack.top().filename, lexer.getLineNo(), m);
+	std::string msg = string_format("%s(%d): warning: %s", this->lexer.src_location_stack.top().filename, lexer.getLineNo(), m);
 	this->pp_inst->err_data.warnings.push_back(msg);
 }
 
