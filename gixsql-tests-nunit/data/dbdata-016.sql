@@ -1,4 +1,4 @@
-﻿create table tab_a (col1 int, col2 int, key01 int)
+﻿create table tab_a (col1 int, col2 int, key01 int);
 --
 insert into tab_a (col1, col2, key01) values (100, 200, 0);
 insert into tab_a (col1, col2, key01) values (101, 201, 1);
