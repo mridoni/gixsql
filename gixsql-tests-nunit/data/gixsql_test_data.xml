@@ -3223,6 +3223,28 @@
 			</expected-preprocessed-file-content>
 		</test>
 
+		<test name="TSQL040A" enabled="true">
+			<description>Parser error on DECLARE TABLE statements</description>
+			<issue-coverage>#000</issue-coverage>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
 
+			<cobol-sources>
+				<src name="TSQL040A.cbl" />
+			</cobol-sources>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="false" />
+
+			<environment>
+			</environment>
+
+			<expected-output>
+			</expected-output>
+
+			<expected-preprocessed-file-content>
+			</expected-preprocessed-file-content>
+		</test>
 	</tests>
 </test-data>
