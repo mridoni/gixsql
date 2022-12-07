@@ -28,6 +28,10 @@ USA.
 
 #include "TPESQLProcessing.h"
 
+#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
+#include <Windows.h>
+#endif
+
 #if _DEBUG
 #if defined (VERBOSE)
 #define DEBUG_PARSER true
@@ -202,9 +206,9 @@ std::vector<cb_sql_token_t> *gix_esql_driver::cb_concat_text_list(std::vector<cb
 std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> *list, std::string text)
 {
 	// Handle placeholders for group items passed as host variables
-	if (map_contains(field_map, text.substr(1))) {
+	if (map_contains(_field_map, text.substr(1))) {
 		int f_type = 0, f_size = 0, f_scale = 0;
-		cb_field_ptr f = field_map[text.substr(1)];
+		cb_field_ptr f = _field_map[text.substr(1)];
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") && 
@@ -238,9 +242,9 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
 {
 	// Handle placeholders for group items passed as host variables
-	if (map_contains(field_map, text.substr(1))) {
+	if (map_contains(_field_map, text.substr(1))) {
 		int f_type = 0, f_size = 0, f_scale = 0;
-		cb_field_ptr f = field_map[text.substr(1)];
+		cb_field_ptr f = _field_map[text.substr(1)];
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
@@ -380,9 +384,29 @@ void gix_esql_driver::put_exec_list()
 
 }
 
+void gix_esql_driver::add_to_field_map(std::string k, cb_field_ptr f)
+{
+#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
+	char bfr[512];
+	sprintf(bfr, "Adding field to field_map: %s\n", k.c_str());
+	OutputDebugStringA(bfr);
+#endif
+	_field_map[k] = f;
+}
+
+cb_field_ptr gix_esql_driver::field_map(std::string k)
+{
+	return field_exists(k) ? _field_map[k] : nullptr;
+}
+
 bool gix_esql_driver::field_exists(const std::string &f)
 {
-	return (field_map.find(f) != field_map.end());
+	return (_field_map.find(f) != _field_map.end());
+}
+
+std::map<std::string, cb_field_ptr>& gix_esql_driver::get_field_map() const
+{
+	return const_cast<std::map<std::string, cb_field_ptr>&>(_field_map);
 }
 
 int cb_get_level(int val)
@@ -531,7 +555,7 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 				break;
 
 		}
-		field_map[f->sname] = f;
+		add_to_field_map(f->sname, f);
 	}
 
 	f->defined_at_source_line = lexer.getLineNo();
