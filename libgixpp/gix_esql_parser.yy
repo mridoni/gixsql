@@ -453,13 +453,13 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 
 	// We do NOT set FLAG_EMIT_VAR
 
-	if (driver.field_map.find(var_name) == driver.field_map.end()) {
+	if (!driver.field_exists(var_name)) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
 		std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
 		driver.field_sql_type_info[var_name] = d;
 	}
 	else {
-		x = driver.field_map[var_name];
+		x = driver.field_map(var_name);
 		if (IS_VARLEN(sql_type) && !IS_BINARY(sql_type)) {
 			type_info = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_PICX_AS_VARCHAR);
 		}

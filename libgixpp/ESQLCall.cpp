@@ -55,7 +55,7 @@ void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, in
 		addParameter(0, BY_VALUE);
 	}
 	else {
-		if (!map_contains<std::string, cb_field_ptr>(driver->field_map, p->name.substr(1)) || !driver->field_map[p->name.substr(1)]) {
+		if (!driver->field_exists(p->name.substr(1)) || !driver->field_map(p->name.substr(1))) {
 			this->error_msg = "Invalid or undefined parameter name: " + p->name.substr(1);
 			this->has_error = true;
 			return;
@@ -65,7 +65,7 @@ void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, in
 		addParameter(p->name.substr(1), BY_REFERENCE);
 
 		if (!varlen_sz) {	// Not a variable length field
-			addParameter(driver->field_map[p->name.substr(1)]->picnsize, BY_VALUE);
+			addParameter(driver->field_map(p->name.substr(1))->picnsize, BY_VALUE);
 		}
 		else {
 			addParameter(-varlen_sz, BY_VALUE);

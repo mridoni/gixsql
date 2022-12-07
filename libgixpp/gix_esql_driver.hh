@@ -146,6 +146,9 @@ public:
     void put_startup_exec_list();
     void put_exec_list();
 
+    void add_to_field_map(std::string k, cb_field_ptr f);
+    cb_field_ptr field_map(std::string k);
+
     int startlineno;
     int endlineno;
     int hostlineno;
@@ -196,7 +199,7 @@ public:
     GixPreProcessor *pp_inst = nullptr;
     TPESQLProcessing* pp_caller = nullptr;
     
-    std::map<std::string, cb_field_ptr> field_map;
+
     std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
 
     std::map<std::string, srcLocation> paragraphs;
@@ -204,7 +207,12 @@ public:
     std::string program_id;
 
     bool field_exists(const std::string &f);
+    std::map<std::string, cb_field_ptr>& get_field_map() const;
 
 #pragma endregion
+
+private:
+
+    std::map<std::string, cb_field_ptr> _field_map;
 
 };

@@ -250,6 +250,12 @@ bool TPESQLProcessing::run(ITransformationStep* prev_step)
 		input_file = prev_step->getOutput();
 	}
 
+#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
+	char bfr[512];
+	sprintf(bfr, "********************\nStarting run, processing file %s\n", input_file.c_str());
+	OutputDebugStringA(bfr);
+#endif
+
 #if _DEBUG_LOG_ON
 	char dbg_bfr[512];
 #if defined(_WIN32)
@@ -407,6 +413,12 @@ bool TPESQLProcessing::processNextFile()
 	std::string the_file = input_file_stack.top();
 	std::vector<std::string> input_lines = file_read_all_lines(the_file);
 
+#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
+		char bfr[512];
+		sprintf(bfr, "Processing file %s\n", the_file.c_str());
+		OutputDebugStringA(bfr);
+#endif
+
 	if (!input_lines.size()) {
 		input_file_stack.pop();
 		if (input_file_stack.size() > 0)
@@ -419,11 +431,6 @@ bool TPESQLProcessing::processNextFile()
 	for (int input_line = 1; input_line <= input_lines.size(); input_line++) {
 		current_input_line = input_line;
 
-#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
-		char bfr[512];
-		sprintf(bfr, "Processing line %d of file %s\n", input_line, the_file.c_str());
-		OutputDebugStringA(bfr);
-#endif
 		std::string cur_line = input_lines.at(input_line - 1);
 
 		bool in_ws = (input_line >= working_begin_line) && (input_line <= working_end_line);
@@ -693,7 +700,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 					return false;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
-				auto hr = main_module_driver.field_map[var_name];
+				auto hr = main_module_driver.field_map(var_name);
 				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
@@ -726,7 +733,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 					return false;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
-				auto hr = main_module_driver.field_map[var_name];
+				auto hr = main_module_driver.field_map(var_name);
 				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
@@ -853,6 +860,12 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 			add_dependency(input_file_stack.top(), copy_file);
 
+#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
+			char bfr[512];
+			bool b = ends_with(copy_file, "DPCTP006.cpy");
+			sprintf(bfr, "Preprocessing copy file %s\n", copy_file.c_str());
+			OutputDebugStringA(bfr);
+#endif
 			input_file_stack.push(filename_clean_path(copy_file));
 			if (!processNextFile())
 				return false;
@@ -1047,7 +1060,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map[rp->hostreference.substr(1)];
+			cb_field_ptr hr = main_module_driver.field_map(rp->hostreference.substr(1));
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in SELECT statements
@@ -1183,7 +1196,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map[p->hostreference.substr(1)];
+			cb_field_ptr hr = main_module_driver.field_map(p->hostreference.substr(1));
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in INSERT statements
@@ -1290,7 +1303,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			return false;
 		}
 
-		cb_field_ptr var = main_module_driver.field_map[var_name];
+		cb_field_ptr var = main_module_driver.field_map(var_name);
 		if (var->level != 1) {
 			main_module_driver.error(string_format("Invalid level for SQL variable, it is %02d, should be 01", var->level), ERR_INVALID_LEVEL, var->defined_at_source_file, var->defined_at_source_line);
 			return false;
@@ -1349,7 +1362,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					fdata->picnsize = cbl_int_part_len;
 					fdata->scale = 0;
 					fdata->parent = nullptr;
-					main_module_driver.field_map[fdata->sname] = fdata;
+					main_module_driver.add_to_field_map(fdata->sname, fdata);
 				}
 				else {
 					put_output_line(AREA_B_CPREFIX + string_format("01 %s.", var->sname));
@@ -1376,8 +1389,8 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					fdata->parent = var;
 					var->children->sister = fdata;
 
-					main_module_driver.field_map[flength->sname] = flength;
-					main_module_driver.field_map[fdata->sname] = fdata;
+					main_module_driver.add_to_field_map(flength->sname, flength);
+					main_module_driver.add_to_field_map(fdata->sname, fdata);
 				}
 			}
 			else {
@@ -1449,7 +1462,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
 			}
-			cb_field_ptr sv = main_module_driver.field_map[sv_name];
+			cb_field_ptr sv = main_module_driver.field_map(sv_name);
 			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
@@ -1516,7 +1529,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
 			}
-			cb_field_ptr sv = main_module_driver.field_map[sv_name];
+			cb_field_ptr sv = main_module_driver.field_map(sv_name);
 			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
@@ -1874,7 +1887,7 @@ bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, int* type, int* siz
 			f_actual_name = f->sname + "-" + opt_varlen_suffix_data;
 		}
 
-		cb_field_ptr f_actual = main_module_driver.field_map[f_actual_name];
+		cb_field_ptr f_actual = main_module_driver.field_map(f_actual_name);
 
 		if (f_actual) {
 			gethostvarianttype(f_actual, type);
@@ -1977,7 +1990,7 @@ bool TPESQLProcessing::fixup_declared_vars()
 					var->pictype = -1;
 					var->defined_at_source_line = orig_start_line;
 					var->defined_at_source_file = orig_src_file;
-					main_module_driver.field_map[var_name] = var;
+					main_module_driver.add_to_field_map(var_name, var);
 				}
 			}
 		}
@@ -1987,7 +2000,7 @@ bool TPESQLProcessing::fixup_declared_vars()
 			return false;
 		}
 
-		var = main_module_driver.field_map[var_name];
+		var = main_module_driver.field_map(var_name);
 		if (var->level != 1) {
 			std::string msg = string_format("Host variable %s has level %02d, should be 01", var_name, var->level);
 			//owner->err_data.err_messages.push_back(msg);
@@ -2174,8 +2187,9 @@ bool TPESQLProcessing::write_map_file(const std::string& preprocd_file)
 	// Variable declaraton source location info
 
 	mw.addSection("field_map");
-	mw.appendToSectionContents("field_map", main_module_driver.field_map.size());
-	for (std::map<std::string, cb_field_ptr>::const_iterator it = main_module_driver.field_map.begin(); it != main_module_driver.field_map.end(); ++it) {
+	auto const fmap = main_module_driver.get_field_map();
+	mw.appendToSectionContents("field_map", fmap.size());
+	for (std::map<std::string, cb_field_ptr>::const_iterator it = fmap.begin(); it != fmap.end(); ++it) {
 		std::string path = "";
 		std::string var = it->first;
 		cb_field_ptr fld = it->second;
@@ -2283,7 +2297,7 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map[rp->hostreference.substr(1)];
+		cb_field_ptr hr = main_module_driver.field_map(rp->hostreference.substr(1));
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		// Support for group items used as host variables in SELECT statements
@@ -2363,7 +2377,7 @@ bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map[p->hostreference.substr(1)];
+		cb_field_ptr hr = main_module_driver.field_map(p->hostreference.substr(1));
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		int flags = is_varlen ? CBL_FIELD_FLAG_VARLEN : CBL_FIELD_FLAG_NONE;
@@ -2538,7 +2552,7 @@ std::map<int, std::string> TPESQLProcessing::getReverseFileMap()
 
 std::map<std::string, cb_field_ptr>& TPESQLProcessing::getVariableDeclarationInfoMap() const
 {
-	return const_cast<std::map<std::string, cb_field_ptr>&>(main_module_driver.field_map);
+	return main_module_driver.get_field_map();
 }
 
 std::map<std::string, srcLocation> TPESQLProcessing::getParagraphs()
