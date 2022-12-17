@@ -19,7 +19,6 @@ namespace gixsql_tests
     {
         public static string TestTempDir => test_temp_dir;
         public static string TestGixInstallBase => test_install_base;
-        public static string TestGixDataDir => test_datadir;
         public static bool TestKeepTemps => test_keep_temps;
         public static bool TestVerbose => test_verbose;
         public static int TestCount => test_count;
@@ -38,7 +37,6 @@ namespace gixsql_tests
         private static string test_temp_dir = null;
         private static bool test_keep_temps = false;
         private static string test_install_base = null;
-        private static string test_datadir = null;
         private static bool test_verbose = false;
         private static int test_count = 0;
         private static List<string> test_filter_list = new List<string>();
@@ -80,15 +78,6 @@ namespace gixsql_tests
                 }
                 test_install_base = xg.InnerText;
                 Console.WriteLine("Install base: " + test_install_base);
-
-                // data dir (required, compiler packages, etc.)
-                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-data-dir");
-                if (xg == null || !Directory.Exists(xg.InnerText))
-                {
-                    throw new Exception("Invalid \"gix-data-dir\" in " + local_config);
-                }
-                test_datadir = xg.InnerText;
-                Console.WriteLine("Data dir: " + test_datadir);
 
                 // Keep temps (optional)
                 xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/keep-temps");

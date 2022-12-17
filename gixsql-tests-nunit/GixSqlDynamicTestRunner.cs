@@ -199,7 +199,7 @@ namespace gixsql_tests
 
                     string pp_file = msrc.Replace(".cbl", ".cbsql");
 
-                    CompilerConfig2 cc = td.CompilerConfiguration;
+                    //CompilerConfig2 cc = td.CompilerConfiguration;
 
                     // Preprocess
                     string client_pp_params = String.Empty;
