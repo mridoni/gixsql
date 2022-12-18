@@ -199,7 +199,7 @@ namespace gixsql_tests
 
                     string pp_file = msrc.Replace(".cbl", ".cbsql");
 
-                    //CompilerConfig2 cc = td.CompilerConfiguration;
+                    CompilerConfig2 cc = td.CompilerConfiguration;
 
                     // Preprocess
                     string client_pp_params = String.Empty;
@@ -210,7 +210,7 @@ namespace gixsql_tests
                         if (client_pp_params == null)
                             client_pp_params = String.Empty;
                     }
-                    string gixpp_args = $"-e -v -S -I. -I{cc.gix_copy_path} -i {msrc} -o {pp_file} {client_pp_params}";
+                    string gixpp_args = $"-e -v -S -I. -I{cc.gixsql_copy_path} -i {msrc} -o {pp_file} {client_pp_params}";
                     if (td.AdditionalPreProcessParams != String.Empty)
                         gixpp_args += (" " + td.AdditionalPreProcessParams);
 
@@ -300,7 +300,7 @@ namespace gixsql_tests
 
                     var r2 = Task.Run(async () =>
                     {
-                        string cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gix_copy_path} {pp_file} -L{cc.link_lib_dir_path} -l{cc.link_lib_lname}";
+                        string cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
                         if (TestDataProvider.TestVerbose)
                         {
                             Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
@@ -422,12 +422,12 @@ namespace gixsql_tests
                 if (td.BuildType == "exe")
                 {
                     exe = outfile;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.gixsql_link_lib_dir_path}";
                 }
                 else
                 {
                     exe = cc.cobcrun_exe;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.gixsql_link_lib_dir_path}";
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 

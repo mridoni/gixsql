@@ -194,4 +194,13 @@
     <PackageReference Include="System.Data.SQLite.EF6" Version="1.0.116" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="gixsql_test_local_linux.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="gixsql_test_local_windows.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

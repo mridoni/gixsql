@@ -18,7 +18,7 @@ namespace gixsql_tests
     public class TestDataProvider : Attribute
     {
         public static string TestTempDir => test_temp_dir;
-        public static string TestGixInstallBase => test_install_base;
+        public static string TestGixSqlInstallBase => test_install_base;
         public static bool TestKeepTemps => test_keep_temps;
         public static bool TestVerbose => test_verbose;
         public static int TestCount => test_count;
@@ -71,10 +71,10 @@ namespace gixsql_tests
                 doc.Load(local_config);
 
                 // Install base (required)
-                XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-install-base");
+                XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gixsql-install-base");
                 if (xg == null || !Directory.Exists(xg.InnerText))
                 {
-                    throw new Exception("Invalid \"gix-install-base\" in " + local_config);
+                    throw new Exception("Invalid \"gixsql-install-base\" in " + local_config);
                 }
                 test_install_base = xg.InnerText;
                 Console.WriteLine("Install base: " + test_install_base);
@@ -145,8 +145,8 @@ namespace gixsql_tests
                     if (!available_compiler_types.Contains(compiler_type))
                         continue;
 
-                    CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
-                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    CompilerConfig2 cc = CompilerConfig2.init(xe);
+                    Tuple<string, string> k = new Tuple<string, string>(compiler_type, compiler_arch);
                     available_compilers.Add(k, cc);
                 }
 
@@ -190,7 +190,7 @@ namespace gixsql_tests
                     available_data_sources.Add(k, ds);
                 }
 
-                foreach (var xn in doc.SelectNodes("/test-local-config/environment/variable"))
+                foreach (var xn in doc.SelectNodes("/test-local-config/global/environment/variable"))
                 {
                     XmlElement xe = (XmlElement)xn;
                     global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
