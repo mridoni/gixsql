@@ -118,12 +118,6 @@ namespace gixsql_tests
                     }
                 }
 
-                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/shell");
-                if (xg == null) {
-                    throw new Exception("Invalid \"temp-dir\" in " + local_config);
-                }
-                shell = xg.InnerText;
-
                 xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/mem-check");
                 if (xg != null && !String.IsNullOrWhiteSpace(xg.InnerText))  {
                     mem_check = xg.InnerText.ToLower();
