@@ -185,6 +185,25 @@ namespace gixsql_tests
         private void compile(GixSqlTestData td)
         {
             string compiler_init_cmd = "break"; // break does nothing
+            string _shell = String.Empty;
+            string _shell_args = String.Empty;
+
+            if (!TestDataProvider.Shell.Contains(" "))
+            {
+                _shell = TestDataProvider.Shell;
+            }
+            else
+            {
+                var sl = TestDataProvider.Shell.Split(' ');
+                if (sl.Length > 0)
+                {
+                    _shell = sl[0];
+                    for (int i = 1; i < sl.Length; i++)
+                        _shell_args += (sl[i] + " ");
+                }
+                _shell_args = _shell_args.Trim();
+            }
+
 
             Assert.IsTrue(td.CobolModules.Count > 0);
 
@@ -226,9 +245,11 @@ namespace gixsql_tests
                         gixpp_args = TestDataProvider.MemCheck + " " + gixpp_args;
                     }
 
+                    gixpp_args = _shell_args + " " + gixpp_args;
+
                     var r1 = Task.Run(async () =>
                     {
-                        return await Cli.Wrap(TestDataProvider.Shell)
+                        return await Cli.Wrap(_shell)
                              .WithArguments(gixpp_args)
                              .WithValidation(CommandResultValidation.None)
                              .ExecuteBufferedAsync();
@@ -329,6 +350,8 @@ namespace gixsql_tests
 
                         if (td.AdditionalCompileParams != String.Empty)
                             cobc_args += (" " + td.AdditionalCompileParams);
+
+                        cobc_args = _shell_args + " " + cobc_args;
 
                         return await Cli.Wrap(TestDataProvider.Shell)
                            .WithArguments(cobc_args)
