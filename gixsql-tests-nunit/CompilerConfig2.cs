@@ -64,7 +64,11 @@ namespace gixsql_tests
                 cc.gixsql_bin_path = Path.Combine(gix_base_path, "bin"); 
                 
                 cc.gixsql_lib_path = Path.Combine(gix_base_path, "lib");
-                cc.gixsql_link_lib_dir_path = Path.Combine(cc.gixsql_lib_path, compiler_arch, compiler_type);
+                if (isWindows)
+                    cc.gixsql_link_lib_dir_path = Path.Combine(cc.gixsql_lib_path, compiler_arch, compiler_type);
+                else
+                    cc.gixsql_link_lib_dir_path = cc.gixsql_lib_path;
+
                 cc.gixsql_link_lib_name = cc.IsVsBased ? "libgixsql.lib" : "libgixsql.a";
 
                 if (!File.Exists(Path.Combine(cc.gixsql_link_lib_dir_path, cc.gixsql_link_lib_name))) throw new Exception(Path.Combine(cc.gixsql_link_lib_dir_path, cc.gixsql_link_lib_name));
