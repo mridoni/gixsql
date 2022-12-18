@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+	<RunConfiguration>
+		<EnvironmentVariables>
+			<!-- if empty use embedded -->
+			<GIXTEST_TESTMATRIX_CONFIG></GIXTEST_TESTMATRIX_CONFIG>
+
+			<GIXTEST_LOCAL_CONFIG>C:\Users\marchetto\source\repos\gixsql-v1.0.20dev\gixsql-tests-nunit\gixsql_test_local_windows.xml</GIXTEST_LOCAL_CONFIG>
+		</EnvironmentVariables>
+	</RunConfiguration>
+</RunSettings>

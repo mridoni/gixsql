@@ -1,0 +1,213 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<test-local-config>
+
+	<global>
+		<gixsql-install-base>d:\gix-ide-x64</gixsql-install-base>
+		<keep-temps>1</keep-temps>
+		<temp-dir>D:\gix_tmp_test</temp-dir>
+		<verbose>1</verbose>
+		<test-filter></test-filter>
+		<!--<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>-->
+		<dbtype-filter>pgsql</dbtype-filter>
+
+		<environment>
+			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
+		</environment>
+	</global>
+
+
+	<architectures>
+		<architecture id="x64" />
+		<!--<architecture id="x86" />-->
+	</architectures>
+	<compiler-types>
+		<compiler-type id="msvc" />
+		<!--<compiler-type id="gcc" />-->
+	</compiler-types>
+
+	<compilers>
+		<compiler type="msvc" architecture="x64" id="gnucobol-3.1.2-windows-msvc-all">
+			<bin_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64</bin_dir_path>
+			<lib_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\lib_x64</lib_dir_path>
+			<config_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\config</config_dir_path>
+			<environment>
+			</environment>
+		</compiler>		
+		<compiler type="msvc" architecture="x86" id="gnucobol-3.1.2-windows-msvc-all">
+			<bin_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x86</bin_dir_path>
+			<lib_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\lib_x86</lib_dir_path>
+			<config_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\config</config_dir_path>
+			<environment>
+			</environment>
+		</compiler>
+		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-windows-mingw-x64">
+			<bin_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x64\bin</bin_dir_path>
+			<lib_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x64\lib</lib_dir_path>
+			<config_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x64\config</config_dir_path>
+			<environment>
+			</environment>
+		</compiler>
+		<compiler type="gcc" architecture="x86" id="gnucobol-3.1.2-windows-mingw-x86">
+			<bin_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x86\bin</bin_dir_path>
+			<lib_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x86\lib</lib_dir_path>
+			<config_dir_path>%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-mingw-x86\config</config_dir_path>
+			<environment>
+			</environment>
+		</compiler>
+	</compilers>
+
+	<data-source-clients>
+		<data-source-client type="pgsql" architecture="x64">
+			<environment>
+				<variable key="PATH" value="C:\vcpkg\installed\x64-windows\bin;C:\vcpkg\installed\x64-mingw-dynamic\bin" />
+			</environment>
+			<provider value="Npgsql" />
+		</data-source-client>
+		<data-source-client type="pgsql" architecture="x86">
+			<environment>
+				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
+			</environment>
+			<provider value="Npgsql" />
+		</data-source-client>
+
+		<data-source-client type="mysql" architecture="x86">
+			<environment>
+				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
+			</environment>
+			<provider value="MySql.Data.MySqlClient" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+		<data-source-client type="mysql" architecture="x64">
+			<environment>
+				<variable key="PATH" value="C:\vcpkg\installed\x64-windows\bin;C:\vcpkg\installed\x64-mingw-dynamic\bin" />
+			</environment>
+			<provider value="MySql.Data.MySqlClient" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+
+		<data-source-client type="oracle" architecture="x64">
+			<environment>
+				<variable key="PATH" value="D:\oracle\instantclient_21_6_x64" />
+			</environment>
+			<provider value="Oracle.ManagedDataAccess.Client" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+		<data-source-client type="oracle" architecture="x86">
+			<environment>
+				<variable key="PATH" value="D:\oracle\instantclient_21_6_x86" />
+			</environment>
+			<provider value="Oracle.ManagedDataAccess.Client" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+
+		<data-source-client type="sqlite" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="System.Data.SQLite" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+		<data-source-client type="sqlite" architecture="x86">
+			<environment>
+			</environment>
+			<provider value="System.Data.SQLite" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+
+		<data-source-client type="odbc" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="System.Data.Odbc" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+		<data-source-client type="odbc" architecture="x86">
+			<environment>
+			</environment>
+			<provider value="System.Data.Odbc" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+
+	</data-source-clients>
+
+	<data-sources>
+		<data-source type="pgsql" index="1">
+			<hostname>localhost</hostname>
+			<port>5432</port>
+			<dbname>testdb1</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options>native_cursors=off</options>
+		</data-source>
+		<data-source type="pgsql" index="2">
+			<hostname>localhost</hostname>
+			<port>5432</port>
+			<dbname>testdb2</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options>native_cursors=off</options>
+		</data-source>
+		<data-source type="mysql" index="1">
+			<hostname>192.168.1.171</hostname>
+			<port>3306</port>
+			<dbname>testdb1</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="mysql" index="2">
+			<hostname>192.168.1.171</hostname>
+			<port>3306</port>
+			<dbname>testdb2</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="oracle" index="1">
+			<hostname>192.168.56.135</hostname>
+			<port>1521</port>
+			<dbname>orcl</dbname>
+			<username>test1</username>
+			<password>test1</password>
+			<options></options>
+		</data-source>
+		<data-source type="oracle" index="2">
+			<hostname>192.168.56.135</hostname>
+			<port>1521</port>
+			<dbname>orcl</dbname>
+			<username>test2</username>
+			<password>test2</password>
+			<options></options>
+		</data-source>
+		<data-source type="sqlite" index="1">
+			<hostname>d:/gix_tmp_test/test_sqlite_1.db</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username></username>
+			<password></password>
+			<options></options>
+		</data-source>
+		<data-source type="sqlite" index="2">
+			<hostname>d:/gix_tmp_test/test_sqlite_2.db</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username></username>
+			<password></password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="1">
+			<hostname>ODBC_TEST1</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="2">
+			<hostname>ODBC_TEST2</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+	</data-sources>
+</test-local-config>
