@@ -1,3 +1,5 @@
+
+
 ﻿using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine;
@@ -319,7 +321,7 @@ namespace gixsql_tests
                         Console.WriteLine($"[cobc]: {cc.cobc_exe}");
                     }
 
-                    string outfile = msrc.Replace(".cbl", "." + td.BuildType);
+                    string outfile = msrc.Replace(".cbl", isWindows ? "." + td.BuildType : "");
 
                     string opt_exe = td.BuildType == "exe" ? "-x" : "";
 
@@ -356,7 +358,7 @@ namespace gixsql_tests
 
                         cobc_args = _shell_args + " " + cobc_args;
 
-                        return await Cli.Wrap(TestDataProvider.Shell)
+                        return await Cli.Wrap(_shell)
                            .WithArguments(cobc_args)
                            .WithEnvironmentVariables(new Dictionary<string, string>
                            {
@@ -430,7 +432,7 @@ namespace gixsql_tests
                 string module_src = td.CobolModules[module_index][0];
                 string module_filename = Path.GetFileName(module_src);
 
-                string outfile = module_filename.Replace(".cbl", "." + td.BuildType);
+                string outfile = module_filename.Replace(".cbl", isWindows ? "." + td.BuildType : "");
                 Assert.IsTrue(File.Exists(outfile));
 
                 CompilerConfig2 cc = td.CompilerConfiguration;
@@ -470,7 +472,9 @@ namespace gixsql_tests
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 
-                //set_db_client_path(td.Architecture, env);
+                if (!isWindows) {
+		    env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
+		}
 
                 if (TestDataProvider.TestVerbose)
                 {
