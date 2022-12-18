@@ -53,7 +53,11 @@ namespace gixsql_tests
                 cc.cobc_config_dir_path = Environment.ExpandEnvironmentVariables(xc.SelectSingleNode("config_dir_path")?.InnerText);
                 if (!Directory.Exists(cc.cobc_config_dir_path)) throw new Exception(cc.cobc_config_dir_path);
 
-                cc.gixsql_copy_path = Path.Combine(gix_base_path, "lib", "copy");
+                if (isWindows)
+                    cc.gixsql_copy_path = Path.Combine(gix_base_path, "lib", "copy");
+                else
+                    cc.gixsql_copy_path = Path.Combine(gix_base_path, "share", "config", "copy");
+
                 if (!Directory.Exists(cc.gixsql_copy_path)) throw new Exception(cc.gixsql_copy_path);
                 if (!File.Exists(Path.Combine(cc.gixsql_copy_path, "SQLCA.cpy"))) throw new Exception();
 
