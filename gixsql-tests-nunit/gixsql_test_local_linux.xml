@@ -24,9 +24,9 @@
 
 	<compilers>
 		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-linux-gcc-x64">
-			<bin_dir_path>/opt/gnucobol-3.1.2/bin</bin_dir_path>
-			<lib_dir_path>/opt/gnucobol-3.1.2/lib</lib_dir_path>
-			<config_dir_path>/opt/gnucobol-3.1.2/share/gnucobol/config</config_dir_path>
+			<bin_dir_path>/usr/bin</bin_dir_path>
+			<lib_dir_path>/usr/lib</lib_dir_path>
+			<config_dir_path>/etc/gnucobol</config_dir_path>
 			<environment>
 				<!--<variable key="PATH" value="/opt/gnucobol=3.1.2/bin" />
 				<variable key="COB_CONFIG_DIR" value="/opt/gnucobol=3.1.2/share/config" />-->
