@@ -56,7 +56,7 @@ namespace gixsql_tests
                 if (isWindows)
                     cc.gixsql_copy_path = Path.Combine(gix_base_path, "lib", "copy");
                 else
-                    cc.gixsql_copy_path = Path.Combine(gix_base_path, "share", "config", "copy");
+                    cc.gixsql_copy_path = Path.Combine(gix_base_path, "share", "gixsql", "copy");
 
                 if (!Directory.Exists(cc.gixsql_copy_path)) throw new Exception(cc.gixsql_copy_path);
                 if (!File.Exists(Path.Combine(cc.gixsql_copy_path, "SQLCA.cpy"))) throw new Exception();
