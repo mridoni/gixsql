@@ -22,6 +22,8 @@ namespace gixsql_tests
         public static bool TestKeepTemps => test_keep_temps;
         public static bool TestVerbose => test_verbose;
         public static int TestCount => test_count;
+        public static string Shell => shell;
+        public static string MemCheck => mem_check;
         public static List<string> TestFilterList => test_filter_list;
         public static List<string> TestDbTypeFilterList => db_filter_list;
 
@@ -34,8 +36,10 @@ namespace gixsql_tests
 
         private static Dictionary<string, string> global_env = new Dictionary<string, string>();
 
+        private static string shell = null;
         private static string test_temp_dir = null;
         private static bool test_keep_temps = false;
+        private static string mem_check = null;
         private static string test_install_base = null;
         private static bool test_verbose = false;
         private static int test_count = 0;
@@ -112,6 +116,17 @@ namespace gixsql_tests
                     foreach (var f in xg.InnerText.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))  {
                         test_filter_list.Add(f);
                     }
+                }
+
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/shell");
+                if (xg == null) {
+                    throw new Exception("Invalid \"temp-dir\" in " + local_config);
+                }
+                shell = xg.InnerText;
+
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/mem-check");
+                if (xg != null && !String.IsNullOrWhiteSpace(xg.InnerText))  {
+                    mem_check = xg.InnerText.ToLower();
                 }
 
                 // db type filter

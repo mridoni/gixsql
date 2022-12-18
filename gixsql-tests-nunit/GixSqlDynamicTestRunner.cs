@@ -219,13 +219,17 @@ namespace gixsql_tests
                         Console.WriteLine($"[gixpp]: {cc.gixpp_exe} {gixpp_args}");
                     }
 
+                    gixpp_args = cc.gixpp_exe + " " + gixpp_args;
+
+                    if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
+                    {
+                        gixpp_args = TestDataProvider.MemCheck + " " + gixpp_args;
+                    }
+
                     var r1 = Task.Run(async () =>
                     {
-                        return await Cli.Wrap(cc.gixpp_exe)
+                        return await Cli.Wrap(TestDataProvider.Shell)
                              .WithArguments(gixpp_args)
-                             //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer, System.Text.Encoding.ASCII))
-                             //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer, System.Text.Encoding.ASCII))
-                             //.WithEnvironmentVariables(env)
                              .WithValidation(CommandResultValidation.None)
                              .ExecuteBufferedAsync();
 
@@ -300,10 +304,21 @@ namespace gixsql_tests
 
                     var r2 = Task.Run(async () =>
                     {
-                        string cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
+                        string cobc_args;
+                        if (td.CompilerConfiguration.IsVsBased)
+                            cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
+                        else
+                            cobc_args = $"{cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
+
+
+                        if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
+                        {
+                            cobc_args = TestDataProvider.MemCheck + " " + cobc_args;
+                        }
+
                         if (TestDataProvider.TestVerbose)
                         {
-                            Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
+                            Console.WriteLine($"[cobc]: {TestDataProvider.Shell} {cobc_args}");
                         }
 
 
@@ -315,10 +330,8 @@ namespace gixsql_tests
                         if (td.AdditionalCompileParams != String.Empty)
                             cobc_args += (" " + td.AdditionalCompileParams);
 
-                        return await Cli.Wrap("cmd.exe")
+                        return await Cli.Wrap(TestDataProvider.Shell)
                            .WithArguments(cobc_args)
-                           //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                           //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                            .WithEnvironmentVariables(new Dictionary<string, string>
                            {
                                ["COB_CONFIG_DIR"] = cc.cobc_config_dir_path,

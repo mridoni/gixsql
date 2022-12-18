@@ -9,6 +9,8 @@
 		<test-filter></test-filter>
 		<!--<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>-->
 		<dbtype-filter>pgsql</dbtype-filter>
+		<shell>/bin/bash</shell>
+		<memcheck>valgrind --leak-check=yes</memcheck>
 
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
