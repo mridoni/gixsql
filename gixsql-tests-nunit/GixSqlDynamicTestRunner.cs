@@ -26,6 +26,7 @@ namespace gixsql_tests
         private bool except = false;
 
         private static bool factories_init = false;
+        private static bool isWindows = !File.Exists(@"/proc/sys/kernel/ostype");
 
         static GixSqlDynamicTestRunner()
         {
@@ -187,21 +188,17 @@ namespace gixsql_tests
             string compiler_init_cmd = "break"; // break does nothing
             string _shell = String.Empty;
             string _shell_args = String.Empty;
-
-            if (!TestDataProvider.Shell.Contains(" "))
+            bool _shell_implode_args = false;
+            
+            if (isWindows)
             {
-                _shell = TestDataProvider.Shell;
+                _shell = "cmd.exe";
             }
             else
             {
-                var sl = TestDataProvider.Shell.Split(' ');
-                if (sl.Length > 0)
-                {
-                    _shell = sl[0];
-                    for (int i = 1; i < sl.Length; i++)
-                        _shell_args += (sl[i] + " ");
-                }
-                _shell_args = _shell_args.Trim();
+                _shell = "/bin/bash";
+                _shell_args = "-c";
+                _shell_implode_args = true;
             }
 
 
@@ -244,6 +241,9 @@ namespace gixsql_tests
                     {
                         gixpp_args = TestDataProvider.MemCheck + " " + gixpp_args;
                     }
+
+                    if (_shell_implode_args)
+                        gixpp_args = "\"" + gixpp_args + "\"";
 
                     gixpp_args = _shell_args + " " + gixpp_args;
 
@@ -350,6 +350,9 @@ namespace gixsql_tests
 
                         if (td.AdditionalCompileParams != String.Empty)
                             cobc_args += (" " + td.AdditionalCompileParams);
+
+                        if (_shell_implode_args)
+                            cobc_args = "\"" + cobc_args + "\"";
 
                         cobc_args = _shell_args + " " + cobc_args;
 
