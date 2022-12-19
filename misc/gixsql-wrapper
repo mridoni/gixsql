@@ -7,5 +7,5 @@ if test "x$2" == "x"; then
 else
    input=$1; shift   
    output=$1; shift
-   $install_dir/bin/gixpp -e -I $install_dir/share/gix/copy -i $input -o $output $*
+   $install_dir/bin/gixpp -e -I $install_dir/share/gixsql/copy -i $input -o $output $*
 fi
