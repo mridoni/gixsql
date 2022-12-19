@@ -27,7 +27,7 @@
 
 static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
 
-typedef IDbInterface *(*DBLIB_PROVIDER_FUNC)();
+typedef std::shared_ptr<IDbInterface> (*DBLIB_PROVIDER_FUNC)();
 
 #if defined(_WIN32)
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
