@@ -141,7 +141,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 				spdlog::debug(FMT_FILE_FUNC "DB provider loaded from: {}", __FILE__, __func__, dll_path);
 			}
 #endif
-			dbi = std::make_shared<IDbInterface>(dblib_provider());
+			dbi.reset(dblib_provider());
 			lib_map[dbi] = libHandle;
 		}
 		else {
@@ -203,8 +203,9 @@ int DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
 		FreeLibrary(lib_ptr);
 #else
 		dlclose(lib_ptr);
-	}
+
 #endif
+	}
 
 	lib_map.erase(dbi);
 

@@ -23,6 +23,7 @@ USA.
 #include <string>
 #include <vector>
 #include <variant>
+#include <memory>
 
 #include "ICursor.h"
 #include "Logger.h"

@@ -791,7 +791,6 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	}
 	else {
 		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
-		uint8_t b0, b1;
 		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			return false;
@@ -965,8 +964,8 @@ int DbInterfaceODBC::get_data_len(SQLHANDLE hStmt, int cnum)
 	SQLULEN        ColumnDataSize;
 	SQLSMALLINT    ColumnDataDigits;
 	SQLSMALLINT    ColumnDataNullable;
-	SQLCHAR* ColumnData;
-	SQLLEN         ColumnDataLen;
+	//SQLCHAR*	   ColumnData;
+	//SQLLEN         ColumnDataLen;
 
 	rc = SQLDescribeCol(
 		hStmt,                    // Select Statement (Prepared)

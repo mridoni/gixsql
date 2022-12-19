@@ -31,6 +31,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <memory>
 
 #include "IConnection.h"
 #include "IDbInterface.h"
@@ -50,8 +51,8 @@ public:
 
 	LIBGIXSQL_API IDataSourceInfo *getConnectionInfo() override;
 	LIBGIXSQL_API void setConnectionInfo(IDataSourceInfo *) override;
-	LIBGIXSQL_API IDbInterface *getDbInterface() override;
-	LIBGIXSQL_API void setDbInterface(IDbInterface *) override;
+	LIBGIXSQL_API std::shared_ptr<IDbInterface> getDbInterface() override;
+	LIBGIXSQL_API void setDbInterface(std::shared_ptr<IDbInterface>) override;
 
 	LIBGIXSQL_API static bool test(IDataSourceInfo*);
 
@@ -74,6 +75,6 @@ private:
 	bool is_opened = false;
 	bool ext_conninfo;
 	IConnectionOptions options;
-	IDbInterface *dbi = nullptr;
+	std::shared_ptr<IDbInterface> dbi;
 };
 

@@ -81,7 +81,7 @@ void Connection::setOpened(bool i)
 	is_opened = i;
 }
 
-void Connection::setDbInterface(IDbInterface *_dbi)
+void Connection::setDbInterface(std::shared_ptr<IDbInterface> _dbi)
 {
 	dbi = _dbi;
 }
@@ -96,7 +96,7 @@ IDataSourceInfo *Connection::getConnectionInfo()
 	return conninfo;
 }
 
-IDbInterface * Connection::getDbInterface()
+std::shared_ptr<IDbInterface> Connection::getDbInterface()
 {
 	return dbi;
 }

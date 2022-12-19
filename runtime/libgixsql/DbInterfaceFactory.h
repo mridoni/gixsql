@@ -67,8 +67,10 @@ public:
 
 	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(int, const std::shared_ptr<spdlog::logger>& _logger);
 	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(std::string, const std::shared_ptr<spdlog::logger>& _logger);
+
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(int);
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(std::string);
+	
 	static int removeInterface(std::shared_ptr<IDbInterface> dbi);
 
 	static LIBGIXSQL_API std::vector<std::string> getAvailableDrivers();

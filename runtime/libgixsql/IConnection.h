@@ -21,6 +21,7 @@ USA.
 #pragma once
 
 #include <string>
+#include <memory>
 
 #include "IDbInterface.h"
 #include "IDataSourceInfo.h"
@@ -39,9 +40,9 @@ public:
 	virtual void setName(std::string) = 0;
 	virtual void setConnectionInfo(IDataSourceInfo *) = 0;
 	virtual void setOpened(bool) = 0;
-	virtual void setDbInterface(IDbInterface *) = 0;
+	virtual void setDbInterface(std::shared_ptr<IDbInterface> ) = 0;
 	virtual IDataSourceInfo *getConnectionInfo() = 0;
-	virtual IDbInterface *getDbInterface() = 0;
+	virtual std::shared_ptr<IDbInterface> getDbInterface() = 0;
 	virtual IConnectionOptions* getConnectionOptions() const = 0;
 	virtual void setConnectionOptions(IConnectionOptions *) = 0;
 };
