@@ -195,21 +195,20 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 
 int DbInterfaceFactory::removeInterface(IDbInterface *dbi)
 {
-	if (dbi == NULL)
+	if (!dbi || lib_map.find(dbi) == lib_map.end())
 		return 1;
 
-	if (lib_map.find(dbi) == lib_map.end())
-		return 1;
+	LIBHANDLE lib_ptr = lib_map[dbi];
+	if (lib_ptr) {
+#if defined(_WIN32)
+		FreeLibrary(lib_ptr);
+#else
+		dlclose(lib_ptr);
+	}
+#endif
 
 	lib_map.erase(dbi);
 	delete dbi; 
-
-	LIBHANDLE lib_ptr = lib_map[dbi];
-#if defined(_WIN32) || defined(_WIN64)
-	auto b = FreeLibrary(lib_ptr);
-#else
-	dlclose(lib_ptr);
-#endif
 
 	return 0;
 }

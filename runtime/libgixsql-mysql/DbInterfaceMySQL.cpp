@@ -40,7 +40,8 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 
 
 DbInterfaceMySQL::~DbInterfaceMySQL()
-{}
+{
+}
 
 int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
@@ -881,7 +882,6 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 		lib_logger->error("Invalid resultset");
 		return DBERR_SQL_ERROR;
 	}
-
 
 	if (col < wk_rs->data_buffers.size()) {
 		char* data = wk_rs->data_buffers.at(col);
