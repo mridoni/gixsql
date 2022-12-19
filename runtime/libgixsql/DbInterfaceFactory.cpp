@@ -24,9 +24,8 @@
 #include <cstring>
 
 #include "gixsql.h"
-#include "IDbInterface.h"
 
-static std::map<IDbInterface *, LIBHANDLE> lib_map;
+static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
 
 typedef IDbInterface *(*DBLIB_PROVIDER_FUNC)();
 
@@ -57,7 +56,7 @@ std::string GetLastErrorAsString()
 }
 #endif
 
-IDbInterface *DbInterfaceFactory::getInterface(int type, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(int type, const std::shared_ptr<spdlog::logger>& _logger)
 {
 	switch (type) {
 		case DB_PGSQL:
@@ -80,7 +79,7 @@ IDbInterface *DbInterfaceFactory::getInterface(int type, const std::shared_ptr<s
 	}
 }
 
-IDbInterface* DbInterfaceFactory::getInterface(std::string t, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(std::string t, const std::shared_ptr<spdlog::logger>& _logger)
 {
 		if (t == "pgsql")
 			return load_dblib("pgsql");
@@ -110,10 +109,10 @@ IDbManagerInterface* DbInterfaceFactory::getManagerInterface(std::string type)
 	return dynamic_cast<IDbManagerInterface *>(getManagerInterface(type));
 }
 
-IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 {
 	char bfr[256];
-	IDbInterface *dbi = NULL;
+	std::shared_ptr<IDbInterface> dbi;
 	LIBHANDLE libHandle = NULL;
 	DBLIB_PROVIDER_FUNC dblib_provider;
 
@@ -142,7 +141,7 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 				spdlog::debug(FMT_FILE_FUNC "DB provider loaded from: {}", __FILE__, __func__, dll_path);
 			}
 #endif
-			dbi = dblib_provider();
+			dbi = std::make_shared<IDbInterface>(dblib_provider());
 			lib_map[dbi] = libHandle;
 		}
 		else {
@@ -187,13 +186,13 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 
 #endif
 
-	if (dbi != NULL) {
+	if (dbi != nullptr) {
 		dbi->init(gixsql_logger);
 	}
 	return dbi;
 }
 
-int DbInterfaceFactory::removeInterface(IDbInterface *dbi)
+int DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
 {
 	if (!dbi || lib_map.find(dbi) == lib_map.end())
 		return 1;
@@ -208,7 +207,6 @@ int DbInterfaceFactory::removeInterface(IDbInterface *dbi)
 #endif
 
 	lib_map.erase(dbi);
-	delete dbi; 
 
 	return 0;
 }
