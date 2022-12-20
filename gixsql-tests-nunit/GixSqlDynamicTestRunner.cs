@@ -554,14 +554,14 @@ namespace gixsql_tests
                                 }
                             }
 
-                            var content_lines = content.Split("\r\n").ToList();
+                            var content_lines = content.Split(Environment.NewLine).ToList();
                             if (t.StartsWith("{{SW}}"))
                                 Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(6).Trim())) > 0, $"Output mismatch (index: {i}, expected: {t}");
                             else
                                 if (t.StartsWith("{{NOT}}"))
                                     Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
                                 else
-                                    Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
+                                    Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: [{t}]");
                         }
                         b2 = true;
                     }
