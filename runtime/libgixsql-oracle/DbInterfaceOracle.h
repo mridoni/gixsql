@@ -70,7 +70,7 @@ public:
 	~DbInterfaceOracle();
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
-	virtual int connect(IDataSourceInfo *, IConnectionOptions* opts) override;
+	virtual int connect(const std::shared_ptr<IDataSourceInfo>& conn_string, const std::shared_ptr<IConnectionOptions>& g_opts) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
 	//virtual int begin_transaction() override;

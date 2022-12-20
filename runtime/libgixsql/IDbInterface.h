@@ -119,7 +119,7 @@ public:
 	virtual ~IDbInterface() { }
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
-	virtual int connect(IDataSourceInfo *, IConnectionOptions *) = 0;
+	virtual int connect(const std::shared_ptr<IDataSourceInfo>&, const std::shared_ptr<IConnectionOptions>&) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
 	virtual int exec(std::string) = 0;

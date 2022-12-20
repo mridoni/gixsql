@@ -101,7 +101,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
+int DbInterfaceODBC::connect(const std::shared_ptr<IDataSourceInfo>& conn_string, const std::shared_ptr<IConnectionOptions>& g_opts)
 {
 	int rc = 0;
 	char dbms_name[256];

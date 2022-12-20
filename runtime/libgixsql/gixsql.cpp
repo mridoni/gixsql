@@ -76,9 +76,9 @@ static bool __lib_initialized = false;
 
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, std::shared_ptr<IDbInterface> dbi, int err);
-static AutoCommitMode get_autocommit(DataSourceInfo* ds);
-static bool get_fixup_params(DataSourceInfo*);
-static std::string get_client_encoding(DataSourceInfo*);
+static AutoCommitMode get_autocommit(const std::shared_ptr<DataSourceInfo>& ds);
+static bool get_fixup_params(const std::shared_ptr<DataSourceInfo>&);
+static std::string get_client_encoding(const std::shared_ptr<DataSourceInfo>&);
 static void init_sql_var_list(void);
 
 /* sql var list */
@@ -143,7 +143,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		return RESULT_FAILED;
 	}
 
-	DataSourceInfo* data_source = new DataSourceInfo();
+	std::shared_ptr<DataSourceInfo> data_source = std::make_shared<DataSourceInfo>();
 	int rc = data_source->init(data_source_info, dbname, username, password);
 	if (rc != 0) {
 		spdlog::error("Cannot initialize connection parameters, aborting, data source is [{}]", data_source_info);
@@ -159,7 +159,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 		return RESULT_FAILED;
 	}
 
-	std::shared_ptr<IConnectionOptions> opts(new IConnectionOptions());
+	std::shared_ptr<IConnectionOptions> opts = std::make_shared<IConnectionOptions>();
 	opts->autocommit = get_autocommit(data_source);;
 	opts->fixup_parameters = get_fixup_params(data_source);
 	opts->client_encoding = get_client_encoding(data_source);
@@ -170,7 +170,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	spdlog::trace(FMT_FILE_FUNC "Fix up parameters : {}", __FILE__, __func__, opts->fixup_parameters);
 	spdlog::trace(FMT_FILE_FUNC "Client encoding   : {}", __FILE__, __func__, opts->client_encoding);
 
-	rc = dbi->connect(data_source, opts.get());
+	rc = dbi->connect(data_source, opts);
 	if (rc != DBERR_NO_ERROR) {
 		setStatus(st, dbi, DBERR_CONNECTION_FAILED);
 		return RESULT_FAILED;
@@ -178,7 +178,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 
 	Connection* c = connection_manager.create();
 	c->setName(connection_id);	// it might still be empty, the connection manager will assign a default name
-	c->setConnectionOptions(opts.get());	// Generic/global connection options, separate from driver-specific options that reside only in the data source info
+	c->setConnectionOptions(opts);	// Generic/global connection options, separate from driver-specific options that reside only in the data source info
 	c->setConnectionInfo(data_source);
 	c->setDbInterface(dbi);
 	c->setOpened(true);
@@ -1379,7 +1379,7 @@ static int setStatus(struct sqlca_t* st, std::shared_ptr<IDbInterface> dbi, int 
 	return RESULT_SUCCESS;
 }
 
-static AutoCommitMode get_autocommit(DataSourceInfo* ds)
+static AutoCommitMode get_autocommit(const std::shared_ptr<DataSourceInfo>& ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
 	if (options.find("autocommit") != options.end()) {
@@ -1411,7 +1411,7 @@ static AutoCommitMode get_autocommit(DataSourceInfo* ds)
 }
 
 
-static bool get_fixup_params(DataSourceInfo* ds)
+static bool get_fixup_params(const std::shared_ptr<DataSourceInfo>& ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
 	if (options.find("fixup_params") != options.end()) {
@@ -1432,7 +1432,7 @@ static bool get_fixup_params(DataSourceInfo* ds)
 }
 
 
-static std::string get_client_encoding(DataSourceInfo* ds)
+static std::string get_client_encoding(const std::shared_ptr<DataSourceInfo>& ds)
 {
 	std::map<std::string, std::string> options = ds->getOptions();
 	if (options.find("client_encoding") != options.end()) {

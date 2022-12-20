@@ -57,7 +57,7 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
+int DbInterfaceMySQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_string, const std::shared_ptr<IConnectionOptions>& g_opts)
 {
 	int rc = 0;
 	MYSQL* conn;
@@ -639,15 +639,17 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 	}
 
 	if (wk_rs->column_count) {
-		MYSQL_BIND* bound_res_cols = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), wk_rs->column_count);
+		std::unique_ptr<MYSQL_BIND[]> bound_res_cols(new MYSQL_BIND[wk_rs->column_count]());
+		// memset(bound_res_cols.get(), sizeof(MYSQL_BIND) * wk_rs->column_count, 0);
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
+			
 			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
 		}
 
-		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols);
+		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			lib_logger->error("MySQL: Error while executing query ({} : {}) {}", last_rc, last_error, last_state);
 			return DBERR_FETCH_ROW_FAILED;
@@ -886,6 +888,7 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 	if (col < wk_rs->data_buffers.size()) {
 		char* data = wk_rs->data_buffers.at(col);
 		unsigned long datalen = *(wk_rs->data_lengths.at(col));
+		
 		if (datalen > bfrlen) {
 			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	// was just a warning
 			return false;
@@ -1027,7 +1030,7 @@ int MySQLStatementData::resizeColumnData()
 		data_buffers.push_back(bfr);
 		data_buffer_lengths.push_back(len);
 
-		unsigned long* dl = (unsigned long*)calloc(1, sizeof(int));
+		unsigned long* dl = (unsigned long*)calloc(1, sizeof(unsigned long*));
 		data_lengths.push_back(dl);
 	}
 
@@ -1041,9 +1044,13 @@ void MySQLStatementData::cleanup()
 	for (int i = 0; i < data_buffers.size(); i++) {
 		if (data_buffers.at(i))
 			free(data_buffers.at(i));
+
+		if (data_lengths.at(i))
+			free(data_lengths.at(i));
 	}
 	data_buffers.clear();
 	data_buffer_lengths.clear();
+	data_lengths.clear();
 }
 
 

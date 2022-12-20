@@ -71,9 +71,12 @@ public:
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(int);
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(std::string);
 	
-	static int removeInterface(std::shared_ptr<IDbInterface> dbi);
+	static bool removeInterface(std::shared_ptr<IDbInterface> dbi);
 
 	static LIBGIXSQL_API std::vector<std::string> getAvailableDrivers();
+
+	static void *getNativeLibraryHandle(IDbInterface *);
+	static void closeNativeLibrary(void *lib_ptr);
 
 private:
 

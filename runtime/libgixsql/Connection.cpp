@@ -24,7 +24,7 @@
 
 Connection::Connection()
 {	
-	ext_conninfo = false;
+	// ext_conninfo = false;
 	is_opened = false;
 }
 
@@ -34,9 +34,6 @@ Connection::~Connection()
 	if (dbi != NULL) {
 		DbInterfaceFactory::removeInterface(dbi);
 	}
-
-	if (conninfo && !ext_conninfo)
-		delete (conninfo);
 }
 
 int Connection::getId()
@@ -59,21 +56,21 @@ std::string Connection::getName()
 	return name;
 }
 
-IConnectionOptions* Connection::getConnectionOptions() const
+std::shared_ptr<IConnectionOptions> Connection::getConnectionOptions() const
 {
-	return (IConnectionOptions *)&options;
+	return options;
 }
 
-void Connection::setConnectionOptions(IConnectionOptions *p)
+void Connection::setConnectionOptions(std::shared_ptr<IConnectionOptions> p)
 {
-	options = *p;
+	options = p;
 }
 
-void Connection::setConnectionInfo(IDataSourceInfo *conn_string)
+void Connection::setConnectionInfo(std::shared_ptr<IDataSourceInfo> conn_string)
 {
 	conninfo = conn_string;
-	if (conn_string)
-		ext_conninfo = true;
+	// if (conn_string)
+	// 	ext_conninfo = true;
 }
 
 void Connection::setOpened(bool i)
@@ -91,7 +88,7 @@ bool Connection::test(IDataSourceInfo*)
 	return false;
 }
 
-IDataSourceInfo *Connection::getConnectionInfo()
+std::shared_ptr<IDataSourceInfo> Connection::getConnectionInfo()
 {
 	return conninfo;
 }

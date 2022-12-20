@@ -84,7 +84,7 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceOracle::connect(IDataSourceInfo* conn_info, IConnectionOptions* opts)
+int DbInterfaceOracle::connect(const std::shared_ptr<IDataSourceInfo>& conn_info, const std::shared_ptr<IConnectionOptions>& opts)
 {
 	lib_logger->trace(FMT_FILE_FUNC "ODPI::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)opts->autocommit, opts->client_encoding);
 

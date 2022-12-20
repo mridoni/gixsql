@@ -35,10 +35,10 @@ public:
 	~ConnectionManager();
 
 	Connection *create();
-	Connection *get(std::string name = "");
+	Connection *get(const std::string& name = "");
 	int add(Connection *conn);
 	void remove(Connection *conn);
-	bool exists(std::string cname);
+	bool exists(const std::string& cname);
 	std::vector<Connection*> list();
 
 private:

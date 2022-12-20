@@ -54,7 +54,7 @@ int DbInterfaceSQLite::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_opts)
+int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info, const std::shared_ptr<IConnectionOptions>& g_opts)
 {
 	sqlite3* conn;
 	std::string connstr;

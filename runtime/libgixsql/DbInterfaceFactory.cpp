@@ -192,24 +192,14 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 	return dbi;
 }
 
-int DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
+bool DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
 {
 	if (!dbi || lib_map.find(dbi) == lib_map.end())
-		return 1;
-
-	LIBHANDLE lib_ptr = lib_map[dbi];
-	if (lib_ptr) {
-#if defined(_WIN32)
-		FreeLibrary(lib_ptr);
-#else
-		dlclose(lib_ptr);
-
-#endif
-	}
+		return false;
 
 	lib_map.erase(dbi);
 
-	return 0;
+	return true;
 }
 
 
@@ -219,3 +209,25 @@ std::vector<std::string> DbInterfaceFactory::getAvailableDrivers()
 	return std::vector<std::string> { "odbc", "mysql", "pgsql", "oracle", "sqlite" } ;
 }
 
+void *DbInterfaceFactory::getNativeLibraryHandle(IDbInterface *dbi)
+{
+	if (!dbi)
+		return nullptr;
+
+	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
+		if (it->first.get() == dbi)
+			return it->second;
+	}
+	return nullptr;
+}
+
+void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
+{
+	if (lib_ptr) {
+#if defined(_WIN32)
+		FreeLibrary(lib_ptr);
+#else
+		dlclose(lib_ptr);
+#endif
+	}		
+}

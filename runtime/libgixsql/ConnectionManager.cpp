@@ -51,15 +51,15 @@ Connection *ConnectionManager::create()
 	return new Connection();
 }
 
-Connection *ConnectionManager::get(std::string name)
+Connection *ConnectionManager::get(const std::string& name)
 {
-	trim(name);
+	std::string n = trim_copy(name);
 
-	if (name.empty())
+	if (n.empty())
 		return default_connection;
 
-	if (_connection_name_map.find(name) != _connection_name_map.end())
-		return _connection_name_map[name];
+	if (_connection_name_map.find(n) != _connection_name_map.end())
+		return _connection_name_map[n];
 
 	return nullptr;
 }
@@ -96,7 +96,7 @@ void ConnectionManager::remove(Connection *conn)
 	delete (conn);
 }
 
-bool ConnectionManager::exists(std::string cname)
+bool ConnectionManager::exists(const std::string& cname)
 {
 	return _connection_name_map.find(cname) != _connection_name_map.end();
 }
