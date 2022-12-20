@@ -20,9 +20,9 @@ namespace gixsql_tests_nunit
 
             var tests = TestDataProvider.GetData();
 
-            foreach (object[] t in tests)
+            foreach (TestCaseData tcd in tests)
             {
-                GixSqlTestData test = (GixSqlTestData)t[0];
+                GixSqlTestData test = (GixSqlTestData) tcd.OriginalArguments[0];
 
                 if (TestDataProvider.TestVerbose)
                     Console.WriteLine("Running: " + test.FullName);
