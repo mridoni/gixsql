@@ -225,7 +225,7 @@ void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
 {
 	if (lib_ptr) {
 #if defined(_WIN32)
-		FreeLibrary(lib_ptr);
+		FreeLibrary((HMODULE)lib_ptr);
 #else
 		dlclose(lib_ptr);
 #endif

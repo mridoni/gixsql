@@ -73,7 +73,6 @@ private:
 	std::string name;
 	std::shared_ptr<IDataSourceInfo> conninfo;
 	bool is_opened = false;
-	// bool ext_conninfo;
 	std::shared_ptr<IConnectionOptions> options;
 	std::shared_ptr<IDbInterface> dbi;
 };
