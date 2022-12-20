@@ -30,6 +30,8 @@ namespace gixsql_tests
         private static bool factories_init = false;
         private static bool isWindows = !File.Exists(@"/proc/sys/kernel/ostype");
 
+        private static int cur_index = 1;
+
         static GixSqlDynamicTestRunner()
         {
 
@@ -37,6 +39,8 @@ namespace gixsql_tests
 
         public void Init(GixSqlTestData td)
         {
+            cur_index = 1;
+
             testMutex.WaitOne(TimeSpan.FromSeconds(20));
 
             if (!String.IsNullOrWhiteSpace(TestDataProvider.TestTempDir))
@@ -63,7 +67,6 @@ namespace gixsql_tests
 
         }
 
-        int cur_index = 1;
 
         public void Execute(GixSqlTestData td)
         {
