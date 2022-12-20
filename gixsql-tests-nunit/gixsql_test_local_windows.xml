@@ -10,7 +10,8 @@
 		<!--<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>-->
 		<dbtype-filter>pgsql</dbtype-filter>
 		<shell>cmd.exe</shell>
-		<memcheck>drmemory.exe --</memcheck>
+		<!-- <mem-check>drmemory.exe </mem-check> -->
+		<mem-check></mem-check>
 
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />

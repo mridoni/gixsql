@@ -896,13 +896,13 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	Cursor* cursor = cursor_manager.get(cname);
 	if (cursor == NULL) {
-		spdlog::error("cursor {} not registered.\n", cname);
+		spdlog::error("cursor {} not registered", cname);
 		setStatus(st, NULL, DBERR_NO_SUCH_CURSOR);
 		return RESULT_FAILED;
 	}
 
 	if (!cursor->isOpen()) {
-		spdlog::error("cursor {} already closed\n", cname);
+		spdlog::error("cursor {} already closed", cname);
 		setStatus(st, NULL, DBERR_NO_ERROR);
 		return RESULT_SUCCESS;
 	}
@@ -1072,7 +1072,7 @@ GIXSQLDisconnect(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 	std::string connection_id = get_hostref_or_literal(d_connection_id, connection_id_tl);
 	Connection* conn = connection_manager.get(connection_id);
 	if (conn == NULL) {
-		spdlog::error("connection is not found\n");
+		spdlog::error("connection is not found");
 		return RESULT_FAILED;
 	}
 
@@ -1145,7 +1145,7 @@ LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_
 	}
 
 	if (_res_sql_var_list.AddVar(type, length, scale, flags, addr) == NULL) {
-		spdlog::error("fail to add SQLVARLIST\n");
+		spdlog::error("fail to add SQLVARLIST");
 		return RESULT_FAILED;
 	}
 	return RESULT_SUCCESS;

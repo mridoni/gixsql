@@ -201,6 +201,7 @@ namespace gixsql_tests
             if (isWindows)
             {
                 _shell = "cmd.exe";
+                _shell_implode_args = true;
             }
             else
             {
@@ -255,6 +256,11 @@ namespace gixsql_tests
 
                     gixpp_args = _shell_args + " " + gixpp_args;
 
+                    if (isWindows)
+                        gixpp_args = "/C " + gixpp_args;
+                    else
+                        gixpp_args = "-c " + gixpp_args;
+
                     var r1 = Task.Run(async () =>
                     {
                         return await Cli.Wrap(_shell)
@@ -277,8 +283,8 @@ namespace gixsql_tests
                     if (!td.ExpectedToFailPreProcess)
                     {
                         Assert.IsTrue(r1.Result.ExitCode == 0, $"Exit code : {r1.Result.ExitCode:x}");
-                        Assert.IsTrue(File.Exists(pp_file));
-                        Assert.IsTrue((new FileInfo(pp_file)).Length > 0);
+                        Assert.IsTrue(File.Exists(pp_file), $"File not found: {pp_file}");
+                        Assert.IsTrue((new FileInfo(pp_file)).Length > 0, $"File empty: {pp_file}");
                     }
                     else
                     {
