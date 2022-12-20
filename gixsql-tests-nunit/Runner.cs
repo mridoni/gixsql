@@ -20,6 +20,8 @@ namespace gixsql_tests_nunit
 
             var tests = TestDataProvider.GetData();
 
+            GixSqlDynamicTestRunner.ResetCounter();
+
             foreach (TestCaseData tcd in tests)
             {
                 GixSqlTestData test = (GixSqlTestData) tcd.OriginalArguments[0];
