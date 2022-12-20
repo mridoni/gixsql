@@ -206,7 +206,7 @@ int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection_id)
 	int rc = dbi->reset();
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CONN_RESET_FAILED)
 
-		connection_manager.remove(conn);
+	connection_manager.remove(conn);
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
 

@@ -171,7 +171,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 		// If the function address is valid, call the function. 
 		if (dblib_provider != NULL)
 		{
-			dbi = dblib_provider();
+			dbi.reset(dblib_provider());
 			lib_map[dbi] = libHandle;
 		}
 		else {
