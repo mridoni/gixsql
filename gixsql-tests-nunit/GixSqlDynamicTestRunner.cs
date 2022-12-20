@@ -37,6 +37,11 @@ namespace gixsql_tests
 
         }
 
+        public static void ResetCounter()
+        {
+            cur_index = 1;
+        }
+
         public void Init(GixSqlTestData td)
         {
             testMutex.WaitOne(TimeSpan.FromSeconds(20));
