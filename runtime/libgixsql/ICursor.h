@@ -22,6 +22,7 @@ USA.
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "Connection.h"
 #include "SqlVar.h"
@@ -60,8 +61,8 @@ public:
 	virtual std::vector<int> getParameterTypes() = 0;
 	virtual std::vector<int> getParameterLengths() = 0;
 
-	virtual void *getPrivateData() = 0;
-	virtual void setPrivateData(IPrivateStatementData *) = 0;
+	virtual std::shared_ptr<IPrivateStatementData> getPrivateData() = 0;
+	virtual void setPrivateData(std::shared_ptr<IPrivateStatementData>) = 0;
 	virtual void clearPrivateData() = 0;
 
 	virtual uint64_t getRowNum() = 0;

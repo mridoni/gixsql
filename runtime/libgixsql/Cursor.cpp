@@ -188,17 +188,16 @@ std::vector<int> Cursor::getParameterLengths()
 	return param_lengths;
 }
 
-void* Cursor::getPrivateData()
+std::shared_ptr<IPrivateStatementData> Cursor::getPrivateData()
 {
 	return dbi_data;
 }
 
-void Cursor::setPrivateData(IPrivateStatementData* d)
+void Cursor::setPrivateData(std::shared_ptr<IPrivateStatementData> d)
 {
-	if (dbi_data) {
-		spdlog::warn("Private data is being set without first being deleted/cleared");
-		delete dbi_data;
-	}
+	// if (dbi_data) {
+	// 	spdlog::warn("Private data is being set without first being deleted/cleared");
+	// }
 
 	dbi_data = d;
 }

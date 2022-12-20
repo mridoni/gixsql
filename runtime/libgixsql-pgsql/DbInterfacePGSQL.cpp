@@ -204,21 +204,6 @@ int DbInterfacePGSQL::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-//int DbInterfacePGSQL::begin_transaction()
-//{
-//	int rc = exec("BEGIN TRANSACTION");
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-//}
-//
-//int DbInterfacePGSQL::end_transaction(std::string completion_type)
-//{
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	int rc = exec(completion_type);
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-//}
-
 int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
 {
 	std::string prepared_sql;
@@ -313,9 +298,6 @@ int DbInterfacePGSQL::exec(std::string query)
 {
 	return _pgsql_exec(nullptr, query);
 }
-
-//template<typename T>
-//using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 
 int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 {
@@ -510,7 +492,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, const std::string query,
 }
 
 
-int DbInterfacePGSQL::close_cursor(ICursor* cursor)
+int DbInterfacePGSQL::close_cursor(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = DBERR_NO_ERROR;
 
@@ -523,20 +505,18 @@ int DbInterfacePGSQL::close_cursor(ICursor* cursor)
 	}
 
 	if (cursor->getPrivateData()) {
-		PGResultSetData* wk_rs = (PGResultSetData*)cursor->getPrivateData();
-		delete wk_rs;
-		cursor->setPrivateData(nullptr);
+		cursor->clearPrivateData();
 	}
 
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_CLOSE_CURSOR_FAILED;
 }
 
-int DbInterfacePGSQL::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfacePGSQL::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool with_hold, int res_type)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -544,12 +524,12 @@ int DbInterfacePGSQL::cursor_declare(ICursor* cursor, bool with_hold, int res_ty
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfacePGSQL::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char** param_values, bool with_hold, int res_type)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}

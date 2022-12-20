@@ -22,13 +22,12 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "ICursor.h"
 #include "Connection.h"
 #include "SqlVar.h"
 #include "SqlVarList.h"
-
-
 
 class Connection;
 
@@ -62,8 +61,8 @@ public:
 	void setOpened(bool);
 
 	// For private DbInterfaceData
-	void *getPrivateData() override;
-	void setPrivateData(IPrivateStatementData *) override;
+	std::shared_ptr<IPrivateStatementData> getPrivateData() override;
+	void setPrivateData(std::shared_ptr<IPrivateStatementData>) override;
 	virtual void clearPrivateData() override;
 	
 	void setParameters(SqlVarList&);
@@ -92,7 +91,7 @@ private:
 
 	SqlVarList parameter_list; // parameter list
 
-	IPrivateStatementData *dbi_data = nullptr;
+	std::shared_ptr<IPrivateStatementData> dbi_data;
 
 	uint64_t rownum = 0;
 
