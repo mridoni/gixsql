@@ -1,6 +1,13 @@
 packages
 deploy/redist
 **/*.bak
+**/*.o
+**/*.lo
+**/*.la
+**/*.a
+**/*.deps
+**/*.libs
+**/*.log
 libgixpp/gix_esql_parser.cc
 libgixpp/gix_esql_parser.hh
 libgixpp/gix_esql_scanner.cc
