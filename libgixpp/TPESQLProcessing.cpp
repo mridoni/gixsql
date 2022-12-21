@@ -27,6 +27,7 @@ USA.
 #include "linq/linq.hpp"
 
 #include "cobol_var_types.h"
+#include "varlen_defs.h"
 
 #if defined(_WIN32) && defined(_DEBUG)
 #include <Windows.h>
@@ -94,21 +95,6 @@ USA.
 #define SQL_QUERY_BLOCK_SIZE	8191
 
 #define DEFAULT_NO_REC_CODE	100
-
-// These must be in sync with the ones in SqlVar.h
-#ifdef USE_VARLEN_16
-#define VARLEN_LENGTH_PIC		"9(4) COMP-5"
-#define VARLEN_PIC_SZ			4
-#define VARLEN_LENGTH_SZ		2
-#define VARLEN_LENGTH_T			uint16_t
-#define VARLEN_BSWAP			COB_BSWAP_16
-#else
-#define VARLEN_LENGTH_PIC		"9(8) COMP-5"
-#define VARLEN_PIC_SZ			9
-#define VARLEN_LENGTH_SZ		4
-#define VARLEN_LENGTH_T			uint32_t
-#define VARLEN_BSWAP			COB_BSWAP_32
-#endif
 
 enum class ESQL_Command
 {

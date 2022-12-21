@@ -34,14 +34,14 @@ public:
 	ConnectionManager();
 	~ConnectionManager();
 
-	Connection *create();
-	Connection *get(const std::string& name = "");
-	int add(Connection *conn);
-	void remove(Connection *conn);
+	std::shared_ptr<Connection> create();
+	std::shared_ptr<Connection> get(const std::string& name = "");
+	int add(std::shared_ptr<Connection> conn);
+	void remove(std::shared_ptr<Connection> conn);
 	bool exists(const std::string& cname);
-	std::vector<Connection*> list();
+	std::vector<std::shared_ptr<Connection>> list();
 
 private:
-	Connection *default_connection = nullptr;
+	std::shared_ptr<Connection> default_connection;
 };
 

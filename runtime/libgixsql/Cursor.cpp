@@ -40,9 +40,9 @@ Cursor::~Cursor()
 {
 }
 
-void Cursor::setConnection(IConnection* c)
+void Cursor::setConnection(std::shared_ptr<IConnection> c)
 {
-	connection = (Connection*)c;
+	connection = c;
 }
 
 void Cursor::setConnectionName(std::string n)
@@ -71,9 +71,9 @@ void Cursor::setNumParams(int np)
 	nParams = np;
 }
 
-IConnection* Cursor::getConnection()
+std::shared_ptr<IConnection> Cursor::getConnection()
 {
-	return (IConnection*)connection;
+	return connection;
 }
 
 std::string Cursor::getConnectionName()

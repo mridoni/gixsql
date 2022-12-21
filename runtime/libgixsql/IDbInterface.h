@@ -31,6 +31,7 @@ USA.
 #include "IDataSourceInfo.h"
 #include "IConnectionOptions.h"
 #include "IDbManagerInterface.h"
+#include "IResultSetContextData.h"
 
 #define USE_DEFAULT_CONNECTION		-998
 
@@ -129,7 +130,7 @@ public:
 	virtual int cursor_declare_with_params(const std::shared_ptr<ICursor>& crsr, char **, bool, int) = 0;
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int fetch_one(const std::shared_ptr<ICursor>& crsr, int) = 0;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void *context, int row, int col, char* bfr, int bfrlen, int* value_len) = 0;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, IResultSetContextData context, int row, int col, char* bfr, int bfrlen, int* value_len) = 0;
 	virtual bool move_to_first_record(std::string stmt_name = "") = 0;
 	virtual uint64_t get_native_features() = 0;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) = 0;
@@ -138,7 +139,7 @@ public:
 	virtual int get_error_code() = 0;
 	virtual std::string get_state() = 0;
 	virtual void set_owner(std::shared_ptr<IConnection>) = 0;
-	virtual IConnection* get_owner() = 0;
+	virtual std::shared_ptr<IConnection> get_owner() = 0;
 	virtual int prepare(std::string stmt_name, std::string sql) = 0;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) = 0;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;

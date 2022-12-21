@@ -23,6 +23,7 @@
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 
 #include "Cursor.h"
 
@@ -32,18 +33,18 @@ public:
 	CursorManager();
 	~CursorManager();
 
-	Cursor *create();
+	std::shared_ptr<Cursor> create();
 	void clearConnectionCursors(int, bool);
 	void closeConnectionCursors(int, bool);
 	
 	//static Cursor *current();
-	int add(Cursor *);
-	void remove(Cursor *);
+	int add(std::shared_ptr<Cursor>);
+	void remove(std::shared_ptr<Cursor>);
 	bool exists(std::string cname);
-	Cursor *get(std::string cname);
+	std::shared_ptr<Cursor> get(std::string cname);
 
 private:
-	std::vector<Cursor *> _cursor_list;
-	std::map<std::string, Cursor *> _cursor_map;
+	std::vector<std::shared_ptr<Cursor>> _cursor_list;
+	std::map<std::string, std::shared_ptr<Cursor>> _cursor_map;
 };
 

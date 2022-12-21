@@ -25,11 +25,9 @@
 #include <memory>
 
 #include "ICursor.h"
-#include "Connection.h"
+#include "IConnection.h"
 #include "SqlVar.h"
 #include "SqlVarList.h"
-
-class Connection;
 
 class Cursor : public ICursor
 {
@@ -39,13 +37,13 @@ public:
 	~Cursor();
 
 	// ICursor
-	void setConnection(IConnection *) override;
+	void setConnection(std::shared_ptr<IConnection>) override;
 	void setConnectionName(std::string) override;
 	void setName(std::string) override;
 	void setQuery(std::string) override;
 	void setQuerySource(void*, int) override;
 	void setNumParams(int) override;
-	IConnection *getConnection() override;
+	std::shared_ptr<IConnection> getConnection() override;
 	std::string getConnectionName() override;
 	std::string getName() override;
 	std::string getQuery() override;
@@ -78,16 +76,16 @@ public:
 
 private:
 
-	Connection *connection; // connection id
-	std::string connection_name; // default NULL
-	std::string name; // default NULL
-	std::string query; // default NULL
+	std::shared_ptr<IConnection> connection;
+	std::string connection_name;
+	std::string name;
+	std::string query;
 	void* query_source_addr = nullptr;
 	int query_source_len = 0;
-	int nParams = 0; // params for query
-	bool is_opened = false; //open flag
+	int nParams = 0;
+	bool is_opened = false;
 	bool is_with_hold = false;
-	int tuples = 0; //fetched row number
+	int tuples = 0;
 
 	SqlVarList parameter_list; // parameter list
 

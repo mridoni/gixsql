@@ -24,15 +24,10 @@ USA.
 #include <vector>
 #include <memory>
 
-#include "Connection.h"
-#include "SqlVar.h"
-#include "SqlVarList.h"
-
-class IConnection;
+#include "IConnection.h"
 
 struct IPrivateStatementData {
 
-public:
 	virtual ~IPrivateStatementData() {}
 };
 
@@ -41,14 +36,14 @@ class ICursor
 
 public:
 
-	virtual void setConnection(IConnection *) = 0;
+	virtual void setConnection(std::shared_ptr<IConnection>) = 0;
 	virtual void setConnectionName(std::string) = 0;
 	virtual void setName(std::string) = 0;
 	virtual void setQuery(std::string) = 0;
 	virtual void setQuerySource(void *, int) = 0;
 	virtual void setNumParams(int) = 0;
 
-	virtual IConnection *getConnection() = 0;
+	virtual std::shared_ptr<IConnection> getConnection() = 0;
 	virtual std::string getConnectionName() = 0;
 	virtual std::string getName() = 0;
 	virtual std::string getQuery() = 0;

@@ -100,6 +100,7 @@
     </ClInclude>
     <ClInclude Include="default_driver.h" />
     <ClInclude Include="IConnectionOptions.h" />
+    <ClInclude Include="IResultSetContextData.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

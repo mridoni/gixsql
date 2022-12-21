@@ -27,6 +27,7 @@ USA.
 #include <tuple>
 #include <libpq-fe.h>
 
+#include "varlen_defs.h"
 #include "ICursor.h"
 #include "IDbInterface.h"
 #include "IDbManagerInterface.h"
@@ -46,6 +47,8 @@ struct PGResultSetData : public IPrivateStatementData {
 	int num_rows = 0;
 };
 
+// struct PGResultSetData_Deleter;
+
 class DbInterfacePGSQL : public IDbInterface, public IDbManagerInterface
 {
 public:
@@ -61,9 +64,9 @@ public:
 	virtual int close_cursor(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr, bool, int) override;
 	virtual int cursor_declare_with_params(const std::shared_ptr<ICursor>& crsr, char **, bool, int) override;
-	virtual int cursor_open(ICursor* cursor);
+	virtual int cursor_open(const std::shared_ptr<ICursor>& cursor);
 	virtual int fetch_one(const std::shared_ptr<ICursor>& crsr, int) override;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int *value_len);
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, IResultSetContextData context, int row, int col, char* bfr, int bfrlen, int *value_len);
 	virtual bool move_to_first_record(std::string stmt_name = "") override;
 	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) override;
@@ -72,7 +75,7 @@ public:
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;
 	virtual void set_owner(std::shared_ptr<IConnection>) override;
-	virtual IConnection* get_owner() override;
+	virtual std::shared_ptr<IConnection> get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
 	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
@@ -96,8 +99,8 @@ private:
 
 	int decode_binary = DECODE_BINARY_DEFAULT;
 
-	int _pgsql_exec(ICursor *crsr, const std::string);
-	int _pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
+	int _pgsql_exec(const std::shared_ptr<ICursor>& crsr, const std::string& query);
+	int _pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, const std::string& query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats);
 
 	bool retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src);
 

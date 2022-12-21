@@ -23,8 +23,8 @@ USA.
 #include <string>
 #include <memory>
 
-#include "IDbInterface.h"
-#include "IDataSourceInfo.h"
+//#include "IDbInterface.h"
+//#include "IDataSourceInfo.h"
 #include "IConnectionOptions.h"
 
 class IDataSourceInfo;
