@@ -73,7 +73,7 @@
                     DNUM2,
                     DNUM3
                  FROM EMPTABLE
-               WHERE ENO BETWEEN $1 AND $2
+               WHERE ENO BETWEEN :ENO-START AND :ENO-END
            END-EXEC.
            
        PROCEDURE DIVISION. 
@@ -174,6 +174,9 @@
        
       * we try a single open + fetch + close to see if the cursor
       * is still available for opening after being closed
+
+           MOVE 789 TO ENO-START.
+           MOVE 999 TO ENO-END.
 
       *  open cursor
            EXEC SQL

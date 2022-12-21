@@ -318,21 +318,20 @@
 			<run value="true" />
 
 			<expected-output>
-				<line>${{NOT}}employee #: [+0123]</line>
-				<line>${{NOT}}last name : [Doe       ]</line>
-				<line>${{NOT}}first name: [John      ]</line>
-				<line>${{NOT}}street    : [123, Nowhere Lane   ]</line>
-				<line>${{NOT}}city      : [Noplace        ]</line>
-				<line>${{NOT}}state     : [NA]</line>
-				<line>${{NOT}}zip code  : [00100]</line>
-				<line>${{NOT}}department: [DEP1]</line>
-				<line>${{NOT}}payrate   : [+0000000000200.00]</line>
-				<line>${{NOT}}commission: [+1.23]</line>
-				<line>${{NOT}}misc      : [abcd1234                                                                                                                        ]</line>
-				<line>${{NOT}}misc (len): [0000000008]</line>
-				<line>${{NOT}}dnum1     : [+00.00]</line>
-				<line>${{NOT}}dnum2     : [+22.33]</line>
-				<line>${{NOT}}dnum3     : [+33.44]</line>
+				<line>{{NOT}}employee #: [+0123]</line>
+				<line>{{NOT}}last name : [Doe       ]</line>
+				<line>{{NOT}}first name: [John      ]</line>
+				<line>{{NOT}}street    : [123, Nowhere Lane   ]</line>
+				<line>{{NOT}}city      : [Noplace        ]</line>
+				<line>{{NOT}}zip code  : [00100]</line>
+				<line>{{NOT}}department: [DEP1]</line>
+				<line>{{NOT}}payrate   : [+0000000000200.00]</line>
+				<line>{{NOT}}commission: [+1.23]</line>
+				<line>{{NOT}}misc      : [abcd1234                                                                                                                        ]</line>
+				<line>{{NOT}}misc (len): [0000000008]</line>
+				<line>{{NOT}}dnum1     : [+00.00]</line>
+				<line>{{NOT}}dnum2     : [+22.33]</line>
+				<line>{{NOT}}dnum3     : [+33.44]</line>
 				<line>employee #: [+0456]</line>
 				<line>last name : [Smith     ]</line>
 				<line>first name: [Jane      ]</line>
@@ -370,10 +369,10 @@
 				<line>reopen msg :                                                                     </line>
 				<line>refetch +0000000000</line>
 				<line>refetch                                                                      </line>
-				<line>(reopen) employee #: [+0123]</line>
-				<line>(reopen) last name : [Doe       ]</line>
-				<line>(reopen) first name: [John      ]</line>
-				<line>(reopen) street    : [123, Nowhere Lane   ]</line>
+				<line>(reopen) employee #: [+0789]</line>
+				<line>(reopen) last name : [Smith2    ]</line>
+				<line>(reopen) first name: [Jane2     ]</line>
+				<line>(reopen) street    : [789, Someplace 2 Rd.]</line>
 			</expected-output>
 		</test>
 

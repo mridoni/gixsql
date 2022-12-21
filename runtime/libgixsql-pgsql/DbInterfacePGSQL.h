@@ -66,7 +66,7 @@ public:
 	virtual int cursor_declare_with_params(const std::shared_ptr<ICursor>& crsr, char **, bool, int) override;
 	virtual int cursor_open(const std::shared_ptr<ICursor>& cursor);
 	virtual int fetch_one(const std::shared_ptr<ICursor>& crsr, int) override;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, IResultSetContextData context, int row, int col, char* bfr, int bfrlen, int *value_len);
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int *value_len);
 	virtual bool move_to_first_record(std::string stmt_name = "") override;
 	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) override;

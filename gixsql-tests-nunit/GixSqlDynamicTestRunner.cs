@@ -185,7 +185,9 @@ namespace gixsql_tests
             catch (Exception ex)
             {
                 except = true;
-                Console.WriteLine(ex.StackTrace);
+                if (TestDataProvider.TestVerbose)
+                    Console.WriteLine(ex.StackTrace);
+
                 throw ex;
             }
 

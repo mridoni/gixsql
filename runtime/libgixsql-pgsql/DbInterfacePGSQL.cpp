@@ -590,7 +590,7 @@ int DbInterfacePGSQL::fetch_one(const std::shared_ptr<ICursor>& cursor, int fetc
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, IResultSetContextData context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
 {
 	size_t to_length = 0;
 	*value_len = 0;
@@ -605,7 +605,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 		case ResultSetContextType::PreparedStatement:
 		{
-			PreparedStatementContextData& p = dynamic_cast<PreparedStatementContextData&>(context);
+			PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
 			std::string stmt_name = p.prepared_statement_name;
 			stmt_name = to_lower(stmt_name);
@@ -620,7 +620,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 		case ResultSetContextType::Cursor:
 		{
-			CursorContextData& p = dynamic_cast<CursorContextData&>(context);
+			CursorContextData& p = (CursorContextData&)context;
 			std::shared_ptr <ICursor> c = p.cursor;
 			if (!c) {
 				lib_logger->error("Invalid cursor reference");
