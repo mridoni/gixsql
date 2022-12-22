@@ -27,16 +27,18 @@ USA.
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "DbInterfacePGSQL.h"
 #include "Logger.h"
 
 extern "C" {
 
-	LIBGIXSQL_API IDbInterface *get_dblib()
+	LIBGIXSQL_API std::shared_ptr<IDbInterface> get_dblib()
 	{
-		IDbInterface *dbi = new DbInterfacePGSQL();
-		return dbi;
+		return std::make_shared<DbInterfacePGSQL>();
+		// IDbInterface *dbi = new DbInterfacePGSQL();
+		// return dbi;
 	}
 
 }

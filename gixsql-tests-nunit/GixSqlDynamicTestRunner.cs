@@ -490,9 +490,13 @@ namespace gixsql_tests
 
                 if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
                 {
-                    if (TestDataProvider.MemCheck.Contains(' ')) {
-                        args = TestDataProvider.MemCheck.Substring(TestDataProvider.MemCheck.IndexOf(' ') + 1) + " " + exe;
-                        exe = TestDataProvider.MemCheck.Substring(0, TestDataProvider.MemCheck.IndexOf(' '));
+                    string mc = TestDataProvider.MemCheck.Replace("${testid}", td.Name);
+                    mc = mc.Replace("${isodate}", DateTime.Now.ToString("yyyyMMdd"));
+                    mc = mc.Replace("${isotime}", DateTime.Now.ToString("HHmmss"));
+
+                    if (mc.Contains(' ')) {
+                        args = mc.Substring(mc.IndexOf(' ') + 1) + " " + exe;
+                        exe = mc.Substring(0, mc.IndexOf(' '));
                     }
                     else
                     {
@@ -514,7 +518,7 @@ namespace gixsql_tests
                 if (TestDataProvider.TestVerbose)
                 {
                     Console.WriteLine(res.Result.StandardOutput);
-                    Console.WriteLine(res.Result.StandardError);
+                    Console.Error.WriteLine(res.Result.StandardError);
                 }
 
                 File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-run-stdout.log"), res.Result.StandardOutput);

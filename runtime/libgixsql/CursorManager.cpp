@@ -83,8 +83,8 @@ void CursorManager::clearConnectionCursors(int connId, bool clear_held_cursors)
 
 	for (it = _cur_to_del.begin(); it != _cur_to_del.end(); it++) {
 		std::shared_ptr<Cursor> c = (*it);
-		_cursor_map.erase(c->getName());
-		remove(c);
+		// _cursor_map.erase(c->getName());
+		CursorManager::remove(c);
 	}
 }
 

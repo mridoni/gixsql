@@ -54,6 +54,7 @@ DbInterfacePGSQL::~DbInterfacePGSQL()
 	//	delete current_resultset_data;
 	//	current_resultset_data = nullptr;
 	//}
+	fprintf(stderr, "********************************** DbInterfacePGSQL is being deleted\n");
 }
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
