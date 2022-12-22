@@ -475,6 +475,8 @@ namespace gixsql_tests
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 
+                env["PATH"] = env["PATH"] + $";{TestTempDir}";
+
                 if (!isWindows)
                 {
                     env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
