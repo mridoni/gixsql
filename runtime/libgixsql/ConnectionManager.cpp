@@ -86,16 +86,12 @@ void ConnectionManager::remove(std::shared_ptr<Connection> conn)
 
 	int id = conn->id;
 	std::string name = conn->name;
-	int uc1 = conn.use_count();
 	_connections.erase(std::remove(_connections.begin(), _connections.end(), conn), _connections.end());
 	_connection_map.erase(id);
 	_connection_name_map.erase(name);
 
 	if (conn == default_connection)
 		default_connection.reset();
-
-	int uc2 = conn.use_count();
-	fprintf(stderr, "%d - %d\n", uc1, uc2);
 }
 
 bool ConnectionManager::exists(const std::string& cname)

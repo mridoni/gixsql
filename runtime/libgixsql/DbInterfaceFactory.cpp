@@ -27,8 +27,7 @@
 
 static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
 
-// typedef IDbInterface * (*DBLIB_PROVIDER_FUNC)();
-typedef std::shared_ptr<IDbInterface> (*DBLIB_PROVIDER_FUNC)();
+typedef IDbInterface * (*DBLIB_PROVIDER_FUNC)();
 
 #if defined(_WIN32)
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
@@ -172,8 +171,8 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 		// If the function address is valid, call the function. 
 		if (dblib_provider != NULL)
 		{
-			// dbi.reset(dblib_provider());
-			dbi = dblib_provider();
+			dbi.reset(dblib_provider());
+			// dbi = dblib_provider();
 			lib_map[dbi] = libHandle;
 		}
 		else {

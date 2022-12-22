@@ -34,27 +34,25 @@ static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string pgsql_fixup_parameters(const std::string& sql);
 static std::string pg_get_sqlstate(PGresult* r);
 
-//struct PGResultSetData_Deleter {
-//	void operator() (PGResultSetData* p) {
-//		if (p) {
-//			if (p->resultset)
-//				PQclear(p->resultset);
-//
-//			delete p;
-//		}
-//	}
-//};
+#if 0
+struct PGResultSetData_Deleter {
+	void operator() (PGResultSetData* p) {
+		if (p) {
+			if (p->resultset)
+				PQclear(p->resultset);
+
+			delete p;
+		}
+	}
+};
+#endif
 
 DbInterfacePGSQL::DbInterfacePGSQL()
 {}
 
 DbInterfacePGSQL::~DbInterfacePGSQL()
 {
-	//if (current_resultset_data) {
-	//	delete current_resultset_data;
-	//	current_resultset_data = nullptr;
-	//}
-	fprintf(stderr, "********************************** DbInterfacePGSQL is being deleted\n");
+
 }
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)

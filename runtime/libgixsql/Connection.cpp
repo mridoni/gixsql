@@ -31,7 +31,6 @@ Connection::Connection()
 
 Connection::~Connection()
 {
-	fprintf(stderr, "********************************** Connection is being deleted\n");
 	if (dbi != NULL) {
 		DbInterfaceFactory::removeInterface(dbi);
 	}

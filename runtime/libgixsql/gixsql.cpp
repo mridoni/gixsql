@@ -183,9 +183,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	c->setDbInterface(dbi);
 	c->setOpened(true);
 	connection_manager.add(c);
-
 	dbi->set_owner(c);
-
 	spdlog::debug(FMT_FILE_FUNC "connection success. connection id# = {}, connection id = [{}]", __FILE__, __func__, c->getId(), connection_id);
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
@@ -205,9 +203,10 @@ int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection_id)
 	std::shared_ptr<IDbInterface> dbi = conn->getDbInterface();
 	int rc = dbi->reset();
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CONN_RESET_FAILED)
-
+	int dbi_uc = dbi.use_count();
+	int cc = conn.use_count();
+	conn->setDbInterface(nullptr);
 	connection_manager.remove(conn);
-
 	setStatus(st, NULL, DBERR_NO_ERROR);
 
 	return RESULT_SUCCESS;
