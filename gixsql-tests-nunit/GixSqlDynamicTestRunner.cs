@@ -366,7 +366,7 @@ namespace gixsql_tests
                            .WithEnvironmentVariables(new Dictionary<string, string>
                            {
                                ["COB_CONFIG_DIR"] = cc.cobc_config_dir_path,
-                               ["PATH"] = Environment.GetEnvironmentVariable("PATH") + $";{cc.cobc_bin_dir_path}"
+                               ["PATH"] = Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}"
                            })
                            .WithValidation(CommandResultValidation.None)
                            .ExecuteBufferedAsync();
@@ -466,16 +466,16 @@ namespace gixsql_tests
                 if (td.BuildType == "exe")
                 {
                     exe = outfile;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.gixsql_link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}{Path.PathSeparator}{cc.gixsql_link_lib_dir_path}";
                 }
                 else
                 {
                     exe = cc.cobcrun_exe;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.gixsql_link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}{Path.PathSeparator}{cc.gixsql_link_lib_dir_path}";
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 
-                env["PATH"] = env["PATH"] + $";{TestTempDir}";
+                env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{TestTempDir}";
 
                 if (!isWindows)
                 {
