@@ -17,8 +17,8 @@
        
        WORKING-STORAGE SECTION. 
 
-           COPY 'SQLCA.CPY'.
-           COPY 'EMPREC.CPY'.
+           COPY 'SQLCA.cpy'.
+           COPY 'EMPREC.cpy'.
 
        PROCEDURE DIVISION. 
  
