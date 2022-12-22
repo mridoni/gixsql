@@ -485,6 +485,7 @@ namespace gixsql_tests
                 if (TestDataProvider.TestVerbose)
                 {
                     Console.WriteLine($"Running {exe} {args}");
+                    Console.WriteLine($"PATH: {env["PATH"]}");
                 }
 
                 if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
