@@ -2044,8 +2044,8 @@
 
 			<expected-output>
 				<line>SET APPLICATION_NAME TO "Identifier1 Identifier2 Identifier3"</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE                VCFLD1 NOT IN (                'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'                )</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE                VCFLD1 NOT IN (                'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,                ' DDDD' ,'  EEEEEEEE    '                )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'               )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,               ' DDDD' ,'  EEEEEEEE    '               )</line>
 			</expected-output>
 
 			<expected-preprocessed-file-content>

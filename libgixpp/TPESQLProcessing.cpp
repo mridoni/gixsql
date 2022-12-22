@@ -1937,7 +1937,9 @@ void TPESQLProcessing::process_sql_query_list()
 	for (cb_exec_sql_stmt_ptr p : *main_module_driver.exec_list) {
 		if (p->sql_list->size()) {
 			std::string sql = process_sql_query_item(*p->sql_list);
-			sql = string_replace_regex(sql, "[\\r\\n\\t]", " ");
+			// We account for EOL differencrs between platforms, so the preprocessor behaves the same everywhere
+			sql = string_replace_regex(sql, "[\\r]", "");
+			sql = string_replace_regex(sql, "[\\n\\t]", " ");
 			ws_query_list.push_back(sql);
 		}
 	}
