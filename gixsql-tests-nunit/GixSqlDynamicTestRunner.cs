@@ -1,6 +1,6 @@
 
 
-﻿using CliWrap;
+using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine;
 //using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -199,7 +199,7 @@ namespace gixsql_tests
             string _shell = String.Empty;
             string _shell_args = String.Empty;
             bool _shell_implode_args = false;
-            
+
             if (isWindows)
             {
                 _shell = "cmd.exe";
@@ -247,11 +247,6 @@ namespace gixsql_tests
                     }
 
                     gixpp_args = cc.gixpp_exe + " " + gixpp_args;
-
-                    if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
-                    {
-                        gixpp_args = TestDataProvider.MemCheck + " " + gixpp_args;
-                    }
 
                     if (_shell_implode_args)
                         gixpp_args = "\"" + gixpp_args + "\"";
@@ -346,12 +341,6 @@ namespace gixsql_tests
                             cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
                         else
                             cobc_args = $"{cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
-
-
-                        if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
-                        {
-                            cobc_args = TestDataProvider.MemCheck + " " + cobc_args;
-                        }
 
                         if (TestDataProvider.TestVerbose)
                         {
@@ -486,21 +475,33 @@ namespace gixsql_tests
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 
-                if (!isWindows) {
-		    env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
-		}
+                if (!isWindows)
+                {
+                    env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
+                }
 
                 if (TestDataProvider.TestVerbose)
                 {
                     Console.WriteLine($"Running {exe} {args}");
                 }
 
+                if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
+                {
+                    if (TestDataProvider.MemCheck.Contains(' ')) {
+                        args = TestDataProvider.MemCheck.Substring(TestDataProvider.MemCheck.IndexOf(' ') + 1) + " " + exe;
+                        exe = TestDataProvider.MemCheck.Substring(0, TestDataProvider.MemCheck.IndexOf(' '));
+                    }
+                    else
+                    {
+                        args = exe;
+                        exe = TestDataProvider.MemCheck;
+                    }
+                }
+
                 var res = Task.Run(async () =>
                 {
                     return await Cli.Wrap(exe)
                         .WithArguments(args)
-                        //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                        //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                         .WithEnvironmentVariables(env)
                         .WithValidation(CommandResultValidation.None)
                         .ExecuteBufferedAsync();
@@ -567,9 +568,9 @@ namespace gixsql_tests
                                 Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(6).Trim())) > 0, $"Output mismatch (index: {i}, expected: {t}");
                             else
                                 if (t.StartsWith("{{NOT}}"))
-                                    Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
-                                else
-                                    Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: [{t}]");
+                                Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
+                            else
+                                Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: [{t}]");
                         }
                         b2 = true;
                     }
