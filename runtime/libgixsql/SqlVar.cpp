@@ -89,14 +89,7 @@ SqlVar* SqlVar::copy()
 
 	v->is_variable_length = is_variable_length;
 	v->is_binary = is_binary;
-	if (realdata) {
-		v->realdata = (char *)calloc(realdata_len + TERMINAL_LENGTH, sizeof(char));
-		v->realdata_len = realdata_len;
-	}
-	else {
-		v->realdata = nullptr;
-		v->realdata_len = 0;
-	}
+	v->is_autrotrim = is_autrotrim;
 
 	return v;
 }

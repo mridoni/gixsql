@@ -200,8 +200,6 @@ bool DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
 
 	lib_map.erase(dbi);
 
-	fprintf(stderr, "dbi usage count: %d\n", dbi.use_count());
-
 	return true;
 }
 

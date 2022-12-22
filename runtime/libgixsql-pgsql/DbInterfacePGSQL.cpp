@@ -33,19 +33,14 @@ USA.
 static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string pgsql_fixup_parameters(const std::string& sql);
 static std::string pg_get_sqlstate(PGresult* r);
-
-#if 0
-struct PGResultSetData_Deleter {
-	void operator() (PGResultSetData* p) {
-		if (p) {
-			if (p->resultset)
-				PQclear(p->resultset);
-
-			delete p;
-		}
-	}
+		
+struct PGresult_deleter {
+    void operator()(PGresult *ptr) {
+      if (ptr)
+	  	PQclear(ptr);
+    }
 };
-#endif
+using PGresultPtr = std::unique_ptr<PGresult, PGresult_deleter>;
 
 DbInterfacePGSQL::DbInterfacePGSQL()
 {}
@@ -141,12 +136,14 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 	// we will optionally start a transaction
 	if (g_opts->autocommit == AutoCommitMode::Off) {
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
-		auto r = PQexec(conn, "BEGIN TRANSACTION");
-		auto rc = PQresultStatus(r);
+
+		PGresultPtr r(PQexec(conn, "BEGIN TRANSACTION"));
+
+		auto rc = PQresultStatus(r.get());
 		if (rc != PGRES_COMMAND_OK) {
 			last_rc = rc;
-			last_error = PQresultErrorMessage(r);
-			last_state = pg_get_sqlstate(r);
+			last_error = PQresultErrorMessage(r.get());
+			last_state = pg_get_sqlstate(r.get());
 			lib_logger->error("libpq: {}", last_error);
 			PQfinish(conn);
 			return DBERR_CONNECTION_FAILED;
@@ -265,10 +262,9 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	}
 
 	int nParams = (int)paramValues.size();
-	char** pvals = nullptr;
+	auto pvals = std::make_unique<const char*[]>(nParams);
 
 	if (paramValues.size() > 0) {
-		pvals = new char* [nParams];
 		for (int i = 0; i < nParams; i++) {
 			pvals[i] = (char*)paramValues.at(i).c_str();
 		}
@@ -278,7 +274,7 @@ int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 
 	std::shared_ptr<PGResultSetData> wk_rs = std::make_shared<PGResultSetData>();
 
-	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
+	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals.get(), NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
@@ -908,31 +904,31 @@ bool DbInterfacePGSQL::retrieve_prepared_statement_source(const std::string& pre
 {
 	lib_logger->trace(FMT_FILE_FUNC "Retrieving SQL source for prepared statement {}", __FILE__, __func__, prep_stmt_name);
 
-	char** pvals = new char* [1];
+	auto pvals = std::make_unique<char*[]>(1);
 	pvals[0] = (char*)prep_stmt_name.c_str();
+
 	std::string qry = "select statement from pg_prepared_statements where lower(name) = lower($1)";
-	PGresult* tr = PQexecParams(connaddr, qry.c_str(), 1, NULL, pvals, NULL, NULL, 0);
+	
+	PGresultPtr tr(PQexecParams(connaddr, qry.c_str(), 1, NULL, pvals.get(), NULL, NULL, 0));
 
-	delete[] pvals;
-
-	last_rc = PQresultStatus(tr);
-	last_error = PQresultErrorMessage(tr);
-	last_state = pg_get_sqlstate(tr);
+	last_rc = PQresultStatus(tr.get());
+	last_error = PQresultErrorMessage(tr.get());
+	last_state = pg_get_sqlstate(tr.get());
 
 	if (last_rc == PGRES_TUPLES_OK) {
-		if (PQntuples(tr) != 1) {
+		if (PQntuples(tr.get()) != 1) {
 			last_rc = 42704;
 			last_error = "\"" + prep_stmt_name + "\" not found";
 			last_state = "42704";
 			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
 			return false;
-
 		}
-		const char* res = PQgetvalue(tr, 0, 0);
+
+		const char* res = PQgetvalue(tr.get(), 0, 0);
 		if (!res) {
-			last_rc = PQresultStatus(tr);
-			last_error = PQresultErrorMessage(tr);
-			last_state = pg_get_sqlstate(tr);
+			last_rc = PQresultStatus(tr.get());
+			last_error = PQresultErrorMessage(tr.get());
+			last_state = pg_get_sqlstate(tr.get());
 			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
 			return false;
 		}
