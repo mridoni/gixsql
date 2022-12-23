@@ -31,7 +31,7 @@
 
 
 SQLHANDLE DbInterfaceODBC::odbc_global_env_context = nullptr;
-int DbInterfaceODBC::odpi_global_env_context_usage_count = 0;
+int DbInterfaceODBC::odbc_global_env_context_usage_count = 0;
 
 static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string odbc_fixup_parameters(const std::string& sql);
@@ -43,8 +43,9 @@ DbInterfaceODBC::DbInterfaceODBC()
 
 DbInterfaceODBC::~DbInterfaceODBC()
 {
-	odpi_global_env_context_usage_count--;
-	if (odbc_global_env_context && odpi_global_env_context_usage_count == 0) {
+	// TODO: use shared_ptr with deleter
+	odbc_global_env_context_usage_count--;
+	if (odbc_global_env_context && odbc_global_env_context_usage_count == 0) {
 		SQLFreeHandle(SQL_HANDLE_ENV, odbc_global_env_context);
 		odbc_global_env_context = nullptr;
 	}
@@ -89,7 +90,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 		}
 	}
 
-	odpi_global_env_context_usage_count++;
+	odbc_global_env_context_usage_count++;
 
 	int rc = SQLAllocHandle(SQL_HANDLE_DBC, odbc_global_env_context, &conn_handle);
 	if (odbcRetrieveError(rc, ErrorSource::Environmennt) != SQL_SUCCESS) {

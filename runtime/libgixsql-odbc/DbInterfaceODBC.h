@@ -109,7 +109,7 @@ private:
 	int get_data_len(SQLHANDLE hStmt, int cnum);
 
 	static SQLHANDLE odbc_global_env_context;
-	static int odpi_global_env_context_usage_count;
+	static int odbc_global_env_context_usage_count;
 
 	SQLHANDLE conn_handle = nullptr;
 

@@ -8,7 +8,7 @@
 		<verbose>1</verbose>
 		<test-filter></test-filter>
 		<!--<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>-->
-		<dbtype-filter>odbc</dbtype-filter>
+		<dbtype-filter>oracle</dbtype-filter>
 		<shell>cmd.exe</shell>
 		<!-- <mem-check>drmemory.exe </mem-check> -->
 		<!--<mem-check>C:\Users\marchetto\Desktop\Utilities\DrMemory-Windows-2.5.0\bin64\drmemory.exe -logdir D:\gix_tmp_test</mem-check>-->

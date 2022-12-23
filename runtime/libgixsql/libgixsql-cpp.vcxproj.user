@@ -13,13 +13,13 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL002A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=odbc://ODBC_TEST1
-DATASRC_USR=test.test
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL002A.log
+    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64
+DATASRC=oracle://192.168.56.135/orcl
+DATASRC_USR=test1.test1
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B.log
 GIXSQL_LOG_LEVEL=trace
 GIXSQL_LOG_TRUNCATE=on
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
