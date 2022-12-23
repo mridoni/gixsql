@@ -13,18 +13,13 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL021B.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL002A.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=192.168.1.171:3306/testdb1
-DATASRC_FULL=test.test@192.168.1.171/testdb1
-DBUSR=test
-DBPWD=test
-DBNAME=testdb1
-DBUSRPWD=test.test
-GIXSQL_DEFAULT_DRIVER=mysql
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL021B.log
+DATASRC=odbc://ODBC_TEST1
+DATASRC_USR=test.test
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL002A.log
 GIXSQL_LOG_LEVEL=trace
 GIXSQL_LOG_TRUNCATE=on
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>

@@ -163,6 +163,7 @@ Global
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Debug|Win32.ActiveCfg = Test_Debug|Win32
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Debug|Win32.Build.0 = Test_Debug|Win32
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Debug|x64.ActiveCfg = Test_Debug|x64
+		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Debug|x64.Build.0 = Test_Debug|x64
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Release|Any CPU.ActiveCfg = Test_Release|Win32
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Release|Win32.ActiveCfg = Test_Release|Win32
 		{C8BB29A7-CC21-4811-95DE-14C24A64DF5E}.Test_Release|Win32.Build.0 = Test_Release|Win32

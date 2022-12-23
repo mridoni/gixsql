@@ -23,6 +23,7 @@
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
+#include "varlen_defs.h"
 
 #include "cobol_var_types.h"
 
@@ -245,12 +246,12 @@ std::string DbInterfaceODBC::get_state()
 	return last_state;
 }
 
-void DbInterfaceODBC::set_owner(IConnection* conn)
+void DbInterfaceODBC::set_owner(std::shared_ptr<IConnection> conn)
 {
 	owner = conn;
 }
 
-IConnection* DbInterfaceODBC::get_owner()
+std::shared_ptr<IConnection> DbInterfaceODBC::get_owner()
 {
 	return owner;
 }
@@ -258,11 +259,8 @@ IConnection* DbInterfaceODBC::get_owner()
 int DbInterfaceODBC::prepare(std::string stmt_name, std::string sql)
 {
 	std::string prepared_sql;
-	ODBCStatementData* res = new ODBCStatementData(conn_handle);
-	if (!res->statement) {
-		delete res;
-		return DBERR_PREPARE_FAILED;
-	}
+	std::shared_ptr<ODBCStatementData> res = std::make_shared<ODBCStatementData>(conn_handle);
+
 	stmt_name = to_lower(stmt_name);
 
 	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
@@ -310,7 +308,7 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 
 	int nParams = (int)paramValues.size();
 
-	ODBCStatementData* wk_rs = _prepared_stmts[stmt_name];
+	std::shared_ptr<ODBCStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
 	wk_rs->resizeParams(nParams);
@@ -359,26 +357,25 @@ int DbInterfaceODBC::exec(std::string _query)
 }
 
 
-int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query, ODBCStatementData* prep_stmt_data)
+int DbInterfaceODBC::_odbc_exec(std::shared_ptr<ICursor> crsr, const std::string query, std::shared_ptr<ODBCStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	uint32_t nquery_cols = 0;
 	std::string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
 
 	if (!prep_stmt_data) {
-		wk_rs = (ODBCStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<ODBCStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new ODBCStatementData(conn_handle);
+		wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 		if (!wk_rs->statement) {
-			delete wk_rs;
+			odbcRetrieveError(-1, ErrorSource::Connection, conn_handle);
 			return DBERR_SQL_ERROR;
 		}
 
@@ -410,9 +407,6 @@ int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query, ODBCStat
 
 	if (last_rc == SQL_SUCCESS) {
 		if (crsr) {
-			if (crsr->getPrivateData())
-				delete (ODBCStatementData*)crsr->getPrivateData();
-
 			crsr->setPrivateData(wk_rs);
 		}
 		else
@@ -432,26 +426,24 @@ int DbInterfaceODBC::exec_params(std::string query, int nParams, const std::vect
 	return _odbc_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, ODBCStatementData* prep_stmt_data)
+int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<ODBCStatementData> prep_stmt_data)
 {
 	std::string q = query;
 	int rc = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
 
 	if (!prep_stmt_data) {
-		wk_rs = (ODBCStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<ODBCStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new ODBCStatementData(conn_handle);
+		wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 		if (!wk_rs->statement) {
-			delete wk_rs;
 			return DBERR_SQL_ERROR;
 		}
 
@@ -510,9 +502,6 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nPa
 
 	if (last_rc == SQL_SUCCESS) {
 		if (crsr) {
-			if (crsr->getPrivateData())
-				delete (ODBCStatementData*)crsr->getPrivateData();
-
 			crsr->setPrivateData(wk_rs);
 		}
 		else
@@ -526,7 +515,7 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nPa
 	}
 }
 
-bool DbInterfaceODBC::is_cursor_from_prepared_statement(ICursor* cursor)
+bool DbInterfaceODBC::is_cursor_from_prepared_statement(const std::shared_ptr<ICursor>& cursor)
 {
 	std::string squery = cursor->getQuery();
 	void* src_addr = nullptr;
@@ -544,7 +533,7 @@ bool DbInterfaceODBC::is_cursor_from_prepared_statement(ICursor* cursor)
 }
 
 
-int DbInterfaceODBC::close_cursor(ICursor* cursor)
+int DbInterfaceODBC::close_cursor(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
@@ -553,7 +542,7 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 
 	// Prepared statements used for cursors will be disposed separately
 	if (!is_cursor_from_prepared_statement(cursor)) {
-		ODBCStatementData* dp = (ODBCStatementData*)cursor->getPrivateData();
+		std::shared_ptr<ODBCStatementData> dp = std::dynamic_pointer_cast<ODBCStatementData>(cursor->getPrivateData());
 
 		if (!dp || !dp->statement)
 			return DBERR_CLOSE_CURSOR_FAILED;
@@ -565,8 +554,6 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 			lib_logger->error("ODBC: Error while closing cursor ({}) {}", last_rc, cursor->getName());
 			return DBERR_CLOSE_CURSOR_FAILED;
 		}
-
-		delete (ODBCStatementData*)cursor->getPrivateData();
 		cursor->setPrivateData(nullptr);
 
 		if (rc != SQL_SUCCESS) {
@@ -582,16 +569,15 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfaceODBC::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool with_hold, int res_type)
 {
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: cursor declare invoked", __FILE__, __func__);
 
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	ODBCStatementData* wk_rs = new ODBCStatementData(conn_handle);
+	std::shared_ptr<ODBCStatementData> wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 	if (!wk_rs->statement) {
-		delete wk_rs;
 		return DBERR_DECLARE_CURSOR_FAILED;
 	}
 
@@ -604,7 +590,7 @@ int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_typ
 
 	cursor->setPrivateData(wk_rs);
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -612,16 +598,15 @@ int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_typ
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfaceODBC::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char** param_values, bool with_hold, int res_type)
 {
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: cursor declare (with params) invoked", __FILE__, __func__);
 
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	ODBCStatementData* wk_rs = new ODBCStatementData(conn_handle);
+	std::shared_ptr<ODBCStatementData> wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 	if (!wk_rs->statement) {
-		delete wk_rs;
 		return DBERR_DECLARE_CURSOR_FAILED;
 	}
 
@@ -634,7 +619,7 @@ int DbInterfaceODBC::cursor_declare_with_params(ICursor* cursor, char** param_va
 
 	cursor->setPrivateData(wk_rs);
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -642,7 +627,7 @@ int DbInterfaceODBC::cursor_declare_with_params(ICursor* cursor, char** param_va
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::cursor_open(ICursor* cursor)
+int DbInterfaceODBC::cursor_open(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = 0;
 
@@ -662,9 +647,10 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
-	ODBCStatementData* prepared_stmt_data = nullptr;
+	std::shared_ptr<ODBCStatementData> prepared_stmt_data;
 	if (starts_with(squery, "@")) {
-		if (!retrieve_prepared_statement(squery.substr(1), &prepared_stmt_data)) {
+		prepared_stmt_data = retrieve_prepared_statement(squery.substr(1));
+		if (!prepared_stmt_data) {
 			// last_error, etc. set by retrieve_prepared_statement_source
 			return DBERR_OPEN_CURSOR_FAILED;
 		}
@@ -694,7 +680,7 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 	}
 }
 
-int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
+int DbInterfaceODBC::fetch_one(const std::shared_ptr<ICursor>& cursor, int fetchmode)
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
@@ -710,7 +696,7 @@ int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
 
 	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
 
-	ODBCStatementData* dp = (ODBCStatementData*)cursor->getPrivateData();
+	std::shared_ptr<ODBCStatementData> dp = std::dynamic_pointer_cast<ODBCStatementData>(cursor->getPrivateData());
 
 	if (!dp || !dp->statement)
 		return DBERR_FETCH_ROW_FAILED;
@@ -726,10 +712,10 @@ int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
 {
 	int rc = 0;
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
 
 	switch (resultset_context_type) {
 	case ResultSetContextType::CurrentResultSet:
@@ -738,28 +724,28 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 
 	case ResultSetContextType::PreparedStatement:
 	{
-		if (!context)
-			return false;
+		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-		std::string stmt_name = (char*)context;
+		std::string stmt_name = p.prepared_statement_name;
 		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			return false;
 		}
 
-		wk_rs = (ODBCStatementData*)_prepared_stmts[stmt_name];
+		wk_rs = _prepared_stmts[stmt_name];
 	}
 	break;
 
 	case ResultSetContextType::Cursor:
 	{
-		ICursor* c = (ICursor*)context;
+		CursorContextData& p = (CursorContextData&)context;
+		std::shared_ptr <ICursor> c = p.cursor;
 		if (!c) {
 			lib_logger->error("Invalid cursor reference");
 			return false;
 		}
-		wk_rs = (ODBCStatementData*)c->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<ODBCStatementData>(c->getPrivateData());
 	}
 	break;
 	}
@@ -829,7 +815,7 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 
 bool DbInterfaceODBC::move_to_first_record(std::string stmt_name)
 {
-	ODBCStatementData* dp = nullptr;
+	std::shared_ptr<ODBCStatementData> dp;
 
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: moving to first row in resultset", __FILE__, __func__);
 
@@ -876,17 +862,17 @@ uint64_t DbInterfaceODBC::get_native_features()
 }
 
 
-int DbInterfaceODBC::get_num_rows(ICursor* crsr)
+int DbInterfaceODBC::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 {
 	return -1;
 }
 
-int DbInterfaceODBC::get_num_fields(ICursor* crsr)
+int DbInterfaceODBC::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
 	SQLHANDLE wk_rs = nullptr;
 
 	if (crsr) {
-		ODBCStatementData* p = (ODBCStatementData*)crsr->getPrivateData();
+		std::shared_ptr<ODBCStatementData> p = std::dynamic_pointer_cast<ODBCStatementData>(crsr->getPrivateData());
 		wk_rs = p->statement;
 	}
 	else {
@@ -981,14 +967,13 @@ int DbInterfaceODBC::get_data_len(SQLHANDLE hStmt, int cnum)
 	return ColumnDataSize;
 }
 
-bool DbInterfaceODBC::retrieve_prepared_statement(const std::string& prep_stmt_name, ODBCStatementData** prepared_stmt_data)
+std::shared_ptr<ODBCStatementData> DbInterfaceODBC::retrieve_prepared_statement(const std::string& prep_stmt_name)
 {
 	std::string stmt_name = to_lower(prep_stmt_name);
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end() || _prepared_stmts[stmt_name] == nullptr || _prepared_stmts[stmt_name]->statement == nullptr)
-		return false;
+		return nullptr;
 
-	*prepared_stmt_data = _prepared_stmts[stmt_name];
-	return true;
+	return _prepared_stmts[stmt_name];
 }
 
 int DbInterfaceODBC::odbcRetrieveError(int rc, ErrorSource err_src, SQLHANDLE h)
@@ -1102,7 +1087,7 @@ void DbInterfaceODBC::odbcSetError(int err_code, std::string sqlstate, std::stri
 	last_state = sqlstate;
 }
 
-int DbInterfaceODBC::get_affected_rows(ODBCStatementData* d)
+int DbInterfaceODBC::get_affected_rows(std::shared_ptr<ODBCStatementData> d)
 {
 	if (!d || !d->statement)
 		return DBERR_SQL_ERROR;
