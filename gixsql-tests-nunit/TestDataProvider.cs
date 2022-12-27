@@ -210,7 +210,7 @@ namespace gixsql_tests
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                throw ex;
+                throw;
             }
 
         }
@@ -535,7 +535,7 @@ namespace gixsql_tests
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message + "\n" + ex.StackTrace);
-                throw ex;
+                throw;
             }
         }
 

@@ -107,7 +107,7 @@ namespace gixsql_tests
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message + "\n" + ex.StackTrace);
-                throw ex;
+                throw;
             }
         }
     }

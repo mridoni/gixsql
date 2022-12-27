@@ -27,7 +27,7 @@ namespace gixsql_tests
 
         private bool except = false;
 
-        private static bool factories_init = false;
+        //private static bool factories_init = false;
         private static bool isWindows = !File.Exists(@"/proc/sys/kernel/ostype");
 
         private static int cur_index = 1;
@@ -188,7 +188,7 @@ namespace gixsql_tests
                 if (TestDataProvider.TestVerbose)
                     Console.WriteLine(ex.StackTrace);
 
-                throw ex;
+                throw;
             }
 
         }
@@ -536,7 +536,8 @@ namespace gixsql_tests
                 if (!String.IsNullOrWhiteSpace(expected_md5_output_hash))
                 {
                     string out_md5 = Utils.CreateMD5(File.ReadAllBytes(res.Result.StandardOutput));
-                    Assert.AreEqual(expected_md5_output_hash, out_md5, $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
+                    //Assert.AreEqual(expected_md5_output_hash, out_md5, $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
+                    Assert.That(out_md5, Is.EqualTo(expected_md5_output_hash), $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
                     b1 = true;
                 }
 

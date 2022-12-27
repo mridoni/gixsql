@@ -14,7 +14,7 @@ namespace gixsql_tests
     {
         private static Dictionary<string, string> element_map = new Dictionary<string, string>();
 
-        private static string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        //private static string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         private static char[] stringChars = new char[8];
         private static Random random = new Random();
 
