@@ -9,7 +9,7 @@ on:
 #    branches: [ "main" ]
 
 env:
-  GIXSQL_VERSION: 1.0.19
+  GIXSQL_VERSION: 1.0.20dev
   BISON_URL: http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
   BISON_PKG: bison_3.7.5+dfsg-1_amd64.deb
 
@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+      ref: v1.0.20dev
 
     - name: Set up dependencies
       run: |
