@@ -9,7 +9,7 @@ libgixsql_oracle_la_SOURCES = DbInterfaceManagerOracle.cpp  DbInterfaceOracle.cp
 							 odpi/dpiRowid.c odpi/dpiSodaColl.c odpi/dpiSodaCollCursor.c odpi/dpiSodaDb.c odpi/dpiSodaDoc.c \
 							 odpi/dpiSodaDocCursor.c odpi/dpiStmt.c odpi/dpiSubscr.c odpi/dpiUtils.c odpi/dpiVar.c 
 
-libgixsql_oracle_la_CXXFLAGS = -I $(srcdir)/odpi -I$(top_srcdir)/runtime/libgixsql -std=c++17 -DSPDLOG_FMT_EXTERNAL
+libgixsql_oracle_la_CXXFLAGS = -I $(srcdir)/odpi -I$(top_srcdir)/common -I$(top_srcdir)/runtime/libgixsql -std=c++17 -DSPDLOG_FMT_EXTERNAL
 
 libgixsql_oracle_la_LIBADD =
 libgixsql_oracle_la_LDFLAGS = -lfmt -lspdlog -no-undefined -avoid-version

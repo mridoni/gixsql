@@ -26,7 +26,8 @@ jobs:
 
     - name: Set up dependencies
       run: |
-        sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev
+        sudo apt update
+        sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev -yq
         wget ${{ env.BISON_URL }}
         sudo dpkg -i ${{ env.BISON_PKG }}
 
