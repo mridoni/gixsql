@@ -986,7 +986,7 @@ std::shared_ptr<SQLiteStatementData>  DbInterfaceSQLite::retrieve_prepared_state
 {
 	std::string stmt_name = to_lower(prep_stmt_name);
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end() || _prepared_stmts[stmt_name] == nullptr || _prepared_stmts[stmt_name]->statement == nullptr)
-		return false;
+		return nullptr;
 
 	return _prepared_stmts[stmt_name];
 }
