@@ -24,6 +24,7 @@ USA.
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
+#include "varlen_defs.h"
 
 #define DEFAULT_CURSOR_ARRAYSIZE	100
 
@@ -61,7 +62,7 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 	char* err_msg = 0;
 
 	connaddr = nullptr;
-	current_statement_data = nullptr;
+	current_statement_data.reset();
 
 	int sqlite_rc = sqlite3_open(conn_info->getHost().c_str(), &conn);
 
@@ -130,29 +131,10 @@ int DbInterfaceSQLite::reset()
 
 int DbInterfaceSQLite::terminate_connection()
 {
-	//for (auto it = _prepared_stmts.begin(); it != _prepared_stmts.end(); ++it) {
-	//	if (it->second) {
-	//		delete it->second;
-	//		it->second = nullptr;
-	//	}
-	//}
-
-	//for (auto it = _declared_cursors.begin(); it != _declared_cursors.end(); ++it) {
-	//	// TODO: what?
-	//}
-
-	//if (current_statement_data) {
-	//	delete current_statement_data;
-	//	current_statement_data = nullptr;
-	//}
-
 	if (connaddr) {
 		sqlite3_close(connaddr);
 		connaddr = nullptr;
 	}
-
-	if (owner)
-		owner->setOpened(false);
 
 	return DBERR_NO_ERROR;
 }
@@ -173,12 +155,12 @@ std::string DbInterfaceSQLite::get_state()
 	return last_state;
 }
 
-void DbInterfaceSQLite::set_owner(IConnection* conn)
+void DbInterfaceSQLite::set_owner(std::shared_ptr<IConnection> conn)
 {
 	owner = conn;
 }
 
-IConnection* DbInterfaceSQLite::get_owner()
+std::shared_ptr<IConnection> DbInterfaceSQLite::get_owner()
 {
 	return owner;
 }
@@ -199,7 +181,7 @@ std::string vector_join(const std::vector<std::string>& v, char sep)
 int DbInterfaceSQLite::prepare(std::string stmt_name, std::string sql)
 {
 	std::string prepared_sql;
-	SQLiteStatementData* res = new SQLiteStatementData();
+	std::shared_ptr<SQLiteStatementData> res = std::make_shared<SQLiteStatementData>();
 
 	stmt_name = to_lower(stmt_name);
 
@@ -250,7 +232,7 @@ int DbInterfaceSQLite::exec_prepared(std::string stmt_name, std::vector<std::str
 
 	int nParams = (int)paramValues.size();
 
-	SQLiteStatementData* wk_rs = _prepared_stmts[stmt_name];
+	std::shared_ptr<SQLiteStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
 	sqlite3_reset(wk_rs->statement);
@@ -258,7 +240,7 @@ int DbInterfaceSQLite::exec_prepared(std::string stmt_name, std::vector<std::str
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), NULL);
+		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), SQLITE_TRANSIENT);
 		if (sqliteRetrieveError(rc) != SQLITE_OK)
 			return DBERR_SQL_ERROR;
 	}
@@ -282,7 +264,7 @@ int DbInterfaceSQLite::exec(std::string query)
 	return _sqlite_exec(nullptr, query);
 }
 
-int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLiteStatementData* prep_stmt_data)
+int DbInterfaceSQLite::_sqlite_exec(std::shared_ptr<ICursor> crsr, const std::string query, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -295,19 +277,18 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLi
 	uint32_t nquery_cols = 0;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
-	SQLiteStatementData* wk_rs = nullptr;
+	std::shared_ptr<SQLiteStatementData> wk_rs = std::make_shared<SQLiteStatementData>();
 
 	if (!prep_stmt_data) {
-		wk_rs = (SQLiteStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<SQLiteStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs) {
 			if (wk_rs && wk_rs == current_statement_data) {
-				delete current_statement_data;
-				current_statement_data = nullptr;
+				current_statement_data.reset();
 			}
 		}
 
-		wk_rs = new SQLiteStatementData();
+		wk_rs = std::make_shared<SQLiteStatementData>();
 
 		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
 			
@@ -319,7 +300,7 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLi
 				return DBERR_SQL_ERROR;
 			}
 
-			ICursor* updatable_crsr = this->_declared_cursors[cursor_name];
+			std::shared_ptr<ICursor> updatable_crsr = this->_declared_cursors[cursor_name];
 
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
@@ -346,12 +327,11 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLi
 			}
 		}
 		else {
-			wk_rs = new SQLiteStatementData();
+			wk_rs = std::make_shared<SQLiteStatementData>();
 			rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &wk_rs->statement, nullptr);
 		}
 
 		if (sqliteRetrieveError(rc) != SQLITE_OK) {
-			delete wk_rs;
 			spdlog::error("Prepare error: {} ({}) - {}", last_rc, last_state, last_error);
 			return DBERR_SQL_ERROR;
 		}
@@ -367,7 +347,6 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLi
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		if (current_statement_data) {
-			delete current_statement_data;
 			current_statement_data = nullptr;
 		}
 
@@ -400,9 +379,6 @@ int DbInterfaceSQLite::_sqlite_exec(ICursor* crsr, const std::string query, SQLi
 	}
 
 	if (crsr) {
-		if (crsr->getPrivateData())
-			delete (SQLiteStatementData*)crsr->getPrivateData();
-
 		crsr->setPrivateData(wk_rs);
 	}
 	else {
@@ -418,7 +394,7 @@ int DbInterfaceSQLite::exec_params(std::string query, int nParams, const std::ve
 	return _sqlite_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, SQLiteStatementData* prep_stmt_data)
+int DbInterfaceSQLite::_sqlite_exec_params(std::shared_ptr<ICursor> crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -431,19 +407,18 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 	uint32_t nquery_cols = 0;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
-	SQLiteStatementData* wk_rs = nullptr;
+	std::shared_ptr<SQLiteStatementData> wk_rs;
 
 	if (!prep_stmt_data) {
-		wk_rs = (SQLiteStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<SQLiteStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs) {
 			if (wk_rs && wk_rs == current_statement_data) {
-				delete current_statement_data;
-				current_statement_data = nullptr;
+				current_statement_data.reset();
 			}
 		}
 
-		wk_rs = new SQLiteStatementData();
+		wk_rs = std::make_shared<SQLiteStatementData>();
 
 		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
 
@@ -455,7 +430,7 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 				return DBERR_SQL_ERROR;
 			}
 
-			ICursor* updatable_crsr = this->_declared_cursors[cursor_name];
+			std::shared_ptr<ICursor> updatable_crsr = this->_declared_cursors[cursor_name];
 
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
@@ -475,12 +450,11 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 			}
 		}
 		else {
-			wk_rs = new SQLiteStatementData();
+			wk_rs = std::make_shared<SQLiteStatementData>();
 			rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &wk_rs->statement, nullptr);
 		}
 
 		if (sqliteRetrieveError(rc) != SQLITE_OK) {
-			delete wk_rs;
 			spdlog::error("Prepare error: {} ({}) - {}", last_rc, last_state, last_error);
 			return DBERR_SQL_ERROR;
 		}
@@ -491,7 +465,7 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), NULL);
+		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), SQLITE_TRANSIENT);
 		if (sqliteRetrieveError(rc))
 			return DBERR_SQL_ERROR;
 	}
@@ -513,8 +487,7 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		if (current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
 		if (sqliteRetrieveError(step_rc) == SQLITE_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
@@ -547,9 +520,6 @@ int DbInterfaceSQLite::_sqlite_exec_params(ICursor* crsr, const std::string quer
 
 
 	if (crsr) {
-		if (crsr->getPrivateData())
-			delete (SQLiteStatementData*)crsr->getPrivateData();
-
 		crsr->setPrivateData(wk_rs);
 	}
 	else {
@@ -583,7 +553,7 @@ bool DbInterfaceSQLite::is_cursor_from_prepared_statement(ICursor* cursor)
 			return false; \
 		}
 
-bool DbInterfaceSQLite::has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key)
+bool DbInterfaceSQLite::has_unique_key(std::string table_name, const std::shared_ptr<ICursor>& crsr, std::vector<std::string>& unique_key)
 {
 	int err_idx = 1;
 	std::string q1 = "SELECT name, case when il.\"origin\" = 'pk' then 0 else 1 end a FROM pragma_index_list(?) il where \"unique\"=1 order by a";
@@ -593,7 +563,7 @@ bool DbInterfaceSQLite::has_unique_key(std::string table_name, ICursor* crsr, st
 	int rc = sqlite3_prepare_v2(connaddr, q1.c_str(), q1.size(), &idxs_stmt, 0);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_bind_text(idxs_stmt, 1, table_name.c_str(), table_name.size(), NULL);
+	rc = sqlite3_bind_text(idxs_stmt, 1, table_name.c_str(), table_name.size(), SQLITE_TRANSIENT);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
 	rc = sqlite3_step(idxs_stmt);
@@ -616,7 +586,7 @@ bool DbInterfaceSQLite::has_unique_key(std::string table_name, ICursor* crsr, st
 	rc = sqlite3_prepare_v2(connaddr, q1.c_str(), q1.size(), &key_stmt, 0);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_bind_text(key_stmt, 1, index_name.c_str(), index_name.size(), NULL);
+	rc = sqlite3_bind_text(key_stmt, 1, index_name.c_str(), index_name.size(), SQLITE_TRANSIENT);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
 	rc = sqlite3_step(key_stmt);
@@ -639,12 +609,12 @@ bool DbInterfaceSQLite::has_unique_key(std::string table_name, ICursor* crsr, st
 	return true;
 }
 
-bool DbInterfaceSQLite::prepare_updatable_cursor_query(const std::string& qry, ICursor* crsr, const std::vector<std::string>& unique_key, sqlite3_stmt** update_stmt, std::vector<std::string>& key_params)
+bool DbInterfaceSQLite::prepare_updatable_cursor_query(const std::string& qry, const std::shared_ptr<ICursor>& crsr, const std::vector<std::string>& unique_key, sqlite3_stmt** update_stmt, std::vector<std::string>& key_params)
 {
 	if (!crsr || !crsr->getQuery().size())
 		return false;
 
-	auto rs = (SQLiteStatementData*)crsr->getPrivateData();
+	auto rs = std::dynamic_pointer_cast<SQLiteStatementData>(crsr->getPrivateData());
 	if (!rs->statement)
 		return false;
 
@@ -715,7 +685,7 @@ std::vector<std::string> DbInterfaceSQLite::get_resultset_column_names(sqlite3_s
 	return crsr_cols;
 }
 
-int DbInterfaceSQLite::close_cursor(ICursor* cursor)
+int DbInterfaceSQLite::close_cursor(const std::shared_ptr<ICursor>& crsr)
 {
 	//if (!cursor) {
 	//	lib_logger->error("Invalid cursor reference");
@@ -744,12 +714,12 @@ int DbInterfaceSQLite::close_cursor(ICursor* cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfaceSQLite::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool, int)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -757,12 +727,12 @@ int DbInterfaceSQLite::cursor_declare(ICursor* cursor, bool with_hold, int res_t
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfaceSQLite::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char**, bool, int)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -770,7 +740,7 @@ int DbInterfaceSQLite::cursor_declare_with_params(ICursor* cursor, char** param_
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::cursor_open(ICursor* cursor)
+int DbInterfaceSQLite::cursor_open(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = 0;
 
@@ -790,10 +760,11 @@ int DbInterfaceSQLite::cursor_open(ICursor* cursor)
 		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
-	SQLiteStatementData* prepared_stmt_data = nullptr;
+	std::shared_ptr<SQLiteStatementData> prepared_stmt_data;
 	if (starts_with(squery, "@")) {
-		if (!retrieve_prepared_statement(squery.substr(1), &prepared_stmt_data)) {
-			// last_error, etc. set by retrieve_prepared_statement_source
+		prepared_stmt_data = retrieve_prepared_statement(squery.substr(1));
+		if (!prepared_stmt_data) {
+			// last_error, etc. set by retrieve_prepared_statement_source?
 			return DBERR_OPEN_CURSOR_FAILED;
 		}
 	}
@@ -828,7 +799,7 @@ int DbInterfaceSQLite::cursor_open(ICursor* cursor)
 	if (sqliteRetrieveError(rc) == SQLITE_OK) {
 
 		// SQLite automatically positions it on the first row, so we need a mechanism to avoid fetching (and skipping) it
-		SQLiteStatementData* wk_rs = (SQLiteStatementData*)cursor->getPrivateData();
+		std::shared_ptr<SQLiteStatementData> wk_rs = std::dynamic_pointer_cast<SQLiteStatementData>(cursor->getPrivateData());
 		wk_rs->_on_first_row = true;
 
 		return DBERR_NO_ERROR;
@@ -838,7 +809,7 @@ int DbInterfaceSQLite::cursor_open(ICursor* cursor)
 	}
 }
 
-int DbInterfaceSQLite::fetch_one(ICursor* cursor, int fetchmode)
+int DbInterfaceSQLite::fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
@@ -854,7 +825,7 @@ int DbInterfaceSQLite::fetch_one(ICursor* cursor, int fetchmode)
 
 	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
 
-	SQLiteStatementData* dp = (SQLiteStatementData*)cursor->getPrivateData();
+	std::shared_ptr<SQLiteStatementData> dp = std::dynamic_pointer_cast<SQLiteStatementData>(cursor->getPrivateData());
 
 	if (!dp || !dp->statement)
 		return DBERR_FETCH_ROW_FAILED;
@@ -877,10 +848,10 @@ int DbInterfaceSQLite::fetch_one(ICursor* cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
 {
 	int rc = 0;
-	SQLiteStatementData* wk_rs = nullptr;
+	std::shared_ptr<SQLiteStatementData> wk_rs;
 
 	switch (resultset_context_type) {
 	case ResultSetContextType::CurrentResultSet:
@@ -889,28 +860,28 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 
 	case ResultSetContextType::PreparedStatement:
 	{
-		if (!context)
-			return false;
+		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-		std::string stmt_name = (char*)context;
+		std::string stmt_name = p.prepared_statement_name;
 		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			return false;
 		}
 
-		wk_rs = (SQLiteStatementData*)_prepared_stmts[stmt_name];
+		wk_rs = _prepared_stmts[stmt_name];
 	}
 	break;
 
 	case ResultSetContextType::Cursor:
 	{
-		ICursor* c = (ICursor*)context;
+		CursorContextData& p = (CursorContextData&)context;
+		std::shared_ptr <ICursor> c = p.cursor;
 		if (!c) {
 			lib_logger->error("Invalid cursor reference");
 			return false;
 		}
-		wk_rs = (SQLiteStatementData*)c->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<SQLiteStatementData>(c->getPrivateData());
 	}
 	break;
 	}
@@ -940,7 +911,7 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 
 bool DbInterfaceSQLite::move_to_first_record(std::string stmt_name)
 {
-	SQLiteStatementData* dp = nullptr;
+	std::shared_ptr<SQLiteStatementData> dp = nullptr;
 
 	if (stmt_name.empty()) {
 		if (!current_statement_data) {
@@ -979,78 +950,17 @@ uint64_t DbInterfaceSQLite::get_native_features()
 }
 
 
-int DbInterfaceSQLite::get_num_rows(ICursor* crsr)
+int DbInterfaceSQLite::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 {
-	//dpiStmt* wk_rs = nullptr;
-
-	//if (crsr) {
-	//	SQLiteStatementData* p = (SQLiteStatementData*)crsr->getPrivateData();
-	//	wk_rs = p->statement;
-	//}
-	//else {
-	//	if (!current_statement_data)
-	//		return -1;
-
-	//	wk_rs = current_statement_data->statement;
-	//}
-
-	//if (wk_rs)
-	//	return wk_rs->rowCount;
-	//else
 	return -1;
 }
 
-//int DbInterfaceSQLite::has_data(ResultSetContextType resultset_context_type, void* context)
-//{
-//	SQLiteStatementData* wk_rs = nullptr;
-//
-//	switch (resultset_context_type) {
-//		case ResultSetContextType::CurrentResultSet:
-//			wk_rs = current_statement_data;
-//			break;
-//
-//		case ResultSetContextType::PreparedStatement:
-//		{
-//			if (!context)
-//				return false;
-//
-//			std::string stmt_name = (char*)context;
-//			stmt_name = to_lower(stmt_name);
-//			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
-//				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
-//				return DBERR_SQL_ERROR;
-//			}
-//
-//			wk_rs = (SQLiteStatementData*)_prepared_stmts[stmt_name];
-//		}
-//		break;
-//
-//		case ResultSetContextType::Cursor:
-//		{
-//			ICursor* c = (ICursor*)context;
-//			if (!c) {
-//				lib_logger->error("Invalid cursor reference");
-//				return DBERR_SQL_ERROR;
-//			}
-//			wk_rs = (SQLiteStatementData*)c->getPrivateData();
-//		}
-//		break;
-//	}
-//
-//	if (!wk_rs) {
-//		lib_logger->error("Invalid resultset");
-//		return DBERR_SQL_ERROR;
-//	}
-//
-//	return sqlite3_data_count(wk_rs->statement);
-//}
-
-int DbInterfaceSQLite::get_num_fields(ICursor* crsr)
+int DbInterfaceSQLite::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
 	sqlite3_stmt* wk_rs = nullptr;
 
 	if (crsr) {
-		SQLiteStatementData* p = (SQLiteStatementData*)crsr->getPrivateData();
+		std::shared_ptr<SQLiteStatementData> p = std::dynamic_pointer_cast<SQLiteStatementData>(crsr->getPrivateData());
 		wk_rs = p->statement;
 	}
 	else {
@@ -1069,26 +979,16 @@ int DbInterfaceSQLite::get_num_fields(ICursor* crsr)
 
 int DbInterfaceSQLite::_sqlite_get_num_rows(sqlite3_stmt* r)
 {
-	//uint64_t res = 0;
-	//if (!r)
-	//	return -1;
-
-	//int rc = dpiStmt_getRowCount(r, &res);
-	//if (dpiRetrieveError(rc))
-	//	return -1;
-
-	//return (int)res;
 	return -1;
 }
 
-bool DbInterfaceSQLite::retrieve_prepared_statement(const std::string& prep_stmt_name, SQLiteStatementData** prepared_stmt_data)
+std::shared_ptr<SQLiteStatementData>  DbInterfaceSQLite::retrieve_prepared_statement(const std::string& prep_stmt_name)
 {
 	std::string stmt_name = to_lower(prep_stmt_name);
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end() || _prepared_stmts[stmt_name] == nullptr || _prepared_stmts[stmt_name]->statement == nullptr)
 		return false;
 
-	*prepared_stmt_data = _prepared_stmts[stmt_name];
-	return true;
+	return _prepared_stmts[stmt_name];
 }
 
 int DbInterfaceSQLite::sqliteRetrieveError(int rc)
@@ -1146,38 +1046,15 @@ void SQLiteStatementData::resizeParams(int n)
 	cleanup();
 
 	params_count = n;
-	//this->params = new dpiVar * [n];
-	//this->params_bfrs = new dpiData * [n];
-
 }
 
 void SQLiteStatementData::resizeColumnData(int n)
 {
 	coldata_count = n;
-	//this->coldata = new dpiVar * [n];
-	//this->coldata_bfrs = new dpiData * [n];
 }
 
 void SQLiteStatementData::cleanup()
 {
-	//if (params) {
-	//	for (int i = 0; i < params_count; i++) {
-	//		dpiVar_release(params[i]);
-	//		params[i] = nullptr;
-	//	}
-	//	delete[] params;
-	//	params = nullptr;
-	//}
-
-	//if (coldata) {
-	//	for (int i = 0; i < coldata_count; i++) {
-	//		dpiVar_release(coldata[i]);
-	//		coldata[i] = nullptr;
-	//	}
-	//	delete[] coldata;
-	//	coldata = nullptr;
-	//}
-
 	params_count = 0;
 	coldata_count = 0;
 }

@@ -207,6 +207,7 @@ int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection_id)
 	int dbi_uc = dbi.use_count();
 	int cc = conn.use_count();
 	conn->setDbInterface(nullptr);
+	conn->setOpened(false);
 	connection_manager.remove(conn);
 	setStatus(st, NULL, DBERR_NO_ERROR);
 
@@ -1052,9 +1053,11 @@ GIXSQLDisconnect(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 
 	std::shared_ptr<IDbInterface> dbi = conn->getDbInterface();
 	int rc = dbi->terminate_connection();
+	conn->setOpened(false);
+
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_DISCONNECT_FAILED)
 
-		setStatus(st, NULL, DBERR_NO_ERROR);
+	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 

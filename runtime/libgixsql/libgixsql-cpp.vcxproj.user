@@ -1,27 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL001A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=mysql://192.168.1.171/testdb1
+DATASRC=sqlite://D:/gix_tmp_test/test_sqlite_1.db
 DATASRC_USR=test
 DATASRC_PWD=test
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL001A-x64-mysql-msvc.log
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-mysql-msvc.log
 GIXSQL_LOG_LEVEL=trace
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL026A.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64
-DATASRC=oracle://192.168.56.135/orcl
-DATASRC_USR=test1.test1
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B.log
+    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
+DATASRC=sqlite://D:/gix_tmp_test/test_sqlite_1.db
+DATASRC_USR=test
+DATASRC_PWD=test
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL026A-x64-mysql-msvc.log
 GIXSQL_LOG_LEVEL=trace
-GIXSQL_LOG_TRUNCATE=on
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
   </PropertyGroup>
 </Project>

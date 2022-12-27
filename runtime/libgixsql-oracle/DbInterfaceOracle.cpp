@@ -141,9 +141,6 @@ int DbInterfaceOracle::terminate_connection()
 		connaddr = NULL;
 	}
 
-	if (owner)
-		owner->setOpened(false);
-
 	return DBERR_NO_ERROR;
 }
 

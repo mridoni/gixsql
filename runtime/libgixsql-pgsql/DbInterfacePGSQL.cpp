@@ -200,14 +200,7 @@ int DbInterfacePGSQL::terminate_connection()
 		connaddr = NULL;
 	}
 
-	//if (current_resultset_data) {
-	//	delete current_resultset_data;
-	//	current_resultset_data = nullptr;
-	//}
 	current_resultset_data.reset();
-
-	if (owner)
-		owner->setOpened(false);
 
 	return DBERR_NO_ERROR;
 }

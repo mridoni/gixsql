@@ -173,64 +173,11 @@ int DbInterfaceODBC::terminate_connection()
 
 	int rc = SQLDisconnect(conn_handle);
 
-	if (owner)
-		owner->setOpened(false);
-
 	if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS)
 		return DBERR_DISCONNECT_FAILED;
 
 	return DBERR_NO_ERROR;
 }
-
-//int DbInterfaceODBC::begin_transaction()
-//{
-//	lib_logger->debug(FMT_FILE_FUNC  "ODBC: begin transaction invoked", __FILE__, __func__);
-//
-//	// Nothing to do for ODBC
-//	return DBERR_NO_ERROR;
-//}
-//
-//int DbInterfaceODBC::end_transaction(std::string completion_type)
-//{
-//	lib_logger->trace(FMT_FILE_FUNC  "ODBC: end transaction invoked", __FILE__, __func__);
-//
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	if (!current_statement_data || !current_statement_data->statement) {
-//		lib_logger->error("ODBC: Invalid statement reference");
-//		return DBERR_END_TX_FAILED;
-//	}
-//
-//	SQLSMALLINT sql_completion_type = (completion_type == "COMMIT") ? SQL_COMMIT : SQL_ROLLBACK;
-//	delete current_statement_data;
-//	current_statement_data = nullptr;
-//
-//	int rc = SQLEndTran(SQL_HANDLE_DBC, conn_handle, sql_completion_type);
-//	if (odbcRetrieveError(rc, ErrorSource::Statement) != SQL_SUCCESS) {
-//		lib_logger->debug(FMT_FILE_FUNC  "ODBC: Error while ending transaction (2)({}): {}", __FILE__, __func__, completion_type, last_rc);
-//		lib_logger->error("ODBC: Error while ending transaction (1)({}): {}", completion_type, last_rc);
-//		return DBERR_END_TX_FAILED;
-//	}
-//
-//	std::map<std::string, ICursor*>::iterator it;
-//	std::vector<ICursor*> cur_to_remove;
-//	std::vector<ICursor*>::iterator it2;
-//
-//	for (it = _declared_cursors.begin(); it != _declared_cursors.end(); it++) {
-//		ICursor* c = (it)->second;
-//		if (!c->isWithHold())
-//			cur_to_remove.push_back(c);
-//	}
-//
-//	for (it2 = cur_to_remove.begin(); it2 != cur_to_remove.end(); it2++) {
-//		ICursor* c = (*it2);
-//		_declared_cursors.erase(c->getName());
-//		close_cursor(c);
-//	}
-//
-//	return DBERR_NO_ERROR;
-//}
 
 char* DbInterfaceODBC::get_error_message()
 {
