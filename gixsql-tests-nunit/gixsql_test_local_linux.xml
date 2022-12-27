@@ -2,12 +2,12 @@
 <test-local-config>
 
 	<global>
-		<gixsql-install-base>/opt/gixsql</gixsql-install-base>
+		<gixsql-install-base>/home/marchetto/gixsql/dist</gixsql-install-base>
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
 		<test-filter></test-filter>
 		<dbtype-filter>pgsql</dbtype-filter>
-		<mem-check></mem-check>
+		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
@@ -71,7 +71,7 @@
 
 	<data-sources>
 		<data-source type="pgsql" index="1">
-			<hostname>localhost</hostname>
+			<hostname>192.168.56.1</hostname>
 			<port>5432</port>
 			<dbname>testdb1</dbname>
 			<username>test</username>
@@ -79,7 +79,7 @@
 			<options>native_cursors=off</options>
 		</data-source>
 		<data-source type="pgsql" index="2">
-			<hostname>localhost</hostname>
+			<hostname>192.168.56.1</hostname>
 			<port>5432</port>
 			<dbname>testdb2</dbname>
 			<username>test</username>
@@ -87,7 +87,7 @@
 			<options>native_cursors=off</options>
 		</data-source>
 		<data-source type="mysql" index="1">
-			<hostname>localhost</hostname>
+			<hostname>192.168.1.171</hostname>
 			<port>3306</port>
 			<dbname>testdb1</dbname>
 			<username>test</username>
@@ -95,7 +95,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="mysql" index="2">
-			<hostname>localhost</hostname>
+			<hostname>192.168.1.171</hostname>
 			<port>3306</port>
 			<dbname>testdb2</dbname>
 			<username>test</username>
@@ -119,7 +119,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="1">
-			<hostname>/tmp/gixsql-test/test_sqlite_1.db</hostname>
+			<hostname>/tmp/gix_tmp_test/test_sqlite_1.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>
@@ -127,7 +127,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="2">
-			<hostname>/tmp/gixsql-test/test_sqlite_2.db</hostname>
+			<hostname>/tmp/gix_tmp_test/test_sqlite_2.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>
