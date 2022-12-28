@@ -32,10 +32,27 @@ jobs:
     - name: Prepare test environment
       run: |
         mkdir -p /tmp/gixsql-test
-        sudo apt install -y build-essential libtool pkg-config libspdlog-dev gnucobol3 unixodbc-dev libmariadb-dev-compat libpq-dev
+        sudo apt install -y build-essential libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
         sudo apt remove 'dotnet*' 'aspnet*' 'netstandard*'
         sudo rm /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt install dotnet-sdk-6.0 -y
+        sudo rm -f /etc/odbc.ini
+        echo '[ODBC_TEST1]' >> /etc/odbc.ini
+        echo 'Description = PostgreSQL test DB 1' >> /etc/odbc.ini
+        echo 'Driver  = PostgreSQL ANSI' >> /etc/odbc.ini
+        echo 'Username = test' >> /etc/odbc.ini
+        echo 'Password = test' >> /etc/odbc.ini
+        echo 'Servername = 127.0.0.1' >> /etc/odbc.ini
+        echo 'Database = testdb1' >> /etc/odbc.ini
+        echo 'Port = 5432' >> /etc/odbc.ini
+        echo '[ODBC_TEST2]' >> /etc/odbc.ini
+        echo 'Description = PostgreSQL test DB 2' >> /etc/odbc.ini
+        echo 'Driver  = PostgreSQL ANSI' >> /etc/odbc.ini
+        echo 'Username = test' >> /etc/odbc.ini
+        echo 'Password = test' >> /etc/odbc.ini
+        echo 'Servername = 127.0.0.1' >> /etc/odbc.ini
+        echo 'Database = testdb2' >> /etc/odbc.ini
+        echo 'Port = 5432' >> /etc/odbc.ini
 
     - name: Configure PostgreSQL
       run: |
