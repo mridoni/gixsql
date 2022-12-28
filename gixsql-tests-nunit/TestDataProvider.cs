@@ -78,7 +78,7 @@ namespace gixsql_tests
                 XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gixsql-install-base");
                 if (xg == null || !Directory.Exists(xg.InnerText))
                 {
-                    throw new Exception("Invalid \"gixsql-install-base\" in " + local_config);
+                    throw new Exception("Invalid \"gixsql-install-base\" in " + local_config + ": " + (xg == null ? "(null)" : xg.InnerText));
                 }
                 test_install_base = xg.InnerText;
                 Console.WriteLine("Install base: " + test_install_base);
@@ -96,7 +96,7 @@ namespace gixsql_tests
                 xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/temp-dir");
                 if (xg != null && !Directory.Exists(xg.InnerText))
                 {
-                    throw new Exception("Invalid \"temp-dir\" in " + local_config);
+                    throw new Exception("Invalid \"temp-dir\" in " + local_config + ": " + (xg == null ? "(null)" : xg.InnerText));
                 }
                 if (xg != null)
                     test_temp_dir = xg.InnerText;

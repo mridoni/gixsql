@@ -6,7 +6,7 @@
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
 		<test-filter></test-filter>
-		<dbtype-filter>pgsql</dbtype-filter>
+		<dbtype-filter></dbtype-filter>
 		<mem-check></mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
