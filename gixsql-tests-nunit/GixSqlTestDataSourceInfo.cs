@@ -259,7 +259,7 @@ namespace gixsql_tests
             }
             catch (Exception ex)
             {
-                if (report_error)
+                // if (report_error)
                     Console.WriteLine(ex.Message);
 
                 return false;

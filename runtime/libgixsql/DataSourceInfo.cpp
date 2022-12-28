@@ -89,7 +89,7 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 		}
 
 		this->dbtype = "sqlite";
-		this->host = sqlite_path;
+		this->host = trim_copy(sqlite_path);
 		this->dbname = std::filesystem::path(this->host).filename().string();
 		return 0;
 	}
