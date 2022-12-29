@@ -42,7 +42,7 @@ DataSourceInfo::~DataSourceInfo()
 {
 }
 
-std::string rx_escape(const std::string s)
+static std::string rx_escape(const std::string s)
 {
 	if (s.size() == 1) {
 		char c = s[0];
@@ -71,14 +71,16 @@ int DataSourceInfo::init(const std::string& data_source, const std::string& dbna
 		this->usrpwd_sep = ".";
 	}
 
-	// Special case: it is a filename
-	if (starts_with(data_source, "sqlite://")) {
-		if (data_source.size() <= 10)
+	// Special case: if it is SQLite, we treat it as a filename
+	bool uses_default_driver = false;
+	if (is_sqlite(data_source, &uses_default_driver)) {
+
+		if (!uses_default_driver && data_source.size() <= 10)
 			return 1;
 
 		std::string sqlite_path;
 		std::string sqlite_opts;
-		std::string path_opts = data_source.substr(9);
+		std::string path_opts = data_source.substr(uses_default_driver ? 0 : 9);
 
 		if (path_opts.find('?') == std::string::npos) {
 			sqlite_path = path_opts;
@@ -243,10 +245,6 @@ std::string DataSourceInfo::getPassword()
 	return password;
 }
 
-//std::string DataSourceInfo::getDefaultSchema()
-//{
-//	return options.find("default_schema") != options.end() ? options["default_schema"] : std::string();
-//}
 
 LIBGIXSQL_API std::string DataSourceInfo::getName()
 {
@@ -456,4 +454,24 @@ std::string DataSourceInfo::toConnectionString(bool use_pwd, std::string pwd)
 	}
 
 	return res.str();
+}
+
+bool DataSourceInfo::is_sqlite(const std::string& ds, bool *uses_default_driver)
+{
+	if (starts_with(ds, "sqlite://")) {
+		*uses_default_driver = false;
+		return true;
+	}
+
+	if (get_default_driver() == "sqlite" && 
+		!starts_with(ds, "pgsql://") &&
+		!starts_with(ds, "mysql://") &&
+		!starts_with(ds, "odbc://") &&
+		!starts_with(ds, "oracle://")
+	) {
+		*uses_default_driver = true;
+		return true;
+	}
+
+	return false;
 }

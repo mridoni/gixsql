@@ -72,6 +72,10 @@ jobs:
         sudo debconf-set-selections <<< 'mariadb-server-10.6 mysql-server/root_password password rootpass'
         sudo debconf-set-selections <<< 'mariadb-server-10.6 mysql-server/root_password_again password rootpass'      
         sudo DEBIAN_FRONTEND=noninteractive apt install mariadb-server -yq
+        sudo rm -f /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo echo "[mysqld]" >> /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo echo "lower_case_table_names = 1" >> /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo service mariadb restart
         sudo mysql -uroot -prootpass -e "create user test identified by 'test'"     
         sudo mysql -uroot -prootpass -e "create database testdb1"     
         sudo mysql -uroot -prootpass -e "create database testdb2"     
@@ -79,6 +83,7 @@ jobs:
         sudo mysql -uroot -prootpass -e "grant all on testdb1.* to test@'%' identified by 'test'"     
         sudo mysql -uroot -prootpass -e "grant all on testdb2.* to test@'%' identified by 'test'"     
         sudo mysql -uroot -prootpass -e "grant all on testdb3.* to test@'%' identified by 'test'"     
+        
           
     - name: Set up build dependencies
       run: |

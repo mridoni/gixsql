@@ -1461,7 +1461,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL021B-2" enabled="true">
+		<test name="TSQL021B-2" enabled="true" not-applies-to="odbc,sqlite">>
 			<description>More formats for connect</description>
 			<issue-coverage>#043</issue-coverage>
 			<architecture>all</architecture>
@@ -1500,7 +1500,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL021B-3" enabled="true" not-applies-to="odbc">
+		<test name="TSQL021B-3" enabled="true" not-applies-to="odbc,sqlite">
 			<description>More formats for connect</description>
 			<issue-coverage>#043</issue-coverage>
 			<architecture>all</architecture>

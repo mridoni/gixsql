@@ -110,10 +110,14 @@ namespace gixsql_tests
                     string sql_file_ext = Path.GetExtension(sql_file);
 
                     string sql = Utils.GetResource(sql_file_root + "-" + client_type + sql_file_ext);
-                    if (String.IsNullOrWhiteSpace(sql))
+                    if (String.IsNullOrWhiteSpace(sql)) {
                         sql = Utils.GetResource(sql_file);
+                        if (!String.IsNullOrWhiteSpace(sql) && TestDataProvider.TestVerbose)
+                            Console.WriteLine($"Loaded {sql_file}");
+                    }
 
                     Assert.IsFalse(String.IsNullOrWhiteSpace(sql));
+                    
 
                     string[] sql_blocks = sql.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries)
                                                 .ToList().ConvertAll(a => a.Trim()).Where(a => !String.IsNullOrWhiteSpace(a)).ToArray();

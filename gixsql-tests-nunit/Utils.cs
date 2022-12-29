@@ -96,12 +96,20 @@ namespace gixsql_tests
                 .GetManifestResourceNames()
                 .FirstOrDefault(p => p.ToLowerInvariant() == path.ToLowerInvariant());
 
-            if(path==null)
-                throw new ArgumentNullException($"Can't find resource {resourceName}",nameof(resourceName));
+            if(path==null) {
+                if (TestDataProvider.TestVerbose)
+                    Console.WriteLine($"Warning: can't find resource {resourceName}");
+                
+                return null;
+            }
 
             var manifestResourceStream = assembly.GetManifestResourceStream(path);
-            if (manifestResourceStream == null)
-                throw new ArgumentNullException($"Can't find resource {resourceName}",nameof(resourceName));
+            if (manifestResourceStream == null){
+                if (TestDataProvider.TestVerbose)
+                    Console.WriteLine($"Warning: can't find resource {resourceName}");
+                
+                return null;
+            }
 
   
             using (Stream fs = assembly.GetManifestResourceStream(path))
