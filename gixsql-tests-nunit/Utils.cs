@@ -88,7 +88,23 @@ namespace gixsql_tests
         public static string GetResource(string resourceName)
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using (Stream fs = assembly.GetManifestResourceStream("gixsql_tests_nunit.data." + resourceName))
+
+            string path = "gixsql_tests_nunit.data." + resourceName;
+
+            // Match using case invariant matching
+            path = assembly
+                .GetManifestResourceNames()
+                .FirstOrDefault(p => p.ToLowerInvariant() == path.ToLowerInvariant());
+
+            if(path==null)
+                throw new ArgumentNullException($"Can't find resource {resourceName}",nameof(resourceName));
+
+            var manifestResourceStream = assembly.GetManifestResourceStream(path);
+            if (manifestResourceStream == null)
+                throw new ArgumentNullException($"Can't find resource {resourceName}",nameof(resourceName));
+
+  
+            using (Stream fs = assembly.GetManifestResourceStream(path))
             {
                 if (fs == null)
                     return null;

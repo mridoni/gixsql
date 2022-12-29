@@ -6,7 +6,8 @@
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
 		<test-filter></test-filter>
-		<dbtype-filter>pgsql,mysql,sqlite,odbc</dbtype-filter><!-- Oracle can not be installed directly , so it will not be tested-->
+		<!--<dbtype-filter>pgsql,mysql,sqlite,odbc</dbtype-filter>--><!-- Oracle can not be installed directly , so it will not be tested-->
+		<dbtype-filter>mysql</dbtype-filter><!-- Oracle can not be installed directly , so it will not be tested-->
 		<mem-check></mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
