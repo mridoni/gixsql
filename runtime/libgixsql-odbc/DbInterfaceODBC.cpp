@@ -169,12 +169,16 @@ int DbInterfaceODBC::reset()
 
 int DbInterfaceODBC::terminate_connection()
 {
-	// we need to dispose this before closing the connection, 
-	// or we will get a memory loeak from the ODBC driver/subsystem
-	// if we attempt to free the handle later
+	fprintf(stderr, "terminating connection\n");
+	// we need to dispose these before closing the connection, 
+	// or we will get a memory leak from the ODBC driver/subsystem
+	// if later on we attempt to free the handle in ODBCStatementData
 	if (current_statement_data) {
 		current_statement_data.reset();
 	}
+
+	// same as above
+	_prepared_stmts.clear();
 
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: connection termination invoked", __FILE__, __func__);
 
@@ -252,11 +256,11 @@ int DbInterfaceODBC::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
 {
-	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, stmt_name);
+	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Statement not found: {}", stmt_name);
@@ -266,8 +270,6 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 	int nParams = (int)paramValues.size();
 
 	std::shared_ptr<ODBCStatementData> wk_rs = _prepared_stmts[stmt_name];
-	wk_rs->resizeParams(nParams);
-
 	wk_rs->resizeParams(nParams);
 
 	for (int i = 0; i < nParams; i++) {
@@ -283,11 +285,10 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 			10,
 			0,
 			(SQLPOINTER)paramValues.at(i).c_str(),
-			(SQLLEN)paramValues.at(i).size(),
+			(SQLLEN)paramValues.at(i).size(),		
 			NULL);
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			//free(pvals);
 			last_rc = rc;
 			lib_logger->error("ODBC: Error while binding parameter {} in prepared statement ({}): {}", i + 1, last_rc, stmt_name);
 			return DBERR_SQL_ERROR;
@@ -1067,9 +1068,11 @@ int DbInterfaceODBC::get_affected_rows(std::shared_ptr<ODBCStatementData> d)
 
 ODBCStatementData::ODBCStatementData(SQLHANDLE conn_handle)
 {
+fprintf (stderr, "allocating ODBCStatementData at %p\n", this);
 	if (conn_handle) {
 		int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
 		if (rc != SQL_SUCCESS) {
+			fprintf(stderr, "******** ODBC: SQLAllocHandle returned %d\n", rc);
 			this->statement = nullptr;
 		}
 	}
@@ -1077,9 +1080,15 @@ ODBCStatementData::ODBCStatementData(SQLHANDLE conn_handle)
 
 ODBCStatementData::~ODBCStatementData()
 {
+fprintf (stderr, "deallocating ODBCStatementData at %p\n", this);	
 	int rc = 0;
 	if (this->statement) {
 		rc = SQLFreeStmt(this->statement, SQL_CLOSE);
+		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
+		rc = SQLFreeStmt(this->statement, SQL_UNBIND);  
+		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
+   		rc = SQLFreeStmt(this->statement, SQL_RESET_PARAMS); 
+		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
 		SQLFreeHandle(SQL_HANDLE_STMT, this->statement);
 		this->statement = nullptr;	// Not actually needed, since we are in a destructor, but...
 	}

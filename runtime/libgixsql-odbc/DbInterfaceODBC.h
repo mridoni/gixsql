@@ -94,7 +94,7 @@ public:
 	virtual void set_owner(std::shared_ptr<IConnection>) override;
 	virtual std::shared_ptr<IConnection> get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
-	virtual int exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
+	virtual int exec_prepared(const std::string& stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
 	virtual bool getSchemas(std::vector<SchemaInfo*>& res) override;

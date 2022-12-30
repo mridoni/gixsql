@@ -6,8 +6,8 @@
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
 		<test-filter></test-filter>
-		<dbtype-filter>odbc,mysql,pgsql,sqlite</dbtype-filter><!-- Oracle can not be installed directly , so it will not be tested-->
-		<mem-check>valgrind --log-file=valgrind-${testid}-${arch}-${dbtype}.txt --show-reachable=no --error-exitcode=1</mem-check>
+		<dbtype-filter>odbc</dbtype-filter><!-- Oracle can not be installed directly , so it will not be tested-->
+		<mem-check>valgrind --log-file=valgrind-${testid}-${arch}-${dbtype}.txt</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />

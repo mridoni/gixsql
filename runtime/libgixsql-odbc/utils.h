@@ -58,7 +58,7 @@ bool starts_with(std::string s, std::string s1);
 
 bool caseInsensitiveStringCompare(const std::string& str1, const std::string& str2);
 
-std::string to_lower(const std::string s); 
-std::string to_upper(const std::string s);
+std::string to_lower(const std::string& s); 
+std::string to_upper(const std::string& s);
 
-int find_nocase(const std::string needle, const std::string haystack);
+int find_nocase(const std::string needle, const std::string& haystack);

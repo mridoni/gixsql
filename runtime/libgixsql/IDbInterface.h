@@ -141,7 +141,7 @@ public:
 	virtual void set_owner(std::shared_ptr<IConnection>) = 0;
 	virtual std::shared_ptr<IConnection> get_owner() = 0;
 	virtual int prepare(std::string stmt_name, std::string sql) = 0;
-	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) = 0;
+	virtual int exec_prepared(const std::string& stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) = 0;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;
 
 	IDbManagerInterface* manager()
