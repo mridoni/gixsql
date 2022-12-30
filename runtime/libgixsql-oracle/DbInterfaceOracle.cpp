@@ -221,20 +221,20 @@ int DbInterfaceOracle::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int get_oracle_type(int t)
+int get_oracle_type(CobolVarType t)
 {
 	switch (t) {
-		case COBOL_TYPE_UNSIGNED_NUMBER:
-		case COBOL_TYPE_SIGNED_NUMBER_TC:
-		case COBOL_TYPE_SIGNED_NUMBER_LS:
-		case COBOL_TYPE_UNSIGNED_NUMBER_PD:
-		case COBOL_TYPE_SIGNED_NUMBER_PD:
-		case COBOL_TYPE_UNSIGNED_BINARY:
-		case COBOL_TYPE_SIGNED_BINARY:
+		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+		case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 			return DPI_ORACLE_TYPE_NUMBER;
 
-		case COBOL_TYPE_JAPANESE:
-		case COBOL_TYPE_ALPHANUMERIC:
+		case CobolVarType::COBOL_TYPE_JAPANESE:
+		case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 			return DPI_ORACLE_TYPE_VARCHAR;
 
 		default:
@@ -242,7 +242,7 @@ int get_oracle_type(int t)
 	}
 }
 
-int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats)
 {
 	
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
@@ -406,12 +406,12 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, std::string que
 }
 
 
-int DbInterfaceOracle::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfaceOracle::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<CobolVarType>& paramFormats)
 {
 	return _odpi_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
 }
 
-int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<OdpiStatementData> prep_stmt_data)
+int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, std::string query, int nParams, const std::vector<CobolVarType>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<OdpiStatementData> prep_stmt_data)
 {
 	std::string q = query;
 	int rc = 0;

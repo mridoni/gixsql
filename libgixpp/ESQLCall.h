@@ -25,6 +25,7 @@ USA.
 
 #include "ESQLDefinitions.h"
 #include "gix_esql_driver.hh"
+#include "cobol_var_types.h"
 
 #define BY_REFERENCE	true
 #define BY_VALUE		false
@@ -44,6 +45,7 @@ public:
 
 	void addParameter(std::string value, bool by_reference);
 	void addParameter(int value, bool by_reference);
+	void addParameter(CobolVarType type, bool by_reference);
 	void addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, int varlen_sz = 0);
 
 	std::vector<std::string> format(int indent_level = 0) const;

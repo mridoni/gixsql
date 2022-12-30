@@ -24,7 +24,7 @@ USA.
 
 #include "gix_esql_parser.hh"
 #include "libcpputils.h"
-#include "cobol_var_types.h"
+//#include "cobol_var_types.h"
 
 #include "TPESQLProcessing.h"
 

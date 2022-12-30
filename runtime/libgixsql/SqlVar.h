@@ -24,13 +24,14 @@
 #include <string>
 
 #include "varlen_defs.h"
+#include "cobol_var_types.h"
 
 class SqlVar
 {
 	friend class SqlVarList;
 
 public:
-	SqlVar(int _type, int _length, int _power, uint32_t _flags, void *_addr);
+	SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr);
 	~SqlVar();
 
 	SqlVar *copy();
@@ -39,7 +40,7 @@ public:
 
 	void* getAddr();
 	char *getRealData();
-	int getType();
+	CobolVarType getType();
 	int getLength();
 
 	bool isVarLen();
@@ -51,12 +52,12 @@ public:
 
 
 private:
-	int type; // set OCDB_TYPE_*
-	int length; // includes the extra 2 bytes for variable length fields (level 49)
-	int power; // power
-	void *addr = nullptr; // address of variable
-	char *realdata = nullptr; // realdata
-	unsigned int realdata_len = 0; // length of realdata (actual length of allocated buffer is always realdata_len + 1)
+	CobolVarType type; 
+	int length;						// includes the extra 2 bytes for variable length fields (level 49)
+	int power; 
+	void *addr = nullptr;			// address of variable (COBOL-side)
+	char *realdata = nullptr;		// realdata (i.e. displayable data)
+	unsigned int realdata_len = 0;	// length of realdata (actual length of allocated buffer is always realdata_len + 1)
 
 	// Variable length support
 	bool is_variable_length = false;

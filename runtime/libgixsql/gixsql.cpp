@@ -382,35 +382,7 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-		//if (is_commit_or_rollback_statement(query)) {
-		//	cursor_manager.closeConnectionCursors(conn->getId(), false);
-
-		//	if (conn->getConnectionOptions()->autocommit) {
-		//		rc = dbi->end_transaction(query);
-		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-		//			rc = dbi->begin_transaction();
-		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-		//	}
-		//	else {
-		//		rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-		//		FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-		//	}
-		//}
-		//else {
-		//	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
-		//	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
-
-		//		if (is_dml_statement(query) && conn->getConnectionOptions()->autocommit) {
-		//			rc = dbi->end_transaction(query);
-		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_END_TX_FAILED)
-
-		//				rc = dbi->begin_transaction();
-		//			FAIL_ON_ERROR(rc, st, dbi, DBERR_BEGIN_TX_FAILED)
-		//		}
-		//}
-
-		setStatus(st, NULL, DBERR_NO_ERROR);
+	setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -809,7 +781,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 
 	std::shared_ptr<IDbInterface> dbi = cursor->getConnection()->getDbInterface();
-	int rc = dbi->fetch_one(cursor, FETCH_NEXT_ROW);
+	int rc = dbi->cursor_fetch_one(cursor, FETCH_NEXT_ROW);
 	if (rc == DBERR_NO_DATA) {
 		setStatus(st, dbi, DBERR_NO_DATA);
 		return DBERR_FETCH_ROW_FAILED;

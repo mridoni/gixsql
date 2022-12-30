@@ -25,8 +25,6 @@
 #include "utils.h"
 #include "varlen_defs.h"
 
-#include "cobol_var_types.h"
-
 #include <cstring>
 
 
@@ -256,7 +254,7 @@ int DbInterfaceODBC::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats)
 {
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
@@ -855,22 +853,22 @@ int DbInterfaceODBC::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 	return -1;
 }
 
-int DbInterfaceODBC::cobol2odbctype(int t)
+int DbInterfaceODBC::cobol2odbctype(CobolVarType t)
 {
 	switch (t) {
-	case COBOL_TYPE_UNSIGNED_NUMBER:
-	case COBOL_TYPE_SIGNED_NUMBER_TC:
-	case COBOL_TYPE_SIGNED_NUMBER_TS:
-	case COBOL_TYPE_SIGNED_NUMBER_LC:
-	case COBOL_TYPE_SIGNED_NUMBER_LS:
-	case COBOL_TYPE_UNSIGNED_NUMBER_PD:
-	case COBOL_TYPE_SIGNED_NUMBER_PD:
-	case COBOL_TYPE_UNSIGNED_BINARY:
-	case COBOL_TYPE_SIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 		return SQL_NUMERIC;
 
-	case COBOL_TYPE_ALPHANUMERIC:
-	case COBOL_TYPE_JAPANESE:
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
 		return SQL_VARCHAR;
 
 	default:
@@ -878,22 +876,22 @@ int DbInterfaceODBC::cobol2odbctype(int t)
 	}
 }
 
-int DbInterfaceODBC::cobol2ctype(int t)
+int DbInterfaceODBC::cobol2ctype(CobolVarType t)
 {
 	switch (t) {
-	case COBOL_TYPE_UNSIGNED_NUMBER:
-	case COBOL_TYPE_SIGNED_NUMBER_TC:
-	case COBOL_TYPE_SIGNED_NUMBER_TS:
-	case COBOL_TYPE_SIGNED_NUMBER_LC:
-	case COBOL_TYPE_SIGNED_NUMBER_LS:
-	case COBOL_TYPE_UNSIGNED_NUMBER_PD:
-	case COBOL_TYPE_SIGNED_NUMBER_PD:
-	case COBOL_TYPE_UNSIGNED_BINARY:
-	case COBOL_TYPE_SIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 		return SQL_C_NUMERIC;
 
-	case COBOL_TYPE_ALPHANUMERIC:
-	case COBOL_TYPE_JAPANESE:
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
 		return SQL_C_CHAR;
 
 	default:

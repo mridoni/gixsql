@@ -638,7 +638,8 @@ void TPESQLProcessing::put_working_storage()
 
 bool TPESQLProcessing::put_cursor_declarations()
 {
-	int f_type, f_size, f_scale;
+	CobolVarType f_type;
+	int f_size, f_scale;
 	bool emit_static = opt_emit_static_calls;
 	const char* _areab = AREA_B_CPREFIX;
 
@@ -805,7 +806,8 @@ void TPESQLProcessing::put_output_line(const std::string& line)
 
 bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql_stmt_ptr stmt, bool in_ws)
 {
-	int f_type, f_size, f_scale;
+	CobolVarType f_type;
+	int f_size, f_scale;
 	bool emit_static = opt_emit_static_calls;
 
 	if (stmt->startup_item)
@@ -1051,7 +1053,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 			// Support for group items used as host variables in SELECT statements
 			// They are decomposed into their sub-elements
-			if (f_type == COBOL_TYPE_GROUP && !is_varlen) {
+			if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
 				if (hr->group_levels_count != 1) {
 					main_module_driver.error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
@@ -1069,7 +1071,8 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					ESQLCall pp_call(get_call_id("SetResultParams"), emit_static);
 					int pp_flags = (pp->usage == Usage::Binary) ? CBL_FIELD_FLAG_BINARY : CBL_FIELD_FLAG_NONE;
 
-					int pp_type = 0, pp_size = 0, pp_scale = 0;
+					CobolVarType pp_type = CobolVarType::UNKNOWN;
+					int pp_size = 0, pp_scale = 0;
 					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
 						main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
@@ -1187,7 +1190,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 			// Support for group items used as host variables in INSERT statements
 			// They are decomposed into their sub-elements
-			if (cmd == ESQL_Command::Insert && f_type == COBOL_TYPE_GROUP && !is_varlen) {
+			if (cmd == ESQL_Command::Insert && f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 				if (hr->group_levels_count != 1) {
 					main_module_driver.error("Nested levels not allowed in group variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 					return false;
@@ -1211,7 +1214,8 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					if (HAS_PICX_AS_VARCHAR(_flags) || opt_picx_as_varchar)
 						pp_flags |= CBL_FIELD_FLAG_AUTOTRIM;
 
-					int pp_type = 0, pp_size = 0, pp_scale = 0;
+					CobolVarType pp_type = CobolVarType::UNKNOWN;
+					int pp_size = 0, pp_scale = 0;
 					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
 						main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
@@ -1676,47 +1680,47 @@ bool TPESQLProcessing::is_var_len_group(cb_field_ptr f)
 	return true;
 }
 
-int gethostvarianttype(cb_field_ptr p, int* type)
+bool gethostvarianttype(cb_field_ptr p, CobolVarType* type)
 {
-	int tmp_type = ERR_NOTDEF_CONVERSION;
+	CobolVarType tmp_type = CobolVarType::UNKNOWN;
 
 	if (p->pictype != 0) {
 		switch (p->pictype) {
 		case PIC_ALPHANUMERIC:
-			tmp_type = COBOL_TYPE_ALPHANUMERIC;
+			tmp_type = CobolVarType::COBOL_TYPE_ALPHANUMERIC;
 			break;
 		case PIC_NATIONAL:
-			tmp_type = COBOL_TYPE_NATIONAL;
+			tmp_type = CobolVarType::COBOL_TYPE_NATIONAL;
 			break;
 		case PIC_NUMERIC:
 			if (p->have_sign) {
 				if (p->usage != Usage::None) {
 					switch (p->usage) {
 					case Usage::Packed:
-						tmp_type = COBOL_TYPE_SIGNED_NUMBER_PD;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD;
 						break;
 					case Usage::Binary:
 					case Usage::NativeBinary:
-						tmp_type = COBOL_TYPE_SIGNED_BINARY;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_BINARY;
 						break;
 					default:
-						return ERR_NOTDEF_CONVERSION;
+						return false;
 					}
 				}
 				else if (p->sign_leading) {
 					if (p->separate) {
-						tmp_type = COBOL_TYPE_SIGNED_NUMBER_LS;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS;
 					}
 					else {
-						tmp_type = COBOL_TYPE_SIGNED_NUMBER_LC;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC;
 					}
 				}
 				else {
 					if (p->separate) {
-						tmp_type = COBOL_TYPE_SIGNED_NUMBER_TS;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS;
 					}
 					else {
-						tmp_type = COBOL_TYPE_SIGNED_NUMBER_TC;
+						tmp_type = CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC;
 					}
 				}
 			}
@@ -1724,18 +1728,18 @@ int gethostvarianttype(cb_field_ptr p, int* type)
 				if (p->usage != Usage::None) {
 					switch (p->usage) {
 					case Usage::Packed:
-						tmp_type = COBOL_TYPE_UNSIGNED_NUMBER_PD;
+						tmp_type = CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD;
 						break;
 					case Usage::Binary:
 					case Usage::NativeBinary:
-						tmp_type = COBOL_TYPE_UNSIGNED_BINARY;
+						tmp_type = CobolVarType::COBOL_TYPE_UNSIGNED_BINARY;
 						break;
 					default:
-						return ERR_NOTDEF_CONVERSION;
+						return false;
 					}
 				}
 				else {
-					tmp_type = COBOL_TYPE_UNSIGNED_NUMBER;
+					tmp_type = CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER;
 				}
 			}
 			break;
@@ -1743,29 +1747,30 @@ int gethostvarianttype(cb_field_ptr p, int* type)
 			break;
 		}
 		*type = tmp_type;
-		return 0;
+		return true;
 	}
+
 	if (p->usage != Usage::None) {
 		switch (p->usage) {
 		case Usage::Float:
-			tmp_type = COBOL_TYPE_FLOAT;
+			tmp_type = CobolVarType::COBOL_TYPE_FLOAT;
 			break;
 		case Usage::Double:
-			tmp_type = COBOL_TYPE_DOUBLE;
+			tmp_type = CobolVarType::COBOL_TYPE_DOUBLE;
 			break;
 		default:
-			return ERR_NOTDEF_CONVERSION;
+			return false;
 		}
 		*type = tmp_type;
-		return 0;
+		return true;
 	}
 
 	if (p->children) {
-		*type = COBOL_TYPE_GROUP;
-		return 0;
+		*type = CobolVarType::COBOL_TYPE_GROUP;
+		return true;
 	}
 
-	return ERR_NOTDEF_CONVERSION;
+	return false;
 }
 
 unsigned int compute_field_size(cb_field_ptr f)
@@ -1846,14 +1851,14 @@ void compute_group_size(cb_field_ptr root, cb_field_ptr f, int* size)
 
 }
 
-bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, int* type, int* size, int* scale)
+bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale)
 {
 	bool is_varlen = is_var_len_group(f);
 	bool is_explicit_varlen = f->is_varlen;
 
 	if (!is_varlen && !is_explicit_varlen) {
 		gethostvarianttype(f, type);
-		if (*type == COBOL_TYPE_GROUP) {
+		if (*type == CobolVarType::COBOL_TYPE_GROUP) {
 			*size = 0;
 			f->group_levels_count = 0;
 			compute_group_size(f, f, size);
@@ -1881,7 +1886,7 @@ bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, int* type, int* siz
 			*scale = f_actual->scale;
 		}
 		else {
-			*type = PIC_ALPHANUMERIC;
+			*type = CobolVarType::COBOL_TYPE_ALPHANUMERIC;
 			*size = f->picnsize + VARLEN_LENGTH_SZ;
 			*scale = f->scale;
 		}
@@ -2275,7 +2280,8 @@ void TPESQLProcessing::put_smart_cursor_init_check(const std::string& crsr_name,
 bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, int* res_params_count)
 {
 	int rp_count = 0;
-	int f_type, f_size, f_scale;
+	CobolVarType f_type;
+	int f_size, f_scale;
 	bool emit_static = opt_emit_static_calls;
 
 	for (cb_res_hostreference_ptr rp : *stmt->res_host_list) {
@@ -2290,7 +2296,7 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 
 		// Support for group items used as host variables in SELECT statements
 		// They are decomposed into their sub-elements
-		if (f_type == COBOL_TYPE_GROUP && !is_varlen) {
+		if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
 			if (hr->group_levels_count != 1) {
 				main_module_driver.error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
@@ -2308,7 +2314,8 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 				ESQLCall pp_call(get_call_id("SetResultParams"), emit_static);
 				int pp_flags = (pp->usage == Usage::Binary) ? CBL_FIELD_FLAG_BINARY : CBL_FIELD_FLAG_NONE;
 
-				int pp_type = 0, pp_size = 0, pp_scale = 0;
+				CobolVarType pp_type = CobolVarType::UNKNOWN;
+				int pp_size = 0, pp_scale = 0;
 				bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 				if (pp_is_varlen) {
 					main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
@@ -2355,7 +2362,8 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 
 bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 {
-	int f_type, f_size, f_scale;
+	CobolVarType f_type;
+	int f_size, f_scale;
 	bool emit_static = opt_emit_static_calls;
 
 	for (cb_hostreference_ptr p : *stmt->host_list) {

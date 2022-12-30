@@ -74,6 +74,11 @@ void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, in
 
 }
 
+void ESQLCall::addParameter(CobolVarType type, bool by_reference)
+{
+	addParameter((int)type, by_reference);
+}
+
 void ESQLCall::addParameter(int value, bool by_reference)
 {
 	params.push_back({ std::to_string(value), by_reference });

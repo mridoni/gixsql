@@ -77,7 +77,7 @@ public:
 	virtual int reset() override;
 	virtual int terminate_connection() override;
 	virtual int exec(std::string) override;
-	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) override;
+	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<CobolVarType>& paramFormats) override;
 	virtual int close_cursor(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr, bool, int) override;
 	virtual int cursor_declare_with_params(const std::shared_ptr<ICursor>& crsr, char**, bool, int) override;
@@ -94,7 +94,7 @@ public:
 	virtual void set_owner(std::shared_ptr<IConnection>) override;
 	virtual std::shared_ptr<IConnection> get_owner() override;
 	virtual int prepare(std::string stmt_name, std::string sql) override;
-	virtual int exec_prepared(const std::string& stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) override;
+	virtual int exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
 	virtual bool getSchemas(std::vector<SchemaInfo*>& res) override;
@@ -104,8 +104,8 @@ public:
 
 private:
 
-	int cobol2odbctype(int);
-	int cobol2ctype(int);
+	int cobol2odbctype(CobolVarType);
+	int cobol2ctype(CobolVarType);
 	int get_data_len(SQLHANDLE hStmt, int cnum);
 
 	static SQLHANDLE odbc_global_env_context;
