@@ -58,7 +58,7 @@ enum class ErrorSource {
 struct ODBCStatementData : public IPrivateStatementData {
 
 	ODBCStatementData(SQLHANDLE conn);
-	virtual ~ODBCStatementData();
+	~ODBCStatementData();
 
 	void resizeParams(int n);
 	void resizeColumnData(int n);

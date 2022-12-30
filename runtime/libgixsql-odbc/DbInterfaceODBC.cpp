@@ -169,13 +169,22 @@ int DbInterfaceODBC::reset()
 
 int DbInterfaceODBC::terminate_connection()
 {
+	// we need to dispose this before closing the connection, 
+	// or we will get a memory loeak from the ODBC driver/subsystem
+	// if we attempt to free the handle later
+	if (current_statement_data) {
+		current_statement_data.reset();
+	}
+
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: connection termination invoked", __FILE__, __func__);
 
-	int rc = SQLDisconnect(conn_handle);
+	if (conn_handle) {
+		int rc = SQLDisconnect(conn_handle);
+		conn_handle = NULL;
 
-	if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS)
-		return DBERR_DISCONNECT_FAILED;
-
+		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS)
+			return DBERR_DISCONNECT_FAILED;
+	}
 	return DBERR_NO_ERROR;
 }
 
@@ -498,10 +507,12 @@ int DbInterfaceODBC::close_cursor(const std::shared_ptr<ICursor>& cursor)
 		SQLHANDLE cursor_handle = dp->statement;
 
 		int rc = SQLCloseCursor(cursor_handle);
+		dp->statement = nullptr;
 		if (odbcRetrieveError(rc, ErrorSource::Statement, cursor_handle) != SQL_SUCCESS) {
 			lib_logger->error("ODBC: Error while closing cursor ({}) {}", last_rc, cursor->getName());
 			return DBERR_CLOSE_CURSOR_FAILED;
 		}
+
 		cursor->setPrivateData(nullptr);
 
 		if (rc != SQL_SUCCESS) {
@@ -982,7 +993,7 @@ int DbInterfaceODBC::odbcRetrieveError(int rc, ErrorSource err_src, SQLHANDLE h)
 				MessageText, sizeof(MessageText), &TextLength);
 
 			if (SQL_SUCCEEDED(ret)) {
-				sprintf(bfr, "%s (%d): %s", SQLState, (long)NativeError, MessageText);
+				sprintf(bfr, "%s (%d): %s", SQLState, NativeError, MessageText);
 				odbc_errors.push_back(std::string(bfr));
 
 #if _DEBUG
@@ -1056,9 +1067,11 @@ int DbInterfaceODBC::get_affected_rows(std::shared_ptr<ODBCStatementData> d)
 
 ODBCStatementData::ODBCStatementData(SQLHANDLE conn_handle)
 {
-	int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
-	if (rc != SQL_SUCCESS) {
-		this->statement = nullptr;
+	if (conn_handle) {
+		int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
+		if (rc != SQL_SUCCESS) {
+			this->statement = nullptr;
+		}
 	}
 }
 
@@ -1067,6 +1080,7 @@ ODBCStatementData::~ODBCStatementData()
 	int rc = 0;
 	if (this->statement) {
 		rc = SQLFreeStmt(this->statement, SQL_CLOSE);
+		SQLFreeHandle(SQL_HANDLE_STMT, this->statement);
 		this->statement = nullptr;	// Not actually needed, since we are in a destructor, but...
 	}
 }

@@ -495,8 +495,10 @@ namespace gixsql_tests
                 if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
                 {
                     string mc = TestDataProvider.MemCheck.Replace("${testid}", td.Name);
-                    mc = mc.Replace("${isodate}", DateTime.Now.ToString("yyyyMMdd"));
-                    mc = mc.Replace("${isotime}", DateTime.Now.ToString("HHmmss"));
+                    mc = mc.Replace("${dbtype}", dbid);
+                    mc = mc.Replace("${arch}", td.Architecture);
+                    mc = mc.Replace("${date}", DateTime.Now.ToString("yyyyMMdd"));
+                    mc = mc.Replace("${time}", DateTime.Now.ToString("HHmmss"));
 
                     if (mc.Contains(' ')) {
                         args = mc.Substring(mc.IndexOf(' ') + 1) + " " + exe;

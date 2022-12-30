@@ -23,7 +23,12 @@ jobs:
     - uses: actions/checkout@v3
       with:
           repository: mridoni/gixsql
-    #      ref: v1.0.20dev
+#          ref: ${{ env.GIXSQL_BRANCH }}
+
+    - name: Configure ACT (local only)
+      if: ${{ env.ACT }}
+      run: |
+        sudo sed -i -e 's/http:\/\/archive.ubuntu.com\/ubuntu\//mirror:\/\/mirrors.ubuntu.com\/mirrors.txt/' /etc/apt/sources.list
 
     - name: Update package list
       run: |
@@ -33,7 +38,7 @@ jobs:
     - name: Prepare test environment
       run: |
         mkdir -p ${{ env.GIXSQL_TEST_DIR }}
-        sudo apt install -y build-essential libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
+        sudo apt install -y build-essential valgrind libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
         sudo apt remove 'dotnet*' 'aspnet*' 'netstandard*'
         sudo rm /etc/apt/sources.list.d/microsoft-prod.list
         sudo apt install dotnet-sdk-6.0 -y
