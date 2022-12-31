@@ -25,6 +25,9 @@ USA.
 #include <memory>
 
 #include "IConnection.h"
+#include "cobol_var_types.h"
+
+using std_binary_data = std::vector<unsigned char>;
 
 struct IPrivateStatementData {
 
@@ -52,9 +55,10 @@ public:
 	virtual bool isWithHold() = 0;
 	virtual bool isOpen() = 0;
 
-	virtual std::vector<std::string> getParameterValues() = 0;
-	virtual std::vector<int> getParameterTypes() = 0;
-	virtual std::vector<int> getParameterLengths() = 0;
+	virtual std::vector<CobolVarType> getParameterTypes() = 0;
+	virtual std::vector<std_binary_data> getParameterValues() = 0;
+	virtual std::vector<unsigned long> getParameterLengths() = 0;
+	virtual std::vector<uint32_t> getParameterFlags() = 0;
 
 	virtual std::shared_ptr<IPrivateStatementData> getPrivateData() = 0;
 	virtual void setPrivateData(std::shared_ptr<IPrivateStatementData>) = 0;

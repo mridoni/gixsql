@@ -1285,7 +1285,7 @@ static int setStatus(struct sqlca_t* st, std::shared_ptr<IDbInterface> dbi, int 
 	}
 
 	if (dbi) {
-		char* m = dbi->get_error_message();
+		const char* m = dbi->get_error_message();
 		if (m != NULL && strlen(m) > 0) {
 			set_sqlerrm(st, m);
 		}

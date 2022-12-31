@@ -101,7 +101,7 @@ void CursorManager::closeConnectionCursors(int connId, bool clear_held_cursors)
 	for (it = _cur_to_close.begin(); it != _cur_to_close.end(); it++) {
 		std::shared_ptr<Cursor> c = (*it);
 		if (c && c->getConnection() && c->getConnection()->getDbInterface())
-			c->getConnection()->getDbInterface()->close_cursor(c);
+			c->getConnection()->getDbInterface()->cursor_close(c);
 	}
 }
 

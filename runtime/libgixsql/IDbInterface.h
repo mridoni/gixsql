@@ -34,6 +34,8 @@ USA.
 #include "IResultSetContextData.h"
 #include "cobol_var_types.h"
 
+using std_binary_data = std::vector<unsigned char>;
+
 #define USE_DEFAULT_CONNECTION		-998
 
 #define DBERR_NO_ERROR				0
@@ -68,7 +70,9 @@ USA.
 
 #define DBERR_NUM_OUT_OF_RANGE		-410
 
-#define DBERR_NOT_IMPL				-990099
+#define DBERR_INTERNAL_ERR			-8880
+
+#define DBERR_NOT_IMPL				-9990
 
 #define FETCH_NEXT_ROW	1
 #define FETCH_PREV_ROW	2
@@ -125,7 +129,7 @@ public:
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
 	virtual int exec(std::string) = 0;
-	virtual int exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths) = 0;
+	virtual int exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
 	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr, bool with_hold) = 0;
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) = 0;
@@ -141,7 +145,7 @@ public:
 	virtual void set_owner(std::shared_ptr<IConnection>) = 0;
 	virtual std::shared_ptr<IConnection> get_owner() = 0;
 	virtual int prepare(const std::string& stmt_name, const std::string& query) = 0;
-	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std::string> &paramValues, std::vector<int> paramLengths) = 0;
+	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data> &paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;
 
 	IDbManagerInterface* manager()

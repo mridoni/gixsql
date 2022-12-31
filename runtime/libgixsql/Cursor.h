@@ -52,9 +52,10 @@ public:
 	bool isOpen() override;
 	bool isWithHold() override;
 	
-	std::vector<std::string> getParameterValues() override;
-	std::vector<int> getParameterTypes() override;
-	std::vector<int> getParameterLengths() override;
+	virtual std::vector<CobolVarType> getParameterTypes() override;
+	virtual std::vector<std_binary_data> getParameterValues() override;
+	virtual std::vector<unsigned long> getParameterLengths() override;
+	virtual std::vector<uint32_t> getParameterFlags() override;
 
 	void setOpened(bool);
 

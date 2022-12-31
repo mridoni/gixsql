@@ -155,9 +155,9 @@ void Cursor::increaseRowNum()
 	rownum++;
 }
 
-std::vector<std::string> Cursor::getParameterValues()
+std::vector<std_binary_data> Cursor::getParameterValues()
 {
-	std::vector<std::string> params;
+	std::vector<std_binary_data> params;
 
 	createRealDataforParameters();	// Just in case
 
@@ -168,7 +168,7 @@ std::vector<std::string> Cursor::getParameterValues()
 	return params;
 }
 
-std::vector<int> Cursor::getParameterTypes()
+std::vector<CobolVarType> Cursor::getParameterTypes()
 {
 	std::vector<int> param_types;
 
@@ -178,7 +178,7 @@ std::vector<int> Cursor::getParameterTypes()
 	return param_types;
 }
 
-std::vector<int> Cursor::getParameterLengths()
+std::vector<unsigned long> Cursor::getParameterLengths()
 {
 	std::vector<int> param_lengths;
 
@@ -186,6 +186,11 @@ std::vector<int> Cursor::getParameterLengths()
 		param_lengths.push_back(parameter_list.at(i)->getLength());
 	}
 	return param_lengths;
+}
+
+std::vector<uint32_t> Cursor::getParameterFlags()
+{
+	return std::vector<uint32_t>();
 }
 
 std::shared_ptr<IPrivateStatementData> Cursor::getPrivateData()
