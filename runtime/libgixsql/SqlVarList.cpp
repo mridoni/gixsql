@@ -37,7 +37,7 @@ SqlVarList::~SqlVarList()
 	}
 }
 
-SqlVar * SqlVarList::AddVar(int type, int length, int power, uint32_t flags, void *addr)
+SqlVar *SqlVarList::AddVar(CobolVarType type, int length, int power, uint32_t flags, void *addr)
 {
 	SqlVar * v = new SqlVar(type, length, power, flags, addr);
 
@@ -65,7 +65,7 @@ void SqlVarList::dump()
 	for (it = std::vector<SqlVar *>::begin(); it != std::vector<SqlVar *>::end(); it++) {
 		SqlVar * v = *it;
 		if (v != NULL) 
-			spdlog::trace(FMT_FILE_FUNC"pre: {}, type: {}, length: {}, power: {}, addr: {}", __FILE__, __func__, (void *)v, v->type, v->length, v->power, v->addr);
+			spdlog::trace(FMT_FILE_FUNC"pre: {}, type: {}, length: {}, power: {}, addr: {}", __FILE__, __func__, (void *)v, (int)v->type, v->length, v->power, v->addr);
 	}
 }
 

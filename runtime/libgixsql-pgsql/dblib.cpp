@@ -36,7 +36,6 @@ extern "C" {
 
 	LIBGIXSQL_API IDbInterface * get_dblib()
 	{
-		//return std::make_shared<DbInterfacePGSQL>();
 		 IDbInterface *dbi = new DbInterfacePGSQL();
 		 return dbi;
 	}

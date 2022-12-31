@@ -461,7 +461,7 @@ int DbInterfacePGSQL::cursor_close(const std::shared_ptr<ICursor>& cursor)
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_CLOSE_CURSOR_FAILED;
 }
 
-int DbInterfacePGSQL::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool with_hold)
+int DbInterfacePGSQL::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;

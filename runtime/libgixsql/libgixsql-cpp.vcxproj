@@ -535,6 +535,7 @@
     <ClInclude Include="sqlca.h" />
     <ClInclude Include="SqlVar.h" />
     <ClInclude Include="SqlVarList.h" />
+    <ClInclude Include="custom_formatters.h" />
     <ClInclude Include="utils.h" />
   </ItemGroup>
   <ItemGroup>

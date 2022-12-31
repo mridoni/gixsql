@@ -101,6 +101,9 @@
     <ClInclude Include="default_driver.h" />
     <ClInclude Include="IConnectionOptions.h" />
     <ClInclude Include="IResultSetContextData.h" />
+    <ClInclude Include="custom_formatters.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

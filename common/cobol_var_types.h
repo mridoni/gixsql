@@ -1,7 +1,7 @@
 #pragma once
 
 
-enum class CobolVarType {
+enum class CobolVarType : int {
 	UNKNOWN = 0,
 	COBOL_TYPE_UNSIGNED_NUMBER = 1,
 	COBOL_TYPE_SIGNED_NUMBER_TS = 2,        // (trailing separate)
@@ -20,13 +20,12 @@ enum class CobolVarType {
 	COBOL_TYPE_NATIONAL = 28,
 };
 
-#define COBOL_TYPE_MIN					CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER
-#define COBOL_TYPE_MAX					CobolVarType::COBOL_TYPE_NATIONAL
+// Only to be used in comparisons
+#define COBOL_TYPE_MIN					((int) CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER)
+#define COBOL_TYPE_MAX					((int) CobolVarType::COBOL_TYPE_NATIONAL)
 
 #define COBOL_TYPE_IS_NUMERIC(T)	(T == CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER || T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC || T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC || T == CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD || T == CobolVarType::COBOL_TYPE_UNSIGNED_BINARY || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_BINARY || T == CobolVarType::COBOL_TYPE_FLOAT || T ==CobolVarType::COBOL_TYPE_DOUBLE)
-
-

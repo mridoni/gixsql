@@ -130,7 +130,7 @@ public:
 	virtual int terminate_connection() = 0;
 	virtual int exec(std::string) = 0;
 	virtual int exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
-	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr, bool with_hold) = 0;
+	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_fetch_one(const std::shared_ptr<ICursor>& crsr, int) = 0;

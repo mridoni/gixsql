@@ -32,7 +32,7 @@ public:
 	SqlVarList();
 	~SqlVarList();
 
-	SqlVar * AddVar(int type, int length, int power, uint32_t flags, void * addr);
+	SqlVar * AddVar(CobolVarType type, int length, int power, uint32_t flags, void * addr);
 
 	void clear();
 	void dump();

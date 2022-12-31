@@ -162,7 +162,7 @@ std::vector<std_binary_data> Cursor::getParameterValues()
 	createRealDataforParameters();	// Just in case
 
 	for (int i = 0; i < parameter_list.size(); i++) {
-		params.push_back(std::string(parameter_list.at(i)->getRealData()));
+		params.push_back(parameter_list.at(i)->getRealData());
 	}
 
 	return params;
@@ -170,7 +170,7 @@ std::vector<std_binary_data> Cursor::getParameterValues()
 
 std::vector<CobolVarType> Cursor::getParameterTypes()
 {
-	std::vector<int> param_types;
+	std::vector<CobolVarType> param_types;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
 		param_types.push_back(parameter_list.at(i)->getType());
@@ -180,7 +180,7 @@ std::vector<CobolVarType> Cursor::getParameterTypes()
 
 std::vector<unsigned long> Cursor::getParameterLengths()
 {
-	std::vector<int> param_lengths;
+	std::vector<unsigned long> param_lengths;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
 		param_lengths.push_back(parameter_list.at(i)->getLength());
@@ -190,7 +190,12 @@ std::vector<unsigned long> Cursor::getParameterLengths()
 
 std::vector<uint32_t> Cursor::getParameterFlags()
 {
-	return std::vector<uint32_t>();
+	std::vector<uint32_t> param_flags;
+
+	for (int i = 0; i < parameter_list.size(); i++) {
+		param_flags.push_back(parameter_list.at(i)->getFlags());
+	}
+	return param_flags;
 }
 
 std::shared_ptr<IPrivateStatementData> Cursor::getPrivateData()

@@ -22,9 +22,12 @@
 
 #include <stdint.h>
 #include <string>
+#include <vector>
 
 #include "varlen_defs.h"
 #include "cobol_var_types.h"
+
+using std_binary_data = std::vector<unsigned char>;
 
 class SqlVar
 {
@@ -39,12 +42,15 @@ public:
 	void createRealData();
 
 	void* getAddr();
-	char *getRealData();
+	const std_binary_data& getRealData();
 	CobolVarType getType();
-	int getLength();
+	unsigned long getLength();
+	unsigned long getRealDataLength();
+	uint32_t getFlags();
 
 	bool isVarLen();
 	bool isBinary();
+	bool isAutoTrim();
 
 	void createCobolData(char *retstr, int datalen, int* sqlcode);
 
@@ -56,9 +62,11 @@ private:
 	int length;						// includes the extra 2 bytes for variable length fields (level 49)
 	int power; 
 	void *addr = nullptr;			// address of variable (COBOL-side)
-	char *realdata = nullptr;		// realdata (i.e. displayable data)
-	unsigned int realdata_len = 0;	// length of realdata (actual length of allocated buffer is always realdata_len + 1)
-
+	std_binary_data realdata;		// realdata (i.e. displayable data)
+	unsigned long realdata_len = 0;	// length of realdata (actual length of allocated buffer is always realdata_len + 1)
+	
+	uint32_t flags = 0;
+	
 	// Variable length support
 	bool is_variable_length = false;
 	
@@ -66,11 +74,11 @@ private:
 	bool is_binary = false;
 
 	// auto-trim for CHAR(x) fields (i.e. gixpp with --picx-as=varchar)
-	bool is_autrotrim = false;
+	bool is_autotrim = false;
 
     static const char _decimal_point;
 
 	void display_to_comp3(const char *data, bool has_sign);	// , int total_len, int scale, int has_sign, uint8_t *addr
-	char *allocate_realdata_buffer();
-};
+	void allocate_realdata_buffer();
 
+};

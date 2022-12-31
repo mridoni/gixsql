@@ -35,6 +35,7 @@
 #endif
 #include <math.h>
 
+#include "cobol_var_types.h"
 #include "Connection.h"
 #include "ConnectionManager.h"
 #include "Cursor.h"
@@ -356,16 +357,18 @@ GIXSQLExecParams(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 
 static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sqlca_t* st, char* _query, unsigned int nParams)
 {
-	std::vector<std::string> params;
-	std::vector<int> param_types;
-	std::vector<int> param_lengths;
+	std::vector<std_binary_data> param_values;
+	std::vector<CobolVarType> param_types;
+	std::vector<unsigned long> param_lengths;
+	std::vector<uint32_t> param_flags;
 	std::vector<SqlVar*>::iterator it;
 
 	// set parameters
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-		params.push_back((*it)->getRealData());
+		param_values.push_back((*it)->getRealData());
 		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getLength());
+		param_lengths.push_back((*it)->getRealDataLength());
+		param_flags.push_back((*it)->getFlags());
 	}
 
 	std::string query = _query;
@@ -379,7 +382,7 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 		cursor_manager.closeConnectionCursors(conn->getId(), false);
 	}
 
-	rc = dbi->exec_params(query, nParams, param_types, params, param_lengths, param_types);
+	rc = dbi->exec_params(query, param_types, param_values, param_lengths, param_flags);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
@@ -418,16 +421,18 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 		return RESULT_FAILED;
 	}
 
-	std::vector<std::string> params;
-	std::vector<int> param_lengths;
-	std::vector<int> param_types;
+	std::vector<std_binary_data> param_values;
+	std::vector<unsigned long> param_lengths;
+	std::vector<CobolVarType> param_types;
+	std::vector<uint32_t> param_flags;
 	std::vector<SqlVar*>::iterator it;
 
 	// set parameters
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-		params.push_back((*it)->getRealData());
+		param_values.push_back((*it)->getRealData());
 		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getLength());
+		param_lengths.push_back((*it)->getRealDataLength());
+		param_flags.push_back((*it)->getFlags());
 	}
 
 	int rc = 0;
@@ -435,7 +440,7 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	if (!dbi)
 		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
 
-	rc = dbi->exec_prepared(stmt_name, params, param_lengths, param_types);
+	rc = dbi->exec_prepared(stmt_name, param_types, param_values, param_lengths, param_flags);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 	setStatus(st, NULL, DBERR_NO_ERROR);
@@ -497,9 +502,10 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	}
 
 	// set result params
-	int datalen = 0, sqlcode = 0;
+	uint64_t datalen = 0;
+	int sqlcode = 0;
 	bool has_invalid_column_data = false;
-	int bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
 	char* buffer = (char*)calloc(1, bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
@@ -653,7 +659,7 @@ static int  _gixsqlCursorDeclare(struct sqlca_t* st, std::shared_ptr<IConnection
 
 	if (conn) {
 		std::shared_ptr<IDbInterface> dbi = conn->getDbInterface();
-		if (dbi->cursor_declare(c, with_hold, nParams)) {
+		if (dbi->cursor_declare(c)) {
 			spdlog::error("Invalid cursor data for cursor [{}]", cursor_name);
 			setStatus(st, NULL, DBERR_DECLARE_CURSOR_FAILED);
 			return RESULT_FAILED;
@@ -719,7 +725,7 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 
 		if (cursor->getConnection()) {
 			std::shared_ptr<IDbInterface> cdbi = cursor->getConnection()->getDbInterface();
-			if (!cdbi || cdbi->cursor_declare(cursor, cursor->isWithHold(), cursor->getNumParams())) {
+			if (!cdbi || cdbi->cursor_declare(cursor)) {
 				spdlog::error("Invalid cursor data: {}", cname);
 				setStatus(st, NULL, DBERR_DECLARE_CURSOR_FAILED);
 				return RESULT_FAILED;
@@ -738,7 +744,7 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 
 	if (cursor->isOpen()) {
 		spdlog::error("cursor {} is alredy open", cname);
-		rc = dbi->close_cursor(cursor);
+		rc = dbi->cursor_close(cursor);
 		cursor->setOpened(false);
 		FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
 	}
@@ -796,11 +802,12 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 		return RESULT_FAILED;
 	}
 
-	int bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
 	char* buffer = (char*)calloc(1, bsize);
 	std::vector<SqlVar*>::iterator it;
 	int i = 0;
-	int datalen = 0, sqlcode = 0;
+	uint64_t datalen = 0;
+	int sqlcode = 0;
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
 		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, CursorContextData(cursor), 0, i++, buffer, bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
@@ -860,7 +867,7 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 	}
 
 	std::shared_ptr<IDbInterface> dbi = cursor->getConnection()->getDbInterface();
-	int rc = dbi->close_cursor(cursor);
+	int rc = dbi->cursor_close(cursor);
 
 	// when closing a cursor we always mark its logical state as closed, 
 	// even if an error occurred
@@ -975,9 +982,10 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	}
 
 	// set result params
-	int datalen = 0, sqlcode = 0;
+	uint64_t datalen = 0;
+	int sqlcode = 0;
 	bool has_invalid_column_data = false;
-	int bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
 	char* buffer = (char*)calloc(1, bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
@@ -1064,7 +1072,7 @@ GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
 		return RESULT_FAILED;
 	}
 
-	if (_current_sql_var_list.AddVar(type, length, scale, flags, addr) == NULL) {
+	if (_current_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, addr) == NULL) {
 		spdlog::error("fail to add SQLVARLIST");
 		return RESULT_FAILED;
 	}
@@ -1091,7 +1099,7 @@ LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_
 		return RESULT_FAILED;
 	}
 
-	if (_res_sql_var_list.AddVar(type, length, scale, flags, addr) == NULL) {
+	if (_res_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, addr) == NULL) {
 		spdlog::error("fail to add SQLVARLIST");
 		return RESULT_FAILED;
 	}
