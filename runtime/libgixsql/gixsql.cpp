@@ -506,17 +506,18 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	int sqlcode = 0;
 	bool has_invalid_column_data = false;
 	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
-	char* buffer = (char*)calloc(1, bsize);
+
+	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, PreparedStatementContextData(stmt_name), 0, i, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, PreparedStatementContextData(stmt_name), 0, i, buffer.get(), bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
 		}
 
 		int sql_code_local = DBERR_NO_ERROR;
-		v->createCobolData(buffer, datalen, &sql_code_local);
+		v->createCobolData(buffer.get(), datalen, &sql_code_local);
 		if (sql_code_local) {
 			setStatus(st, dbi, sql_code_local);
 			sqlcode = sql_code_local;
@@ -525,7 +526,6 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
-	free(buffer);
 
 	if (sqlcode != 0) {
 		return RESULT_FAILED;
@@ -803,20 +803,20 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 
 	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
-	char* buffer = (char*)calloc(1, bsize);
+	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	std::vector<SqlVar*>::iterator it;
 	int i = 0;
 	uint64_t datalen = 0;
 	int sqlcode = 0;
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
-		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, CursorContextData(cursor), 0, i++, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, CursorContextData(cursor), 0, i++, buffer.get(), bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
 		}
 
 		int sql_code_local = DBERR_NO_ERROR;
-		(*it)->createCobolData(buffer, datalen, &sql_code_local);
+		(*it)->createCobolData(buffer.get(), datalen, &sql_code_local);
 		if (sql_code_local) {
 			setStatus(st, dbi, sql_code_local);
 			sqlcode = sql_code_local;
@@ -826,7 +826,6 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (*it)->getAddr());
 
 	}
-	free(buffer);
 
 	if (sqlcode != 0) {
 		return RESULT_FAILED;
@@ -986,17 +985,17 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	int sqlcode = 0;
 	bool has_invalid_column_data = false;
 	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
-	char* buffer = (char*)calloc(1, bsize);
+	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, CurrentResultSetContextData(), 0, i, buffer, bsize, &datalen)) {
+		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, CurrentResultSetContextData(), 0, i, buffer.get(), bsize, &datalen)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
 		}
 
 		int sql_code_local = DBERR_NO_ERROR;
-		v->createCobolData(buffer, datalen, &sql_code_local);
+		v->createCobolData(buffer.get(), datalen, &sql_code_local);
 		if (sql_code_local) {
 			setStatus(st, dbi, sql_code_local);
 			sqlcode = sql_code_local;
@@ -1005,7 +1004,6 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 
 		spdlog::trace(FMT_FILE_FUNC "result parameter {} - addr: {}", __FILE__, __func__, i + 1, (void*)v->getAddr());
 	}
-	free(buffer);
 
 	if (sqlcode != 0) {
 		return RESULT_FAILED;
