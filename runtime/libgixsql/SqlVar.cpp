@@ -118,7 +118,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char *>(realdata.data()), realdata_len, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
@@ -136,7 +136,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(realdata.data()), realdata_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
@@ -147,7 +147,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(realdata.data()), realdata_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
@@ -170,7 +170,6 @@ void SqlVar::createRealData()
 			unsigned char lbit = 0x0F;
 
 			for (i = 0; i < (int)dlength; i++) {
-				char val[3];
 
 				ptr = ((char*)addr) + i * sizeof(char);
 				tmp = (unsigned char)*ptr;
@@ -193,12 +192,12 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(realdata.data()), realdata_len, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
 		{
-			double dlength, dlengthbuf;
+			double dlength;
 			int skip_first;
 
 			dlength = ceil(((double)length + 1) / 2);
@@ -213,7 +212,6 @@ void SqlVar::createRealData()
 			unsigned char lbit = 0x0F;
 
 			for (i = 0; i < (int)dlength; i++) {
-				char val[3];
 
 				ptr = ((char*)addr) + i * sizeof(char);
 				tmp = (unsigned char)*ptr;
@@ -244,13 +242,14 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(realdata.data()), realdata_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 		}
 
 		case CobolVarType::COBOL_TYPE_JAPANESE:
 			length = length * 2;
 			/* no break */
+			[[fallthrough]];
 		case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 		{
 			if (!is_variable_length) {
@@ -259,14 +258,14 @@ void SqlVar::createRealData()
 					rtrim(reinterpret_cast<char*>(realdata.data()));
 					length = strlen(reinterpret_cast<char*>(realdata.data()));
 				}
-				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			}
 			else {
 				void* actual_addr = (char*)addr + VARLEN_LENGTH_SZ;
 				VARLEN_LENGTH_T *len_addr = (VARLEN_LENGTH_T *)addr;
 				int actual_len = (*len_addr);
 				memcpy(realdata.data(), (char*)actual_addr, actual_len);
-				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			}
 		}
 		break;
@@ -308,7 +307,7 @@ void SqlVar::createRealData()
 				}
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 
 		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
@@ -349,14 +348,14 @@ void SqlVar::createRealData()
 				}
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 
 		default:
 			realdata = std_binary_data(realdata_len + TERMINAL_LENGTH);
 
 			memcpy(realdata.data(), (char*)addr, realdata_len);
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, *this);
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, realdata: [{}]", __FILE__, __func__, type, length, addr, (const char *)realdata.data());
 			break;
 	}
 }

@@ -208,7 +208,7 @@ int DbInterfacePGSQL::terminate_connection()
 int DbInterfacePGSQL::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
-	std::string stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
 	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
@@ -247,7 +247,7 @@ int DbInterfacePGSQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 {
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
-	std::string stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 	
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Invalid prepared statment name: {}", stmt_name);
@@ -663,7 +663,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 bool DbInterfacePGSQL::move_to_first_record(const std::string& _stmt_name)
 {
 	std::shared_ptr<PGResultSetData> wk_rs;
-	std::string stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (stmt_name.empty()) {
 		wk_rs = current_resultset_data;
