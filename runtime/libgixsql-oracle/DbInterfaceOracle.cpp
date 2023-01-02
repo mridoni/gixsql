@@ -144,7 +144,7 @@ int DbInterfaceOracle::terminate_connection()
 	return DBERR_NO_ERROR;
 }
 
-char* DbInterfaceOracle::get_error_message()
+const char* DbInterfaceOracle::get_error_message()
 {
 	return (char *)last_error.c_str();
 }
@@ -182,26 +182,26 @@ std::string vector_join(const std::vector<std::string>& v, char sep)
 	return s;
 }
 
-int DbInterfaceOracle::prepare(std::string stmt_name, std::string sql)
+int DbInterfaceOracle::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
 	std::shared_ptr<OdpiStatementData> res = std::make_shared<OdpiStatementData>();
 
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (this->_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
 	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = odpi_fixup_parameters(sql);
+		prepared_sql = odpi_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -242,10 +242,17 @@ int get_oracle_type(CobolVarType t)
 	}
 }
 
-int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats)
+int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
 	
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 	
 	std::string stmt_name = to_lower(_stmt_name);
 	
@@ -260,11 +267,11 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 	wk_rs->resizeParams(nParams);
 
 	for (int i = 0; i < nParams; i++) {
-		int rc = dpiConn_newVar(connaddr, get_oracle_type(paramFormats.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+		int rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
-		rc = dpiVar_setFromBytes(wk_rs->params[i], 0, paramValues.at(i).c_str(), paramValues.at(i).size());
+		rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char *>(paramValues.at(i).data()), paramLengths.at(i));
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
@@ -307,7 +314,7 @@ int DbInterfaceOracle::exec(std::string query)
 	return _odpi_exec(nullptr, query);
 }
 
-int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, std::string query, std::shared_ptr<OdpiStatementData> prep_stmt_data)
+int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, const std::string& query, std::shared_ptr<OdpiStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	uint32_t nquery_cols = 0;
@@ -406,17 +413,24 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, std::string que
 }
 
 
-int DbInterfaceOracle::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<CobolVarType>& paramFormats)
+int DbInterfaceOracle::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _odpi_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _odpi_exec_params(nullptr, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
-int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, std::string query, int nParams, const std::vector<CobolVarType>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<OdpiStatementData> prep_stmt_data)
+int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags, std::shared_ptr<OdpiStatementData> prep_stmt_data)
 {
 	std::string q = query;
 	int rc = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	std::shared_ptr<OdpiStatementData> wk_rs;;
 
@@ -437,24 +451,26 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, std::str
 		wk_rs = prep_stmt_data;	// Already prepared
 	}
 
+	int nParams = paramValues.size();
+
 	wk_rs->resizeParams(nParams);
 
 	auto p = wk_rs.get();
 
 	for (int i = 0; i < nParams; i++) {
 
-		rc = dpiConn_newVar(connaddr, get_oracle_type(paramFormats.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramValues.at(i).size(), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+		rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
 
 		// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
 		// We handle this here instead of patching ODPI so we can update it in the future
-		if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramValues.at(i).size() > 0 && paramValues.at(i).at(0) == '+') {
-			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, paramValues.at(i).c_str() + 1, paramValues.at(i).size() - 1);
+		if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
+			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char *>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
 		}
 		else {
-			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, paramValues.at(i).c_str(), paramValues.at(i).size());
+			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
 		}
 		
 		if (dpiRetrieveError(rc) < 0) {
@@ -528,7 +544,7 @@ bool DbInterfaceOracle::is_cursor_from_prepared_statement(const std::shared_ptr<
 	return squery.size() > 1 && starts_with(squery, "@") && _prepared_stmts.find(squery.substr(1)) != _prepared_stmts.end();
 }
 
-int DbInterfaceOracle::close_cursor(const std::shared_ptr<ICursor>& cursor)
+int DbInterfaceOracle::cursor_close(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
@@ -554,20 +570,7 @@ int DbInterfaceOracle::close_cursor(const std::shared_ptr<ICursor>& cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceOracle::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool with_hold, int res_type)
-{
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceOracle::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfaceOracle::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
@@ -616,10 +619,11 @@ int DbInterfaceOracle::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 
 	if (cursor->getNumParams() > 0) {
-		std::vector<std::string> params = cursor->getParameterValues();
-		std::vector<int> param_types = cursor->getParameterTypes();
-		std::vector<int> param_lengths = cursor->getParameterLengths();
-		rc = _odpi_exec_params(cursor, squery, cursor->getNumParams(), param_types, params, param_lengths, param_types, prepared_stmt_data);
+		std::vector<std_binary_data> param_values = cursor->getParameterValues();
+		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
+		std::vector<unsigned long> param_lengths = cursor->getParameterLengths();
+		std::vector<uint32_t> param_flags = cursor->getParameterFlags();
+		rc = _odpi_exec_params(cursor, squery, param_types, param_values, param_lengths, param_flags, prepared_stmt_data);
 	}
 	else {
 		rc = _odpi_exec(cursor, squery, prepared_stmt_data);
@@ -633,7 +637,7 @@ int DbInterfaceOracle::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 }
 
-int DbInterfaceOracle::fetch_one(const std::shared_ptr<ICursor>& cursor, int fetchmode)
+int DbInterfaceOracle::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
@@ -667,7 +671,7 @@ int DbInterfaceOracle::fetch_one(const std::shared_ptr<ICursor>& cursor, int fet
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	int rc = 0;
 	std::shared_ptr<OdpiStatementData> wk_rs;
@@ -748,9 +752,10 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 	return true;
 }
 
-bool DbInterfaceOracle::move_to_first_record(std::string stmt_name)
+bool DbInterfaceOracle::move_to_first_record(const std::string& _stmt_name)
 {
 	std::shared_ptr<OdpiStatementData> dp;
+	std::string stmt_name = to_lower(_stmt_name);
 
 	lib_logger->trace(FMT_FILE_FUNC "ODPI: moving to first row in resultset", __FILE__, __func__);
 
@@ -763,7 +768,6 @@ bool DbInterfaceOracle::move_to_first_record(std::string stmt_name)
 		dp = current_statement_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			dpiSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;

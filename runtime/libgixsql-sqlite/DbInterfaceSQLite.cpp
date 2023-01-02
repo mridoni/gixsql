@@ -140,7 +140,7 @@ int DbInterfaceSQLite::terminate_connection()
 }
 
 
-char* DbInterfaceSQLite::get_error_message()
+const char* DbInterfaceSQLite::get_error_message()
 {
 	return (char*)last_error.c_str();
 }
@@ -178,31 +178,31 @@ std::string vector_join(const std::vector<std::string>& v, char sep)
 	return s;
 }
 
-int DbInterfaceSQLite::prepare(std::string stmt_name, std::string sql)
+int DbInterfaceSQLite::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
 	std::shared_ptr<SQLiteStatementData> res = std::make_shared<SQLiteStatementData>();
 
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "SQLite::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	lib_logger->trace(FMT_FILE_FUNC "SQLite::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (this->_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
 	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = sqlite_fixup_parameters(sql);
+		prepared_sql = sqlite_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "SQLite::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "SQLite::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	lib_logger->trace(FMT_FILE_FUNC "SQLite::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 
-	int rc = sqlite3_prepare_v2(connaddr, sql.c_str(), sql.size(), &res->statement, nullptr);
+	int rc = sqlite3_prepare_v2(connaddr, query.c_str(), query.size(), &res->statement, nullptr);
 	if (sqliteRetrieveError(rc) != SQLITE_OK) {
 		lib_logger->error(FMT_FILE_FUNC "SQLite::prepare ({} - res: ({}) {}", __FILE__, __func__, stmt_name, last_rc, last_error);
 		return DBERR_PREPARE_FAILED;
@@ -218,10 +218,17 @@ int DbInterfaceSQLite::prepare(std::string stmt_name, std::string sql)
 }
 
 
-int DbInterfaceSQLite::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats)
+int DbInterfaceSQLite::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
 
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	std::string stmt_name = to_lower(_stmt_name);
 
@@ -240,7 +247,7 @@ int DbInterfaceSQLite::exec_prepared(const std::string& _stmt_name, std::vector<
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const char *>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
 		if (sqliteRetrieveError(rc) != SQLITE_OK)
 			return DBERR_SQL_ERROR;
 	}
@@ -264,7 +271,7 @@ int DbInterfaceSQLite::exec(std::string query)
 	return _sqlite_exec(nullptr, query);
 }
 
-int DbInterfaceSQLite::_sqlite_exec(std::shared_ptr<ICursor> crsr, const std::string query, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
+int DbInterfaceSQLite::_sqlite_exec(const std::shared_ptr<ICursor>& crsr, const std::string& query, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -275,6 +282,7 @@ int DbInterfaceSQLite::_sqlite_exec(std::shared_ptr<ICursor> crsr, const std::st
 	sqlite3_stmt *upd_del_statement = nullptr;
 	char* err_msg = 0;
 	uint32_t nquery_cols = 0;
+
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	std::shared_ptr<SQLiteStatementData> wk_rs = std::make_shared<SQLiteStatementData>();
@@ -389,12 +397,12 @@ int DbInterfaceSQLite::_sqlite_exec(std::shared_ptr<ICursor> crsr, const std::st
 }
 
 
-int DbInterfaceSQLite::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<CobolVarType>& paramFormats)
+int DbInterfaceSQLite::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _sqlite_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _sqlite_exec_params(nullptr, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
-int DbInterfaceSQLite::_sqlite_exec_params(std::shared_ptr<ICursor> crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
+int DbInterfaceSQLite::_sqlite_exec_params(const std::shared_ptr<ICursor>& crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags, std::shared_ptr<SQLiteStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -408,6 +416,13 @@ int DbInterfaceSQLite::_sqlite_exec_params(std::shared_ptr<ICursor> crsr, const 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	std::shared_ptr<SQLiteStatementData> wk_rs;
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	if (!prep_stmt_data) {
 		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<SQLiteStatementData>(crsr->getPrivateData()) : current_statement_data;
@@ -463,9 +478,11 @@ int DbInterfaceSQLite::_sqlite_exec_params(std::shared_ptr<ICursor> crsr, const 
 		wk_rs = prep_stmt_data;	// Already prepared
 	}
 
+	int nParams = paramValues.size();
+
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, paramValues.at(i).c_str(), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char *>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
 		if (sqliteRetrieveError(rc))
 			return DBERR_SQL_ERROR;
 	}
@@ -685,49 +702,13 @@ std::vector<std::string> DbInterfaceSQLite::get_resultset_column_names(sqlite3_s
 	return crsr_cols;
 }
 
-int DbInterfaceSQLite::close_cursor(const std::shared_ptr<ICursor>& crsr)
+int DbInterfaceSQLite::cursor_close(const std::shared_ptr<ICursor>& crsr)
 {
-	//if (!cursor) {
-	//	lib_logger->error("Invalid cursor reference");
-	//	return DBERR_CLOSE_CURSOR_FAILED;
-	//}
-
-	//// Prepared statements used for cursors will be disposed separately
-	//if (!is_cursor_from_prepared_statement(cursor)) {
-	//	SQLiteStatementData* dp = (SQLiteStatementData*)cursor->getPrivateData();
-
-	//	if (!dp || !dp->statement)
-	//		return DBERR_CLOSE_CURSOR_FAILED;
-
-	//	int rc = dpiStmt_release(dp->statement);
-	//	dp->statement = nullptr;
-	//	if (dpiRetrieveError(rc) != DPI_SUCCESS) {
-	//		return DBERR_CLOSE_CURSOR_FAILED;
-	//	}
-
-	//	delete dp;
-	//}
-
-	//cursor->setPrivateData(nullptr);
-	//cursor->setOpened(false);
-
+	// Nothing to do
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool, int)
-{
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceSQLite::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char**, bool, int)
+int DbInterfaceSQLite::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
@@ -787,10 +768,11 @@ int DbInterfaceSQLite::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 	
 	if (cursor->getNumParams() > 0) {
-		std::vector<std::string> params = cursor->getParameterValues();
-		std::vector<int> param_types = cursor->getParameterTypes();
-		std::vector<int> param_lengths = cursor->getParameterLengths();
-		rc = _sqlite_exec_params(cursor, squery, cursor->getNumParams(), param_types, params, param_lengths, param_types, prepared_stmt_data);
+		std::vector<std_binary_data> param_values = cursor->getParameterValues();
+		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
+		std::vector<unsigned long> param_lengths = cursor->getParameterLengths();
+		std::vector<uint32_t> param_flags = cursor->getParameterFlags();
+		rc = _sqlite_exec_params(cursor, squery, param_types, param_values, param_lengths, param_flags, prepared_stmt_data);
 	}
 	else {
 		rc = _sqlite_exec(cursor, squery, prepared_stmt_data);
@@ -809,7 +791,7 @@ int DbInterfaceSQLite::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 }
 
-int DbInterfaceSQLite::fetch_one(const std::shared_ptr<ICursor>& cursor, int)
+int DbInterfaceSQLite::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
@@ -848,7 +830,7 @@ int DbInterfaceSQLite::fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	int rc = 0;
 	std::shared_ptr<SQLiteStatementData> wk_rs;
@@ -909,20 +891,21 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 	return true;
 }
 
-bool DbInterfaceSQLite::move_to_first_record(std::string stmt_name)
+bool DbInterfaceSQLite::move_to_first_record(const std::string& _stmt_name)
 {
 	std::shared_ptr<SQLiteStatementData> dp = nullptr;
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (stmt_name.empty()) {
 		if (!current_statement_data) {
 			sqliteSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
-			return DBERR_MOVE_TO_FIRST_FAILED;
+			return false;
 		}
 
 		dp = current_statement_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
+
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			sqliteSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;

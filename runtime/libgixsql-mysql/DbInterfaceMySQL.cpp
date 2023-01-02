@@ -157,7 +157,7 @@ int DbInterfaceMySQL::terminate_connection()
 
 }
 
-char* DbInterfaceMySQL::get_error_message()
+const char* DbInterfaceMySQL::get_error_message()
 {
 	return (char*)last_error.c_str();
 }
@@ -182,27 +182,27 @@ std::shared_ptr<IConnection> DbInterfaceMySQL::get_owner()
 	return owner;
 }
 
-int DbInterfaceMySQL::prepare(std::string stmt_name, std::string sql)
+int DbInterfaceMySQL::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
 	std::shared_ptr<MySQLStatementData> res = std::make_shared<MySQLStatementData>();
 	res->statement = mysql_stmt_init(connaddr);
 
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (this->_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
 	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = mysql_fixup_parameters(sql);
+		prepared_sql = mysql_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -224,10 +224,17 @@ int DbInterfaceMySQL::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<std::string>& paramValues, std::vector<unsigned long> paramLengths, std::vector<CobolVarType> paramFormats)
+int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
 	int rc = 0;
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	std::string stmt_name = to_lower(_stmt_name);
 
@@ -248,8 +255,8 @@ int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<s
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
 		bound_param->buffer_type = MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).c_str();
-		bound_param->buffer_length = paramValues.at(i).size();
+		bound_param->buffer = (char*)paramValues.at(i).data();
+		bound_param->buffer_length = paramLengths.at(i);
 	}
 
 	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs.get());
@@ -338,7 +345,7 @@ void DbInterfaceMySQL::mysqlSetError(int err_code, std::string sqlstate, std::st
 	last_state = sqlstate;
 }
 
-int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, std::shared_ptr<MySQLStatementData> prep_stmt_data)
+int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags, std::shared_ptr<MySQLStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -351,6 +358,13 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
 	std::shared_ptr<MySQLStatementData> wk_rs;
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	if (!prep_stmt_data) {
 
@@ -403,6 +417,8 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 		wk_rs = prep_stmt_data;	// Already prepared
 	}
 
+	int nParams = paramValues.size();
+
 	wk_rs->resizeParams(nParams + key_params_size);
 
 	std::unique_ptr<MYSQL_BIND[]> bound_param_defs = std::make_unique<MYSQL_BIND[]>(nParams + key_params_size);
@@ -411,8 +427,8 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
 		bound_param->buffer_type = MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).c_str();
-		bound_param->buffer_length = paramValues.at(i).size();
+		bound_param->buffer = (char*)paramValues.at(i).data();
+		bound_param->buffer_length = paramLengths.at(i);
 	}
 
 	// This will only be used if we are performing an update/delete on an aupdatable cursor
@@ -499,7 +515,7 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::string query, std::shared_ptr<MySQLStatementData> prep_stmt_data)
+int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::string& query, std::shared_ptr<MySQLStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
@@ -651,13 +667,13 @@ int DbInterfaceMySQL::exec(std::string query)
 }
 
 
-int DbInterfaceMySQL::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<CobolVarType>& paramFormats)
+int DbInterfaceMySQL::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _mysql_exec_params(NULL, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _mysql_exec_params(NULL, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
 
-int DbInterfaceMySQL::close_cursor(const std::shared_ptr<ICursor>& cursor)
+int DbInterfaceMySQL::cursor_close(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
@@ -689,21 +705,7 @@ int DbInterfaceMySQL::close_cursor(const std::shared_ptr<ICursor>& cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::cursor_declare(const std::shared_ptr<ICursor>& cursor, bool with_hold, int res_type)
-{
-	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceMySQL::cursor_declare_with_params(const std::shared_ptr<ICursor>& cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfaceMySQL::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
 	if (!cursor)
@@ -753,10 +755,11 @@ int DbInterfaceMySQL::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 
 	if (cursor->getNumParams() > 0) {
-		std::vector<std::string> params = cursor->getParameterValues();
-		std::vector<int> param_types = cursor->getParameterTypes();
-		std::vector<int> param_lengths = cursor->getParameterLengths();
-		rc = _mysql_exec_params(cursor, squery, cursor->getNumParams(), param_types, params, param_lengths, param_types, prepared_stmt_data);
+		std::vector<std_binary_data> param_values = cursor->getParameterValues();
+		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
+		std::vector<unsigned long> param_lengths = cursor->getParameterLengths();
+		std::vector<uint32_t> param_flags = cursor->getParameterFlags();
+		rc = _mysql_exec_params(cursor, squery, param_types, param_values, param_lengths, param_flags, prepared_stmt_data);
 	}
 	else {
 		rc = _mysql_exec(cursor, squery, prepared_stmt_data);
@@ -770,7 +773,7 @@ int DbInterfaceMySQL::cursor_open(const std::shared_ptr<ICursor>& cursor)
 	}
 }
 
-int DbInterfaceMySQL::fetch_one(const std::shared_ptr<ICursor>& cursor, int fetchmode)
+int DbInterfaceMySQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: fetch from cursor invoked", __FILE__, __func__);
 
@@ -802,7 +805,7 @@ int DbInterfaceMySQL::fetch_one(const std::shared_ptr<ICursor>& cursor, int fetc
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	*value_len = 0;
 
@@ -818,8 +821,7 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 	{
 		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-		std::string stmt_name = p.prepared_statement_name;
-		stmt_name = to_lower(stmt_name);
+		std::string stmt_name = to_lower(p.prepared_statement_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			return DBERR_SQL_ERROR;
@@ -867,11 +869,12 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 	}
 }
 
-bool DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
+bool DbInterfaceMySQL::move_to_first_record(const std::string& _stmt_name)
 {
 	lib_logger->trace(FMT_FILE_FUNC  "MySQL: moving to first row in resultset", __FILE__, __func__);
 
 	std::shared_ptr<MySQLStatementData> dp;
+	std::string stmt_name = to_lower(_stmt_name);;
 
 	if (stmt_name.empty()) {
 		if (!current_statement_data) {
@@ -882,7 +885,6 @@ bool DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
 		dp = current_statement_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			mysqlSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;
