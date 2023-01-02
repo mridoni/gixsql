@@ -702,7 +702,10 @@ unsigned long SqlVar::getLength()
 
 unsigned long SqlVar::getRealDataLength()
 {
-	return realdata_len;
+	if (!is_variable_length)
+		return realdata_len;
+	else
+		return (realdata_len - VARLEN_LENGTH_SZ);
 }
 
 uint32_t SqlVar::getFlags()
