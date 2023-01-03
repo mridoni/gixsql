@@ -109,6 +109,8 @@ private:
 	void pgsqlClearError();
 	void pgsqlSetError(int err_code, std::string sqlstate, std::string err_msg);
 
+	Oid get_pgsql_type(CobolVarType t);
+
 	bool use_native_cursors = true;
 };
 

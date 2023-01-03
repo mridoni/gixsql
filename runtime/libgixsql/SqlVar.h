@@ -42,10 +42,10 @@ public:
 	void createRealData();
 
 	void* getAddr();
-	const std_binary_data& getRealData();
+	const std_binary_data& getDbData();
 	CobolVarType getType();
 	unsigned long getLength();
-	unsigned long getRealDataLength();
+	unsigned long getDbDataLength();
 	uint32_t getFlags();
 
 	bool isVarLen();
@@ -59,12 +59,13 @@ public:
 
 private:
 	CobolVarType type; 
-	int length;						// includes the extra 2 bytes for variable length fields (level 49)
+	int length;								// includes the extra 2 bytes for variable length fields (level 49)
 	int power; 
-	void *addr = nullptr;			// address of variable (COBOL-side)
-	std_binary_data realdata;		// realdata (i.e. displayable data)
-	unsigned long realdata_len = 0;	// length of realdata (actual length of allocated buffer is always realdata_len + 1)
-	
+	void *addr = nullptr;					// address of variable (COBOL-side)
+	std_binary_data db_data_buffer;			// realdata (i.e. displayable data) buffer
+	unsigned long db_data_buffer_len = 0;	// length of db_data_buffer (actual length of allocated buffer is always realdata_len)
+	int db_data_len = -1;			// actual length of data in db_data_buffer
+
 	uint32_t flags = 0;
 	
 	// Variable length support
@@ -75,6 +76,7 @@ private:
 
 	// auto-trim for CHAR(x) fields (i.e. gixpp with --picx-as=varchar)
 	bool is_autotrim = false;
+
 
     static const char _decimal_point;
 

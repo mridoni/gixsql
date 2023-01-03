@@ -162,7 +162,7 @@ std::vector<std_binary_data> Cursor::getParameterValues()
 	createRealDataforParameters();	// Just in case
 
 	for (int i = 0; i < parameter_list.size(); i++) {
-		params.push_back(parameter_list.at(i)->getRealData());
+		params.push_back(parameter_list.at(i)->getDbData());
 	}
 
 	return params;

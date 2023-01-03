@@ -167,7 +167,6 @@ int DbInterfaceODBC::reset()
 
 int DbInterfaceODBC::terminate_connection()
 {
-	fprintf(stderr, "terminating connection\n");
 	// we need to dispose these before closing the connection, 
 	// or we will get a memory leak from the ODBC driver/subsystem
 	// if later on we attempt to free the handle in ODBCStatementData
@@ -177,6 +176,7 @@ int DbInterfaceODBC::terminate_connection()
 
 	// same as above
 	_prepared_stmts.clear();
+	_declared_cursors.clear();
 
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: connection termination invoked", __FILE__, __func__);
 
@@ -277,9 +277,13 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 	std::shared_ptr<ODBCStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
+	std::vector<INT64> lengths(paramLengths.size());
+
 	for (int i = 0; i < nParams; i++) {
 		int ptype = cobol2odbctype(paramTypes[i]);
 		int ctype = cobol2ctype(paramTypes[i]);
+
+		lengths[i] = paramLengths[i];
 
 		int rc = SQLBindParameter(wk_rs->statement,
 			i + 1,
@@ -290,7 +294,7 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 			0,
 			(SQLPOINTER)paramValues.at(i).data(),
 			(SQLLEN)paramLengths.at(i),		
-			NULL);
+			&lengths[i]);
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			last_rc = rc;
@@ -429,20 +433,24 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 
 	wk_rs->resizeParams(nParams);
 
+	std::vector<INT64> lengths(paramLengths.size());
+
 	for (int i = 0; i < nParams; i++) {
 		int ptype = cobol2odbctype(paramTypes[i]);
 		int ctype = cobol2ctype(paramTypes[i]);
+
+		lengths[i] = paramLengths[i];
 
 		rc = SQLBindParameter(wk_rs->statement,
 			i + 1,
 			SQL_PARAM_INPUT,
 			SQL_C_CHAR,
-			ptype, // SQL_VARCHAR,
+			ptype, 
 			10,
 			0,
 			(SQLPOINTER)paramValues.at(i).data(),
 			(SQLLEN)paramLengths.at(i),
-			NULL);
+			&lengths[i]);
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			//free(pvals);
@@ -1052,11 +1060,9 @@ int DbInterfaceODBC::get_affected_rows(std::shared_ptr<ODBCStatementData> d)
 
 ODBCStatementData::ODBCStatementData(SQLHANDLE conn_handle)
 {
-fprintf (stderr, "allocating ODBCStatementData at %p\n", this);
 	if (conn_handle) {
 		int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
 		if (rc != SQL_SUCCESS) {
-			fprintf(stderr, "******** ODBC: SQLAllocHandle returned %d\n", rc);
 			this->statement = nullptr;
 		}
 	}
@@ -1064,15 +1070,11 @@ fprintf (stderr, "allocating ODBCStatementData at %p\n", this);
 
 ODBCStatementData::~ODBCStatementData()
 {
-fprintf (stderr, "deallocating ODBCStatementData at %p\n", this);	
 	int rc = 0;
 	if (this->statement) {
 		rc = SQLFreeStmt(this->statement, SQL_CLOSE);
-		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
 		rc = SQLFreeStmt(this->statement, SQL_UNBIND);  
-		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
    		rc = SQLFreeStmt(this->statement, SQL_RESET_PARAMS); 
-		fprintf(stderr, "******** ODBC: SQLFreeStmt returned %d\n", rc);
 		SQLFreeHandle(SQL_HANDLE_STMT, this->statement);
 		this->statement = nullptr;	// Not actually needed, since we are in a destructor, but...
 	}

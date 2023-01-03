@@ -22,17 +22,21 @@ USA.
 #include <string>
 #include <vector>
 
-
 #include "Logger.h"
 #include "DbInterfacePGSQL.h"
 #include "IConnection.h"
 #include "utils.h"
 
-#define OID_TYPEA	17
+#define OID_BYTEA	17
+#define OID_NUMERIC 1700
+#define OID_VARCHAR 1043
 
 static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string pgsql_fixup_parameters(const std::string& sql);
 static std::string pg_get_sqlstate(PGresult* r);
+
+template<typename T>
+using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
 		
 struct PGresult_deleter {
     void operator()(PGresult *ptr) {
@@ -41,6 +45,45 @@ struct PGresult_deleter {
     }
 };
 using PGresultPtr = std::unique_ptr<PGresult, PGresult_deleter>;
+
+class pgsqlParamArray {
+
+public:
+
+	pgsqlParamArray(int sz) {
+		_data = new char* [sz];
+		nitems = sz;
+	}
+
+	~pgsqlParamArray()
+	{
+		if (_data) {
+			for (int i = 0; i < nitems; i++) {
+				if (_data[i])
+					delete _data[i];
+			}
+			delete[] _data;
+		}
+	}
+
+	void assign(int i, char* d, int l)
+	{
+		_data[i] = new char[l + 1];
+		memcpy(_data[i], d, l);
+		_data[i][l] = '\0';
+	}
+
+	char** data() const
+	{
+		return _data;
+	}
+
+private:
+
+	char** _data = nullptr;
+	int nitems = 0;
+
+};
 
 DbInterfacePGSQL::DbInterfacePGSQL()
 {}
@@ -261,17 +304,30 @@ int DbInterfacePGSQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 		return DBERR_INTERNAL_ERR;
 	}
 
-	std::unique_ptr<const char* []> pvals = std::make_unique<const char* []>(paramValues.size());
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
+
+	std::unique_ptr<pgsqlParamArray> param_vals = std::make_unique<pgsqlParamArray>(paramValues.size());
+
+	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
+	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());	// will be used for binary data, currently ignored
 
 	for (int i = 0; i < paramValues.size(); i++) {
-		pvals[i] = reinterpret_cast<const char *>(paramValues.at(i).data());
+		param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
+		param_types[i] = get_pgsql_type(paramTypes.at(i));
+		param_lengths[i] = paramLengths.at(i);
+
 	}
 
 	int ret = DBERR_NO_ERROR;
 
 	std::shared_ptr<PGResultSetData> wk_rs = std::make_shared<PGResultSetData>();
 
-	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), paramValues.size(), pvals.get(), NULL, NULL, 0);
+	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), paramValues.size(), param_vals->data(), NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
@@ -367,7 +423,6 @@ int DbInterfacePGSQL::exec_params(const std::string& query, const std::vector<Co
 
 int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	std::vector<int> empty;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
@@ -380,18 +435,24 @@ int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, c
 		return DBERR_INTERNAL_ERR;
 	}
 
-	std::unique_ptr<const char* []> pvals = std::make_unique<const char* []>(paramValues.size());
+	std::unique_ptr<pgsqlParamArray> param_vals = std::make_unique<pgsqlParamArray>(paramValues.size());
+
+	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
+	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());	// will be used for binary data, currently ignored
 
 	for (int i = 0; i < paramValues.size(); i++) {
-		pvals[i] = reinterpret_cast<const char*>(paramValues.at(i).data());
-	}
+		param_vals->assign(i, (char *)paramValues[i].data(), paramLengths[i]);
+		param_types[i] = get_pgsql_type(paramTypes.at(i));
+		param_lengths[i] = paramLengths.at(i);
+
+	} 
 
 	if (wk_rs && wk_rs == current_resultset_data) {
 		current_resultset_data.reset();
 	}
 
 	wk_rs = std::make_shared<PGResultSetData>();
-	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), paramValues.size(), NULL, pvals.get(), empty.data(), empty.data(), 0);
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), paramValues.size(), nullptr, param_vals->data(), nullptr, nullptr, 0);
 	wk_rs->num_rows = get_num_rows(wk_rs->resultset);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
@@ -630,7 +691,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 	}
 
 	auto type = PQftype(wk_rs->resultset, col);
-	if (type != OID_TYPEA || !this->decode_binary) {
+	if (type != OID_BYTEA || !this->decode_binary) {
 		to_length = strlen(res);
 		if (to_length > bfrlen) {
 			return false;
@@ -745,6 +806,29 @@ void DbInterfacePGSQL::pgsqlSetError(int err_code, std::string sqlstate, std::st
 	last_error = err_msg;
 	last_rc = err_code;
 	last_state = sqlstate;
+}
+
+Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t)
+{
+	switch (t) {
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
+		return OID_NUMERIC;
+
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
+		return OID_VARCHAR;
+
+	default:
+		return 0;
+	}
 }
 
 PGResultSetData::PGResultSetData()

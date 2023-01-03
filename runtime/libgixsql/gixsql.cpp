@@ -365,9 +365,9 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 
 	// set parameters
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-		param_values.push_back((*it)->getRealData());
+		param_values.push_back((*it)->getDbData());
 		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getRealDataLength());
+		param_lengths.push_back((*it)->getDbDataLength());
 		param_flags.push_back((*it)->getFlags());
 	}
 
@@ -429,9 +429,9 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 
 	// set parameters
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-		param_values.push_back((*it)->getRealData());
+		param_values.push_back((*it)->getDbData());
 		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getRealDataLength());
+		param_lengths.push_back((*it)->getDbDataLength());
 		param_flags.push_back((*it)->getFlags());
 	}
 

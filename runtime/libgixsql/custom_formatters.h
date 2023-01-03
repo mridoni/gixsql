@@ -33,7 +33,7 @@ template <> struct fmt::formatter<std_binary_data> {
 			return fmt::format_to(ctx.out(), "{}", (char *) p);
 		else {
 			std::stringstream ss;
-			unsigned char* data = p.getRealData().data();
+			unsigned char* data = p.getDbData().data();
 			int datalen = p.getRealDataLength() <= 256 ? p.getRealDataLength() : 256;
 			for (int i = 0; i < datalen; ++i)
 				ss << std::hex << (int)data[i];
