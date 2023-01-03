@@ -20,6 +20,7 @@ template <> struct fmt::formatter<CobolVarType> {
 
 };
 
+#if 0
 template <> struct fmt::formatter<std_binary_data> {
 
 	constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
@@ -31,14 +32,15 @@ template <> struct fmt::formatter<std_binary_data> {
 		if (!p.isBinary())
 			return fmt::format_to(ctx.out(), "{}", (char *) p);
 		else {
-			//std::stringstream ss;
-			//unsigned char* data = p.getRealData().data();
-			//int datalen = p.getRealDataLength() <= 256 ? p.getRealDataLength() : 256;
-			//for (int i = 0; i < datalen; ++i)
-			//	ss << std::hex << (int)data[i];
+			std::stringstream ss;
+			unsigned char* data = p.getRealData().data();
+			int datalen = p.getRealDataLength() <= 256 ? p.getRealDataLength() : 256;
+			for (int i = 0; i < datalen; ++i)
+				ss << std::hex << (int)data[i];
 
-			//return fmt::format_to(ctx.out(), "{}", ss.str());
+			return fmt::format_to(ctx.out(), "{}", ss.str());
 		}
 	}
 
 };
+#endif
