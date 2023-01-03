@@ -277,7 +277,7 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 	std::shared_ptr<ODBCStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
-	std::vector<INT64> lengths(paramLengths.size());
+	std::vector<SQLLEN> lengths(paramLengths.size());
 
 	for (int i = 0; i < nParams; i++) {
 		int ptype = cobol2odbctype(paramTypes[i]);
@@ -433,7 +433,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 
 	wk_rs->resizeParams(nParams);
 
-	std::vector<INT64> lengths(paramLengths.size());
+	std::vector<SQLLEN> lengths(paramLengths.size());
 
 	for (int i = 0; i < nParams; i++) {
 		int ptype = cobol2odbctype(paramTypes[i]);
