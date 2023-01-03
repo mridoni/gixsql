@@ -482,7 +482,7 @@ int DbInterfaceSQLite::_sqlite_exec_params(const std::shared_ptr<ICursor>& crsr,
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char *>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char *>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
 		if (sqliteRetrieveError(rc))
 			return DBERR_SQL_ERROR;
 	}
