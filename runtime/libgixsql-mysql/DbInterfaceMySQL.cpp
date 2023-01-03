@@ -1276,6 +1276,7 @@ bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, st
 		std::vector<std::string>::iterator itr = std::find(crsr_cols.begin(), crsr_cols.end(), unique_key.at(i));
 
 		if (itr == crsr_cols.cend()) {
+			lib_logger->error("Could not bind parameters for updatable cursor query ({}"), crsr->getName());
 			return false;
 		}
 
