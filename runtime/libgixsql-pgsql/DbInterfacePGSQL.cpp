@@ -90,7 +90,7 @@ DbInterfacePGSQL::DbInterfacePGSQL()
 
 DbInterfacePGSQL::~DbInterfacePGSQL()
 {
-	fprintf(stderr, "0x%p is being deleted\n");
+
 }
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)

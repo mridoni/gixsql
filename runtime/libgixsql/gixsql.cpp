@@ -1546,9 +1546,12 @@ static bool lib_initialize()
 	return true;
 }
 
+#if 0
 void gixsql_shutdown()
 {
+	fprintf(stderr, "shutting down\n");
 	connection_manager.clear();
 	cursor_manager.clear();
 	DbInterfaceFactory::clear();
 }
+#endif

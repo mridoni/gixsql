@@ -806,8 +806,10 @@ void SqlVar::display_to_comp3(const char *data, bool has_sign) // , int total_le
 		ch1 = *(tmp + i);
 		if ('0' <= ch1 && '9' >= ch1) {
 			if (j < 0) {
+#if defined(_DEBUG) && defined(VERBOSE)
 				fprintf(stderr, "Invalid COMP-3 data");
 				return;
+#endif
 			}
 			nibble = (uint8_t)(ch1 - '0');
 			if (nibble_ordinal) {

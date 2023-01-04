@@ -141,7 +141,16 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 				spdlog::debug(FMT_FILE_FUNC "DB provider loaded from: {}", __FILE__, __func__, dll_path);
 			}
 #endif
+
+#if defined(_DEBUG) && defined(VERBOSE)
+			dbi = std::shared_ptr<IDbInterface>(dblib_provider(), [](IDbInterface* p) {
+				fprintf(stderr, "- Deallocated IDbInterface: 0x%p\n", p);
+				delete p;
+			});
+			fprintf(stderr, "+ Allocated IDbInterface: 0x%p\n", dbi.get());
+#else
 			dbi.reset(dblib_provider());
+#endif
 			lib_map[dbi] = libHandle;
 		}
 		else {
@@ -171,6 +180,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 		// If the function address is valid, call the function. 
 		if (dblib_provider != NULL)
 		{
+#if defined(_DEBUG) && defined(VERBOSE)
 			dbi = std::shared_ptr<IDbInterface>(dblib_provider(), [](IDbInterface *p) { 
 				fprintf(stderr, "- Deallocated IDbInterface: 0x%p\n", p);
 				spdlog::trace("- Deallocated IDbInterface: {}", (void *)p);
@@ -178,8 +188,9 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 			});
 			fprintf(stderr, "+ Allocated IDbInterface: 0x%p\n", dbi.get());
 			spdlog::trace("+ Allocated IDbInterface: {}", (void *)dbi.get());
-
-			// dbi = dblib_provider();
+#else
+			dbi.reset(dblib_provider());
+#endif
 			lib_map[dbi] = libHandle;
 		}
 		else {
@@ -206,12 +217,10 @@ bool DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
 		return false;
 
 	auto ptr = lib_map[dbi];
-	closeNativeLibrary(ptr);
+	//closeNativeLibrary(ptr);
 
 	lib_map.erase(dbi);
 	
-	fprintf(stderr, "removed 0x%p, remaining: %d\n", dbi, lib_map.size());
-
 	return true;
 }
 
@@ -247,7 +256,5 @@ void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
 
 void DbInterfaceFactory::clear()
 {
-	fprintf (stderr, "lib_map: %d\n", lib_map.size());
 	lib_map.clear();
-	fprintf (stderr, "lib_map: %d\n", lib_map.size());
 }

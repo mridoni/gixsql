@@ -43,7 +43,6 @@ ConnectionManager::ConnectionManager()
 
 ConnectionManager::~ConnectionManager()
 {
-	spdlog::trace("Terminating connection manager");
 	clear();
 }
 
