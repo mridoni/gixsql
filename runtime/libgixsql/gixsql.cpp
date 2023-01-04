@@ -155,7 +155,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	std::string dbtype = data_source->getDbType();
 	std::shared_ptr<IDbInterface> dbi = DbInterfaceFactory::getInterface(dbtype, gixsql_logger);
 	if (dbi == NULL) {
-		spdlog::error("Cannot initialize connection parameters, aborting, data source is [{}]", dbtype);
+		spdlog::error("Cannot initialize driver library, aborting, DB type is [{}]", dbtype);
 		setStatus(st, NULL, DBERR_CONN_INVALID_DBTYPE);
 		return RESULT_FAILED;
 	}
@@ -1544,4 +1544,11 @@ static bool lib_initialize()
 	__lib_initialized = true;
 
 	return true;
+}
+
+void gixsql_shutdown()
+{
+	connection_manager.clear();
+	cursor_manager.clear();
+	DbInterfaceFactory::clear();
 }

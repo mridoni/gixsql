@@ -43,7 +43,8 @@ ConnectionManager::ConnectionManager()
 
 ConnectionManager::~ConnectionManager()
 {
-
+	spdlog::trace("Terminating connection manager");
+	clear();
 }
 
 std::shared_ptr<Connection> ConnectionManager::create()
@@ -104,4 +105,9 @@ std::vector<std::shared_ptr<Connection>> ConnectionManager::list()
 	return _connections;
 }
 
-
+void ConnectionManager::clear()
+{
+	_connections.clear();
+	_connection_map.clear();
+	_connection_name_map.clear();	
+}

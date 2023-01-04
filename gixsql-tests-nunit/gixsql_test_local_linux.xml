@@ -5,8 +5,8 @@
 		<gixsql-install-base>/home/marchetto/gixsql/dist</gixsql-install-base>
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
-		<test-filter>TSQL006A</test-filter>
-		<dbtype-filter>odbc</dbtype-filter>
+		<test-filter>TSQL021A</test-filter>
+		<dbtype-filter>pgsql</dbtype-filter>
 		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>

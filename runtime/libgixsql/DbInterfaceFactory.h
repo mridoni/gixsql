@@ -78,6 +78,8 @@ public:
 	static void *getNativeLibraryHandle(IDbInterface *);
 	static void closeNativeLibrary(void *lib_ptr);
 
+	static void clear();
+
 private:
 
 	static std::shared_ptr<IDbInterface> load_dblib(const char *);

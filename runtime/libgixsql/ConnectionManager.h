@@ -40,6 +40,7 @@ public:
 	void remove(std::shared_ptr<Connection> conn);
 	bool exists(const std::string& cname);
 	std::vector<std::shared_ptr<Connection>> list();
+	void clear();
 
 private:
 	std::shared_ptr<Connection> default_connection;

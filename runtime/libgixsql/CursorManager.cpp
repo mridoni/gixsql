@@ -70,6 +70,12 @@ std::shared_ptr<Cursor> CursorManager::get(std::string cname)
 		return _cursor_map[cname];
 }
 
+void CursorManager::clear()
+{
+	_cursor_map.clear();
+	_cursor_list.clear();
+}
+
 void CursorManager::clearConnectionCursors(int connId, bool clear_held_cursors)
 {
 	std::vector<std::shared_ptr<Cursor>> _cur_to_del;

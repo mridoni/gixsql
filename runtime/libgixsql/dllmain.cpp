@@ -19,3 +19,15 @@
 */
 
 /* Nothing here */
+
+#include <stdio.h>
+
+extern void gixsql_shutdown();
+
+#ifdef __linux__
+void __attribute__ ((destructor)) some_name_unload(void)
+{
+    fprintf(stderr, "--- terminating libgixsql\n");
+    gixsql_shutdown();
+} 
+#endif

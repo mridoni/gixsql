@@ -42,6 +42,7 @@ public:
 	void remove(std::shared_ptr<Cursor>);
 	bool exists(std::string cname);
 	std::shared_ptr<Cursor> get(std::string cname);
+	void clear();
 
 private:
 	std::vector<std::shared_ptr<Cursor>> _cursor_list;
