@@ -32,6 +32,7 @@ Connection::Connection()
 Connection::~Connection()
 {
 	if (dbi != NULL) {
+		dbi->set_owner(nullptr);
 		DbInterfaceFactory::removeInterface(dbi);
 	}
 }
