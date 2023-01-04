@@ -1392,7 +1392,7 @@
 			<compiler-type>all</compiler-type>
 
 			<cobol-sources>
-				<src name="TSQL021A.cbl" />
+				<src name="TSQL021A.cbl" deps="EMPREC.cpy" />
 			</cobol-sources>
 
 			<data-sources count="1" />
