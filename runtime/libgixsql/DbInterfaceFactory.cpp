@@ -270,4 +270,6 @@ void DbInterfaceFactory::clear()
 	for (auto hndl : hndls) {
 		closeNativeLibrary(hndl);
 	}
+
+	lib_map.clear();
 }
