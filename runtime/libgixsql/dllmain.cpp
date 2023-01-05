@@ -22,7 +22,7 @@
 
 #include <stdio.h>
 
-#if 0
+#if 1
 extern void gixsql_shutdown();
 
 #ifdef __linux__
