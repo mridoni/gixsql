@@ -193,6 +193,6 @@
       * mode 5  and 6 do not support named connections
          
        100-EXIT. 
-             STOP RUN.
+      *      STOP RUN.
 
        200-END.
