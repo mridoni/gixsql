@@ -37,6 +37,7 @@ DbInterfaceSQLite::DbInterfaceSQLite()
 
 DbInterfaceSQLite::~DbInterfaceSQLite()
 {
+	set_owner(nullptr);
 }
 
 int DbInterfaceSQLite::init(const std::shared_ptr<spdlog::logger>& _logger)

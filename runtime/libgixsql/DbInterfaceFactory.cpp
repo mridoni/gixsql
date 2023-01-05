@@ -180,7 +180,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 		// If the function address is valid, call the function. 
 		if (dblib_provider != NULL)
 		{
-#if defined(_DEBUG) && defined(VERBOSE)
+//#if defined(_DEBUG) && defined(VERBOSE)
 			dbi = std::shared_ptr<IDbInterface>(dblib_provider(), [](IDbInterface *p) { 
 				fprintf(stderr, "- Deallocated IDbInterface: 0x%p\n", p);
 				spdlog::trace("- Deallocated IDbInterface: {}", (void *)p);
@@ -188,10 +188,10 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 			});
 			fprintf(stderr, "+ Allocated IDbInterface: 0x%p\n", dbi.get());
 			spdlog::trace("+ Allocated IDbInterface: {}", (void *)dbi.get());
-#else
-			dbi.reset(dblib_provider());
-#endif
-			lib_map[dbi] = libHandle;
+//#else
+//			dbi.reset(dblib_provider());
+//#endif
+			// lib_map[dbi] = libHandle;
 		}
 		else {
 			spdlog::error("ERROR while accessing DB provider: {}", bfr);

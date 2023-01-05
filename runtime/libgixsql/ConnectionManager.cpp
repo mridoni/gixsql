@@ -43,7 +43,7 @@ ConnectionManager::ConnectionManager()
 
 ConnectionManager::~ConnectionManager()
 {
-	clear();
+	// clear();
 }
 
 std::shared_ptr<Connection> ConnectionManager::create()
