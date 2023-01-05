@@ -257,7 +257,7 @@ void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
 void DbInterfaceFactory::clear()
 {
 	std::vector<std::shared_ptr<IDbInterface>> itfs;
-	std::vector<HINSTANCE> hndls;
+	std::vector<void *> hndls;
 	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
 		itfs.push_back(it->first);
 		hndls.push_back(it->second);

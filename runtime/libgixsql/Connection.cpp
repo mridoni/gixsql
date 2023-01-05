@@ -34,6 +34,7 @@ Connection::~Connection()
 	if (dbi != NULL) {
 		dbi->set_owner(nullptr);
 		DbInterfaceFactory::removeInterface(dbi);
+		spdlog::trace("interface removed: {}", (void*)dbi.get());
 	}
 }
 

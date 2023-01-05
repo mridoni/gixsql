@@ -72,6 +72,7 @@ public:
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(std::string);
 	
 	static bool removeInterface(std::shared_ptr<IDbInterface> dbi);
+	static bool removeInterface(IDbInterface *dbi);
 
 	static LIBGIXSQL_API std::vector<std::string> getAvailableDrivers();
 
