@@ -57,7 +57,6 @@ DbInterfaceODBC::~DbInterfaceODBC()
 int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	conn_handle = NULL;
-	owner = NULL;
 
 	auto lib_sink = _logger->sinks().at(0);
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-odbc", lib_sink);
@@ -145,9 +144,6 @@ int DbInterfaceODBC::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::s
 		lib_logger->debug(FMT_FILE_FUNC "DBMS name is [{}]", __FILE__, __func__, dbms_name);
 	}
 
-	if (owner)
-		owner->setOpened(true);
-
 	lib_logger->debug(FMT_FILE_FUNC  "ODBC: Connection registration successful", __FILE__, __func__);
 
 	odbcClearError();
@@ -222,7 +218,7 @@ int DbInterfaceODBC::prepare(const std::string& _stmt_name, const std::string& q
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
+	if (connection_opts->fixup_parameters) {
 		prepared_sql = odbc_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -630,17 +626,12 @@ int DbInterfaceODBC::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, in
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
 	std::shared_ptr<ODBCStatementData> dp = std::dynamic_pointer_cast<ODBCStatementData>(cursor->getPrivateData());
 

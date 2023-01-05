@@ -115,7 +115,6 @@ private:
 	SQLHANDLE conn_handle = nullptr;
 
 	std::shared_ptr<ODBCStatementData> current_statement_data;
-	std::shared_ptr<IConnection> owner;
 
 	int last_rc = 0;
 	std::string last_state;

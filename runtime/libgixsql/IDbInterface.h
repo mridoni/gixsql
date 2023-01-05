@@ -160,8 +160,6 @@ public:
 
 protected:
 
-	//std::shared_ptr<IConnection> owner;
-
 	std::shared_ptr<spdlog::logger> lib_logger;
 
 private:
