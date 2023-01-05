@@ -121,9 +121,10 @@ enum class DbPropertySetResult {
 
 class IDbInterface
 {
+	friend class DbInterfaceFactory;
+
 public:
-	virtual ~IDbInterface() { 
-	}
+	virtual ~IDbInterface() { }
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
 	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) = 0;

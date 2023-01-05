@@ -24,14 +24,14 @@
 
 Connection::Connection()
 {	
-	// ext_conninfo = false;
 	is_opened = false;
 }
 
 
 Connection::~Connection()
 {
-
+	if (dbi)
+		DbInterfaceFactory::releaseInterface(dbi);
 }
 
 int Connection::getId()
@@ -67,8 +67,6 @@ void Connection::setConnectionOptions(std::shared_ptr<IConnectionOptions> p)
 void Connection::setConnectionInfo(std::shared_ptr<IDataSourceInfo> conn_string)
 {
 	conninfo = conn_string;
-	// if (conn_string)
-	// 	ext_conninfo = true;
 }
 
 void Connection::setOpened(bool i)
