@@ -75,7 +75,7 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 		sqlite_rc = sqlite3_exec(conn, sql.c_str(), 0, 0, &err_msg);
 		if (sqlite_rc != SQLITE_OK) {
 			lib_logger->error("SQLite: cannot set encoding to {} transaction: {} ({}): {}", g_opts->client_encoding, last_rc, last_state, last_error);
-			sqlite3_close(conn);
+			sqlite3_close_v2(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -87,7 +87,7 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 		auto rc = sqlite3_exec(conn, "BEGIN TRANSACTION", 0, 0, &err_msg);
 		if (sqliteRetrieveError(rc) != SQLITE_OK) {
 			lib_logger->error("SQLite: cannot start transaction: {} ({}): {}", last_rc, last_state, last_error);
-			sqlite3_close(conn);
+			sqlite3_close_v2(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -131,8 +131,9 @@ int DbInterfaceSQLite::reset()
 
 int DbInterfaceSQLite::terminate_connection()
 {
+	spdlog::trace("terminating connection");
 	if (connaddr) {
-		sqlite3_close(connaddr);
+		sqlite3_close_v2(connaddr);
 		connaddr = nullptr;
 	}
 

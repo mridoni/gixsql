@@ -1546,7 +1546,7 @@ static bool lib_initialize()
 	return true;
 }
 
-#if 0
+#if 1
 void gixsql_shutdown()
 {
 	fprintf(stderr, "shutting down\n");

@@ -23,6 +23,7 @@
 #include <string>
 #include <cstring>
 #include <locale.h>
+#include <inttypes.h>
 
 #include "SqlVar.h"
 #include "utils.h"
@@ -122,7 +123,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char *>(db_data_buffer.data()), db_data_buffer_len, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
@@ -140,7 +141,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(db_data_buffer.data()), db_data_buffer_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
@@ -151,7 +152,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(db_data_buffer.data()), db_data_buffer_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
@@ -192,7 +193,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(db_data_buffer.data()), db_data_buffer_len, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
@@ -242,7 +243,7 @@ void SqlVar::createRealData()
 				insert_decimal_point(reinterpret_cast<char*>(db_data_buffer.data()), db_data_buffer_len + SIGN_LENGTH, power);
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 		}
 
@@ -259,7 +260,7 @@ void SqlVar::createRealData()
 					//rtrim(reinterpret_cast<char*>(realdata.data()));
 					//length = strlen(reinterpret_cast<char*>(realdata.data()));
 				}
-				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			}
 			else {
 				void* actual_addr = (char*)addr + VARLEN_LENGTH_SZ;
@@ -267,7 +268,7 @@ void SqlVar::createRealData()
 				int actual_len = (*len_addr);
 				memcpy(db_data_buffer.data(), (char*)actual_addr, actual_len);
 				db_data_len = actual_len;
-				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			}
 		}
 		break;
@@ -299,7 +300,7 @@ void SqlVar::createRealData()
 							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
 								uint64_t n64 = *((uint64_t*)addr);
 								n64 = COB_BSWAP_64(n64);
-								snprintf((char*)db_data_buffer.data(), length, "%d", n64);
+								snprintf((char*)db_data_buffer.data(), length, "%" PRIu64, n64);
 							}
 							else {
 								// Should never happen - TODO: log fatal and abort
@@ -309,7 +310,7 @@ void SqlVar::createRealData()
 				}
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 
 		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
@@ -340,7 +341,7 @@ void SqlVar::createRealData()
 							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
 								int64_t n64 = *((int64_t*)addr);
 								n64 = COB_BSWAP_64(n64);
-								snprintf((char*)db_data_buffer.data(), length, "%d", n64);
+								snprintf((char*)db_data_buffer.data(), length, "%" PRId64, n64);
 							}
 							else {
 								// Should never happen - TODO: log fatal and abort
@@ -350,14 +351,15 @@ void SqlVar::createRealData()
 				}
 			}
 
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 
 		default:
+			spdlog::trace("unhandled COBOL data type: {}", type);
 			db_data_buffer = std_binary_data(db_data_buffer_len);
 
 			memcpy(db_data_buffer.data(), (char*)addr, db_data_buffer_len);
-			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, (const char *)db_data_buffer.data());
+			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 	}
 #if _DEBUG

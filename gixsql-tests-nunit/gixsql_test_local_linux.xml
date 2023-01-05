@@ -6,7 +6,7 @@
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
 		<test-filter>TSQL021A</test-filter>
-		<dbtype-filter>pgsql</dbtype-filter>
+		<dbtype-filter>sqlite</dbtype-filter>
 		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
@@ -119,7 +119,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="1">
-			<hostname>/tmp/gix_tmp_test/test_sqlite_1.db</hostname>
+			<hostname>/tmp/gixsql-test/test_sqlite_1.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>
@@ -127,7 +127,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="2">
-			<hostname>/tmp/gix_tmp_test/test_sqlite_2.db</hostname>
+			<hostname>/tmp/gixsql-test/test_sqlite_2.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>
