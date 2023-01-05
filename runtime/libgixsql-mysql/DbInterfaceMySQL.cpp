@@ -41,6 +41,8 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 
 DbInterfaceMySQL::~DbInterfaceMySQL()
 {
+	if (connaddr)
+		mysql_close(connaddr);
 }
 
 int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
@@ -80,6 +82,7 @@ int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 		std::string qenc = "SET NAMES " + _conn_opts->client_encoding;
 		rc = mysql_real_query(conn, qenc.c_str(), qenc.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			mysql_close(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -90,6 +93,7 @@ int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 		q += (_conn_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
 		rc = mysql_real_query(conn, q.c_str(), q.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			mysql_close(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -337,7 +341,7 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 	std::string cursor_name, table_name, update_query;
 	std::vector<std::string> unique_key;
 	MYSQL_STMT* upd_del_statement = nullptr;
-	MYSQL_BIND* key_params = nullptr;
+	std::shared_ptr<MYSQL_BIND[]> key_params;
 	int key_params_size = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
@@ -374,7 +378,7 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
 
-				if (!prepare_updatable_cursor_query(query, updatable_crsr, unique_key, &upd_del_statement, &key_params, &key_params_size) || !upd_del_statement) {
+				if (!prepare_updatable_cursor_query(query, updatable_crsr, unique_key, &upd_del_statement, key_params, &key_params_size) || !upd_del_statement) {
 					spdlog::error("Cannot rewrite query for updatable cursor {}", updatable_crsr->getName());
 					return DBERR_SQL_ERROR;
 				}
@@ -507,7 +511,7 @@ int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::stri
 	std::string cursor_name, table_name, update_query;
 	std::vector<std::string> unique_key;
 	MYSQL_STMT* upd_del_statement = nullptr;
-	MYSQL_BIND* key_params = nullptr;
+	std::shared_ptr<MYSQL_BIND[]> key_params;
 	int key_params_size = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
@@ -536,13 +540,13 @@ int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::stri
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
 
-				if (!prepare_updatable_cursor_query(query, updatable_crsr, unique_key, &upd_del_statement, &key_params, &key_params_size) || !upd_del_statement) {
+				if (!prepare_updatable_cursor_query(query, updatable_crsr, unique_key, &upd_del_statement, key_params, &key_params_size) || !upd_del_statement) {
 					spdlog::error("Cannot rewrite query for updatable cursor {}", updatable_crsr->getName());
 					return DBERR_SQL_ERROR;
 				}
 
-				rc = mysql_stmt_bind_param(upd_del_statement, key_params);
-				free(key_params);
+				rc = mysql_stmt_bind_param(upd_del_statement, key_params.get());
+				// free(key_params);
 				if (mysqlRetrieveError(rc) != MYSQL_OK) {
 					lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
 					return DBERR_SQL_ERROR;
@@ -1198,7 +1202,7 @@ bool DbInterfaceMySQL::has_unique_key(std::string table_name, std::shared_ptr<IC
 	return key_found;
 }
 
-bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, std::shared_ptr<ICursor> crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, MYSQL_BIND** key_params, int *key_params_size)
+bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, std::shared_ptr<ICursor> crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, std::shared_ptr<MYSQL_BIND[]> key_params, int *key_params_size)
 {
 	*update_stmt = nullptr;
 
@@ -1249,7 +1253,8 @@ bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, st
 	}
 
 	// we pass parameters that need to be bound
-	MYSQL_BIND* bound_param_defs = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), unique_key.size());
+
+	std::shared_ptr<MYSQL_BIND[]> bound_param_defs(new MYSQL_BIND[unique_key.size()]);
 	for (int i = 0; i < unique_key.size(); i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
@@ -1266,7 +1271,7 @@ bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, st
 		bound_param->buffer_length = strlen(rs->data_buffers[col_idx]);
 	}
 
-	*key_params = bound_param_defs;
+	key_params = bound_param_defs;
 	*key_params_size = unique_key.size();
 	*update_stmt = upd_stmt;
 

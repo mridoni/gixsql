@@ -90,7 +90,8 @@ DbInterfacePGSQL::DbInterfacePGSQL()
 
 DbInterfacePGSQL::~DbInterfacePGSQL()
 {
-
+	if (connaddr)
+		PQfinish(connaddr);
 }
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
