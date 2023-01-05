@@ -174,7 +174,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	rc = dbi->connect(data_source, opts);
 	if (rc != DBERR_NO_ERROR) {
 		setStatus(st, dbi, DBERR_CONNECTION_FAILED);
-		DbInterfaceFactory::removeInterface(dbi);		
+		//DbInterfaceFactory::removeInterface(dbi);		
 		return RESULT_FAILED;
 	}
 
@@ -1546,7 +1546,7 @@ static bool lib_initialize()
 	return true;
 }
 
-#if 1
+#if 0
 void gixsql_shutdown()
 {
 	fprintf(stderr, "shutting down\n");

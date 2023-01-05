@@ -71,7 +71,6 @@ int ConnectionManager::add(std::shared_ptr<Connection> conn)
 		conn->name = GIXSQL_DEFAULT_CONN_PREFIX + std::to_string(conn->id);
 		if (this->default_connection && starts_with(this->default_connection->name, GIXSQL_DEFAULT_CONN_PREFIX)) {
 			spdlog::warn("terminating current default connection (probably still open): {}", default_connection->name);
-			DbInterfaceFactory::removeInterface(this->default_connection->getDbInterface());
 			ConnectionManager::remove(this->default_connection);
 		}
 

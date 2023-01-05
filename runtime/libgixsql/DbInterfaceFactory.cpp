@@ -25,7 +25,7 @@
 
 #include "gixsql.h"
 
-static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
+//static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
 
 typedef IDbInterface * (*DBLIB_PROVIDER_FUNC)();
 
@@ -151,7 +151,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 #else
 			dbi.reset(dblib_provider());
 #endif
-			lib_map[dbi] = libHandle;
+			//lib_map[dbi] = libHandle;
 		}
 		else {
 			spdlog::error("ERROR while accessing DB provider: {}", bfr);
@@ -210,19 +210,19 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 	}
 	return dbi;
 }
-
-bool DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
-{
-	if (!dbi || lib_map.find(dbi) == lib_map.end())
-		return false;
-
-	auto ptr = lib_map[dbi];
-	//closeNativeLibrary(ptr);
-
-	lib_map.erase(dbi);
-	
-	return true;
-}
+//
+//bool DbInterfaceFactory::removeInterface(std::shared_ptr<IDbInterface> dbi)
+//{
+//	if (!dbi || lib_map.find(dbi) == lib_map.end())
+//		return false;
+//
+//	auto ptr = lib_map[dbi];
+//	//closeNativeLibrary(ptr);
+//
+//	lib_map.erase(dbi);
+//	
+//	return true;
+//}
 
 
 // TODO: this should really be generated dynamically
@@ -231,45 +231,45 @@ std::vector<std::string> DbInterfaceFactory::getAvailableDrivers()
 	return std::vector<std::string> { "odbc", "mysql", "pgsql", "oracle", "sqlite" } ;
 }
 
-void *DbInterfaceFactory::getNativeLibraryHandle(IDbInterface *dbi)
-{
-	if (!dbi)
-		return nullptr;
+//void *DbInterfaceFactory::getNativeLibraryHandle(IDbInterface *dbi)
+//{
+//	if (!dbi)
+//		return nullptr;
+//
+//	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
+//		if (it->first.get() == dbi)
+//			return it->second;
+//	}
+//	return nullptr;
+//}
+//
+//void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
+//{
+//	if (lib_ptr) {
+//#if defined(_WIN32)
+//		FreeLibrary((HMODULE)lib_ptr);
+//#else
+//		dlclose(lib_ptr);
+//#endif
+//	}		
+//}
 
-	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
-		if (it->first.get() == dbi)
-			return it->second;
-	}
-	return nullptr;
-}
-
-void DbInterfaceFactory::closeNativeLibrary(void *lib_ptr)
-{
-	if (lib_ptr) {
-#if defined(_WIN32)
-		FreeLibrary((HMODULE)lib_ptr);
-#else
-		dlclose(lib_ptr);
-#endif
-	}		
-}
-
-void DbInterfaceFactory::clear()
-{
-	std::vector<std::shared_ptr<IDbInterface>> itfs;
-	std::vector<void *> hndls;
-	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
-		itfs.push_back(it->first);
-		hndls.push_back(it->second);
-	}
-
-	for (auto itf : itfs) {
-		itf.reset();
-	}
-
-	for (auto hndl : hndls) {
-		closeNativeLibrary(hndl);
-	}
-
-	lib_map.clear();
-}
+//void DbInterfaceFactory::clear()
+//{
+//	std::vector<std::shared_ptr<IDbInterface>> itfs;
+//	std::vector<void *> hndls;
+//	for (auto it = lib_map.begin(); it != lib_map.end(); ++it) {
+//		itfs.push_back(it->first);
+//		hndls.push_back(it->second);
+//	}
+//
+//	for (auto itf : itfs) {
+//		itf.reset();
+//	}
+//
+//	for (auto hndl : hndls) {
+//		closeNativeLibrary(hndl);
+//	}
+//
+//	lib_map.clear();
+//}
