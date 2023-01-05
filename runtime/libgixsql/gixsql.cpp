@@ -185,7 +185,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	c->setDbInterface(dbi);
 	c->setOpened(true);
 	connection_manager.add(c);
-	dbi->set_owner(c);
+
 	spdlog::debug(FMT_FILE_FUNC "connection success. connection id# = {}, connection id = [{}]", __FILE__, __func__, c->getId(), connection_id);
 
 	setStatus(st, NULL, DBERR_NO_ERROR);

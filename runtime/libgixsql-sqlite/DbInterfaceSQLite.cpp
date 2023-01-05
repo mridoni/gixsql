@@ -37,12 +37,11 @@ DbInterfaceSQLite::DbInterfaceSQLite()
 
 DbInterfaceSQLite::~DbInterfaceSQLite()
 {
-	set_owner(nullptr);
+
 }
 
 int DbInterfaceSQLite::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
-	owner = NULL;
 	connaddr = NULL;
 	current_statement_data = NULL;
 	last_rc = 0;
@@ -55,7 +54,7 @@ int DbInterfaceSQLite::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info, const std::shared_ptr<IConnectionOptions>& g_opts)
+int DbInterfaceSQLite::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	sqlite3* conn;
 	std::string connstr;
@@ -64,17 +63,17 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 	connaddr = nullptr;
 	current_statement_data.reset();
 
-	int sqlite_rc = sqlite3_open(conn_info->getHost().c_str(), &conn);
+	int sqlite_rc = sqlite3_open(_conn_info->getHost().c_str(), &conn);
 
 	if (sqlite_rc != SQLITE_OK || conn == NULL) {
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!g_opts->client_encoding.empty()) {
-		std::string sql = "PRAGMA encoding = '" + g_opts->client_encoding + "';";
+	if (!_conn_opts->client_encoding.empty()) {
+		std::string sql = "PRAGMA encoding = '" + _conn_opts->client_encoding + "';";
 		sqlite_rc = sqlite3_exec(conn, sql.c_str(), 0, 0, &err_msg);
 		if (sqlite_rc != SQLITE_OK) {
-			lib_logger->error("SQLite: cannot set encoding to {} transaction: {} ({}): {}", g_opts->client_encoding, last_rc, last_state, last_error);
+			lib_logger->error("SQLite: cannot set encoding to {} transaction: {} ({}): {}", _conn_opts->client_encoding, last_rc, last_state, last_error);
 			sqlite3_close_v2(conn);
 			return DBERR_CONNECTION_FAILED;
 		}
@@ -82,7 +81,7 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
 	// we will optionally start a transaction
-	if (g_opts->autocommit == AutoCommitMode::Off) {
+	if (_conn_opts->autocommit == AutoCommitMode::Off) {
 		lib_logger->trace(FMT_FILE_FUNC "SQLite::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
 		auto rc = sqlite3_exec(conn, "BEGIN TRANSACTION", 0, 0, &err_msg);
 		if (sqliteRetrieveError(rc) != SQLITE_OK) {
@@ -92,7 +91,7 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 		}
 	}
 
-	auto opts = conn_info->getOptions();
+	auto opts = _conn_info->getOptions();
 	if (opts.find("updatable_cursors") != opts.end()) {
 		std::string opt_updatable_cursors = opts["updatable_cursors"];
 		if (!opt_updatable_cursors.empty()) {
@@ -114,8 +113,8 @@ int DbInterfaceSQLite::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 	connaddr = conn;
 	sqlite3_extended_result_codes(connaddr, 1);
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -156,16 +155,6 @@ std::string DbInterfaceSQLite::get_state()
 	return last_state;
 }
 
-void DbInterfaceSQLite::set_owner(std::shared_ptr<IConnection> conn)
-{
-	owner = conn;
-}
-
-std::shared_ptr<IConnection> DbInterfaceSQLite::get_owner()
-{
-	return owner;
-}
-
 std::string vector_join(const std::vector<std::string>& v, char sep)
 {
 	std::string s;
@@ -192,7 +181,7 @@ int DbInterfaceSQLite::prepare(const std::string& _stmt_name, const std::string&
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
+	if (connection_opts->fixup_parameters) {
 		prepared_sql = sqlite_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "SQLite::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "SQLite::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -352,7 +341,7 @@ int DbInterfaceSQLite::_sqlite_exec(const std::shared_ptr<ICursor>& crsr, const 
 	int step_rc = sqlite3_step(wk_rs->statement);
 
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		if (current_statement_data) {
@@ -501,7 +490,7 @@ int DbInterfaceSQLite::_sqlite_exec_params(const std::shared_ptr<ICursor>& crsr,
 	int step_rc = sqlite3_step(wk_rs->statement);
 
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		if (current_statement_data) {
@@ -796,17 +785,12 @@ int DbInterfaceSQLite::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, 
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
 	std::shared_ptr<SQLiteStatementData> dp = std::dynamic_pointer_cast<SQLiteStatementData>(cursor->getPrivateData());
 

@@ -31,12 +31,7 @@ Connection::Connection()
 
 Connection::~Connection()
 {
-	spdlog::trace("deleting Connection object ({}), dbi: {}", (void *)this, (void *)dbi.get());
-	if (dbi != NULL) {
-		// dbi->set_owner(nullptr);
-		//DbInterfaceFactory::removeInterface(dbi);
-		//spdlog::trace("interface removed: {}", (void*)dbi.get());
-	}
+
 }
 
 int Connection::getId()

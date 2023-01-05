@@ -95,7 +95,6 @@ DbInterfacePGSQL::~DbInterfacePGSQL()
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
-	owner = NULL;
 	connaddr = NULL;
 	current_resultset_data = nullptr;
 	last_rc = 0;
@@ -109,12 +108,12 @@ int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info, const std::shared_ptr<IConnectionOptions>& g_opts)
+int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	PGconn* conn;
 	std::string connstr;
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
 	connaddr = NULL;
 	current_resultset_data = nullptr;
@@ -123,11 +122,11 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 	last_error = "";
 	last_state = "";
 
-	connstr = "dbname=" + (conn_info->getDbName().empty() ? "''" : conn_info->getDbName()) + " " +
-		"host=" + (conn_info->getHost().empty() ? "''" : conn_info->getHost()) + " " +
-		"port=" + (conn_info->getPort() == 0 ? "''" : std::to_string(conn_info->getPort())) + " " +
-		"user=" + (conn_info->getUsername().empty() ? "''" : conn_info->getUsername()) + " " +
-		"password=" + (conn_info->getPassword().empty() ? "''" : conn_info->getPassword());
+	connstr = "dbname=" + (_conn_info->getDbName().empty() ? "''" : _conn_info->getDbName()) + " " +
+		"host=" + (_conn_info->getHost().empty() ? "''" : _conn_info->getHost()) + " " +
+		"port=" + (_conn_info->getPort() == 0 ? "''" : std::to_string(_conn_info->getPort())) + " " +
+		"user=" + (_conn_info->getUsername().empty() ? "''" : _conn_info->getUsername()) + " " +
+		"password=" + (_conn_info->getPassword().empty() ? "''" : _conn_info->getPassword());
 
 	lib_logger->trace("libpq - connection string: [{}]", connstr);
 
@@ -146,8 +145,8 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!g_opts->client_encoding.empty()) {
-		if (PQsetClientEncoding(conn, g_opts->client_encoding.c_str())) {
+	if (!_conn_opts->client_encoding.empty()) {
+		if (PQsetClientEncoding(conn, _conn_opts->client_encoding.c_str())) {
 			last_rc = 1;
 			last_error = PQerrorMessage(conn);
 			lib_logger->error("libpq: {}", last_error);
@@ -156,7 +155,7 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 		}
 	}
 
-	auto opts = conn_info->getOptions();
+	auto opts = _conn_info->getOptions();
 	if (opts.find("default_schema") != opts.end()) {
 		std::string default_schema = opts["default_schema"];
 		if (!default_schema.empty()) {
@@ -177,7 +176,7 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
 	// we will optionally start a transaction
-	if (g_opts->autocommit == AutoCommitMode::Off) {
+	if (_conn_opts->autocommit == AutoCommitMode::Off) {
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
 
 		PGresultPtr r(PQexec(conn, "BEGIN TRANSACTION"));
@@ -221,8 +220,8 @@ int DbInterfacePGSQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_info,
 
 	connaddr = conn;
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -259,7 +258,7 @@ int DbInterfacePGSQL::prepare(const std::string& _stmt_name, const std::string& 
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
+	if (connection_opts->fixup_parameters) {
 		prepared_sql = pgsql_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -372,7 +371,7 @@ int DbInterfacePGSQL::_pgsql_exec(const std::shared_ptr<ICursor>& crsr, const st
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 		
 		// we clean up: whether the COMMIT/ROLLBACK failed or not this is probably useless anyway
 		current_resultset_data.reset();
@@ -460,7 +459,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, c
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
 		current_resultset_data.reset();
@@ -585,14 +584,10 @@ int DbInterfacePGSQL::cursor_open(const std::shared_ptr<ICursor>& crsr)
 
 int DbInterfacePGSQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int fetchmode)
 {
-	if (owner == NULL) {
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor)
 		return DBERR_FETCH_ROW_FAILED;
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
 	std::string sname = cursor->getName();
 
@@ -945,16 +940,6 @@ int DbInterfacePGSQL::get_error_code()
 std::string DbInterfacePGSQL::get_state()
 {
 	return last_state;
-}
-
-void DbInterfacePGSQL::set_owner(std::shared_ptr<IConnection> conn)
-{
-	owner = conn;
-}
-
-std::shared_ptr<IConnection> DbInterfacePGSQL::get_owner()
-{
-	return owner;
 }
 
 std::string vector_join(const std::vector<std::string>& v, char sep)

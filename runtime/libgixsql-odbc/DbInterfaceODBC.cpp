@@ -101,13 +101,13 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(const std::shared_ptr<IDataSourceInfo>& conn_string, const std::shared_ptr<IConnectionOptions>& g_opts)
+int DbInterfaceODBC::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	int rc = 0;
 	char dbms_name[256];
-	std::string host = conn_string->getHost();
-	std::string user = conn_string->getUsername();
-	std::string pwd = conn_string->getPassword();
+	std::string host = _conn_info->getHost();
+	std::string user = _conn_info->getUsername();
+	std::string pwd = _conn_info->getPassword();
 
 	lib_logger->trace(FMT_FILE_FUNC  "ODBC: DB connect to DSN '{}' user = '{}'", __FILE__, __func__, host, user);
 
@@ -123,9 +123,9 @@ int DbInterfaceODBC::connect(const std::shared_ptr<IDataSourceInfo>& conn_string
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (g_opts->autocommit != AutoCommitMode::Native) {
-		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (g_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
-		auto autocommit_state = (g_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
+	if (_conn_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (_conn_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
+		auto autocommit_state = (_conn_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
 		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
 		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
 			lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
@@ -151,6 +151,10 @@ int DbInterfaceODBC::connect(const std::shared_ptr<IDataSourceInfo>& conn_string
 	lib_logger->debug(FMT_FILE_FUNC  "ODBC: Connection registration successful", __FILE__, __func__);
 
 	odbcClearError();
+
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
+
 	return DBERR_NO_ERROR;
 }
 
@@ -203,16 +207,6 @@ int DbInterfaceODBC::get_error_code()
 std::string DbInterfaceODBC::get_state()
 {
 	return last_state;
-}
-
-void DbInterfaceODBC::set_owner(std::shared_ptr<IConnection> conn)
-{
-	owner = conn;
-}
-
-std::shared_ptr<IConnection> DbInterfaceODBC::get_owner()
-{
-	return owner;
 }
 
 int DbInterfaceODBC::prepare(const std::string& _stmt_name, const std::string& query)

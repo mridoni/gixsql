@@ -73,7 +73,7 @@ public:
 	~DbInterfaceODBC();
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
-	virtual int connect(const std::shared_ptr<IDataSourceInfo>&, const std::shared_ptr<IConnectionOptions>&) override;
+	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
 	virtual int exec(std::string) override;
@@ -90,8 +90,6 @@ public:
 	virtual const char* get_error_message() override;
 	virtual int get_error_code() override;
 	virtual std::string get_state() override;
-	virtual void set_owner(std::shared_ptr<IConnection>) override;
-	virtual std::shared_ptr<IConnection> get_owner() override;
 	virtual int prepare(const std::string& stmt_name, const std::string& query) override;
 	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
@@ -103,6 +101,9 @@ public:
 	virtual bool getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*>& idxs) override;
 
 private:
+
+	std::shared_ptr<IDataSourceInfo> data_source_info;
+	std::shared_ptr<IConnectionOptions> connection_opts;
 
 	int cobol2odbctype(CobolVarType);
 	int cobol2ctype(CobolVarType);

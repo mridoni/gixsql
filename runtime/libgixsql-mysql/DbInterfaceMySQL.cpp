@@ -36,7 +36,6 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 {
 	connaddr = nullptr;
 	last_rc = 0;
-	owner = nullptr;
 }
 
 
@@ -48,7 +47,6 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	connaddr = NULL;
 	//current_resultset.clear();
-	owner = NULL;
 
 	auto lib_sink = _logger->sinks().at(0);
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-mysql", lib_sink);
@@ -58,7 +56,7 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_string, const std::shared_ptr<IConnectionOptions>& g_opts)
+int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	int rc = 0;
 	MYSQL* conn;
@@ -66,30 +64,30 @@ int DbInterfaceMySQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_strin
 
 	connaddr = NULL;
 
-	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(), (int)g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, _conn_info->get(), (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
-	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
+	unsigned int port = _conn_info->getPort() > 0 ? _conn_info->getPort() : 3306;
 	conn = mysql_init(NULL);
-	conn = mysql_real_connect(conn, conn_string->getHost().c_str(), conn_string->getUsername().c_str(),
-		conn_string->getPassword().c_str(), conn_string->getDbName().c_str(),
+	conn = mysql_real_connect(conn, _conn_info->getHost().c_str(), _conn_info->getUsername().c_str(),
+		_conn_info->getPassword().c_str(), _conn_info->getDbName().c_str(),
 		port, NULL, 0); // CLIENT_MULTI_STATEMENTS?
 
 	if (conn == NULL) {
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!g_opts->client_encoding.empty()) {
-		std::string qenc = "SET NAMES " + g_opts->client_encoding;
+	if (!_conn_opts->client_encoding.empty()) {
+		std::string qenc = "SET NAMES " + _conn_opts->client_encoding;
 		rc = mysql_real_query(conn, qenc.c_str(), qenc.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
 
-	if (g_opts->autocommit != AutoCommitMode::Native) {
-		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit == AutoCommitMode::On ? "ON" : "OFF");
+	if (_conn_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, _conn_opts->autocommit == AutoCommitMode::On ? "ON" : "OFF");
 		std::string q("SET AUTOCOMMIT=");
-		q += (g_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
+		q += (_conn_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
 		rc = mysql_real_query(conn, q.c_str(), q.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			return DBERR_CONNECTION_FAILED;
@@ -99,7 +97,7 @@ int DbInterfaceMySQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_strin
 		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to native (nothing to do)", __FILE__, __func__);
 	}
 
-	auto opts = conn_string->getOptions();
+	auto opts = _conn_info->getOptions();
 	if (opts.find("updatable_cursors") != opts.end()) {
 		std::string opt_updatable_cursors = opts["updatable_cursors"];
 		if (!opt_updatable_cursors.empty()) {
@@ -121,8 +119,8 @@ int DbInterfaceMySQL::connect(const std::shared_ptr<IDataSourceInfo>& conn_strin
 	connaddr = conn;
 	current_statement_data = nullptr;
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -150,9 +148,6 @@ int DbInterfaceMySQL::terminate_connection()
 		// 	return DBERR_DISCONNECT_FAILED;
 	}
 
-	if (owner)
-		owner->setOpened(false);
-
 	return DBERR_NO_ERROR;
 
 }
@@ -172,16 +167,6 @@ std::string DbInterfaceMySQL::get_state()
 	return last_state;
 }
 
-void DbInterfaceMySQL::set_owner(std::shared_ptr<IConnection> conn)
-{
-	owner = conn;
-}
-
-std::shared_ptr<IConnection> DbInterfaceMySQL::get_owner()
-{
-	return owner;
-}
-
 int DbInterfaceMySQL::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
@@ -196,7 +181,7 @@ int DbInterfaceMySQL::prepare(const std::string& _stmt_name, const std::string& 
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
+	if (connection_opts->fixup_parameters) {
 		prepared_sql = mysql_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -777,17 +762,12 @@ int DbInterfaceMySQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, i
 {
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: fetch from cursor invoked", __FILE__, __func__);
 
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
 	std::shared_ptr<MySQLStatementData> dp = std::static_pointer_cast<MySQLStatementData>(cursor->getPrivateData());
 

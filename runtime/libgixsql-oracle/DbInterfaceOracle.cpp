@@ -53,7 +53,6 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 	char bfr[1024];
 	dpiErrorInfo info;
 
-	owner = nullptr;
 	connaddr = nullptr;
 	current_statement_data = nullptr;
 	last_rc = 0;
@@ -82,15 +81,15 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceOracle::connect(const std::shared_ptr<IDataSourceInfo>& conn_info, const std::shared_ptr<IConnectionOptions>& opts)
+int DbInterfaceOracle::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
-	lib_logger->trace(FMT_FILE_FUNC "ODPI::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)opts->autocommit, opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
-	std::string conn_string = "//" + conn_info->getHost();
-	if (conn_info->getPort())
-		conn_string += ":" + std::to_string(conn_info->getPort());
+	std::string conn_string = "//" + _conn_info->getHost();
+	if (_conn_info->getPort())
+		conn_string += ":" + std::to_string(_conn_info->getPort());
 
-	conn_string += "/" + conn_info->getDbName();
+	conn_string += "/" + _conn_info->getDbName();
 
 	dpiConn* conn = NULL;
 	current_statement_data = nullptr;
@@ -101,13 +100,13 @@ int DbInterfaceOracle::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 
 	lib_logger->trace("odpi - connection string: [{}]", conn_string);
 
-	if (!opts->client_encoding.empty()) {
+	if (!_conn_opts->client_encoding.empty()) {
 		lib_logger->warn("Setting the encoding is not supported on Oracle, set NLS_LANG before trying to connect");
 	}
 
 	int rc = dpiConn_create(odpi_global_context,
-		conn_info->getUsername().c_str(), conn_info->getUsername().size(),
-		conn_info->getPassword().c_str(), conn_info->getPassword().size(),
+		_conn_info->getUsername().c_str(), _conn_info->getUsername().size(),
+		_conn_info->getPassword().c_str(), _conn_info->getPassword().size(),
 		conn_string.c_str(), conn_string.size(),
 		NULL, NULL, &conn);
 
@@ -119,8 +118,8 @@ int DbInterfaceOracle::connect(const std::shared_ptr<IDataSourceInfo>& conn_info
 
 	connaddr = conn;
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -159,16 +158,6 @@ std::string DbInterfaceOracle::get_state()
 	return last_state;
 }
 
-void DbInterfaceOracle::set_owner(std::shared_ptr<IConnection> conn)
-{
-	owner = conn;
-}
-
-std::shared_ptr<IConnection> DbInterfaceOracle::get_owner()
-{
-	return owner;
-}
-
 std::string vector_join(const std::vector<std::string>& v, char sep)
 {
 	std::string s;
@@ -195,7 +184,7 @@ int DbInterfaceOracle::prepare(const std::string& _stmt_name, const std::string&
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
+	if (connection_opts->fixup_parameters) {
 		prepared_sql = odpi_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -381,7 +370,7 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, const std::stri
 
 		// Since Oracle automatically starts a new transaction on the first statement after a COMMIT/ROLLBACK
 		// we only need to issue a manual COMMIT after a statement has been successfully executed
-		if (owner->getConnectionOptions()->autocommit == AutoCommitMode::On && !is_tx_termination_statement(query)) {
+		if (connection_opts->autocommit == AutoCommitMode::On && !is_tx_termination_statement(query)) {
 
 			// the statement was not a COMMIT/ROLLBACK, so we issue a COMMIT
 			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is enabled, trying to commit", __FILE__, __func__);
@@ -641,17 +630,12 @@ int DbInterfaceOracle::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, 
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
 
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 	
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 	
 	std::shared_ptr<OdpiStatementData> dp = (cursor != nullptr) ? std::static_pointer_cast<OdpiStatementData>(cursor->getPrivateData()) : current_statement_data;
 

@@ -126,7 +126,7 @@ public:
 	}
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
-	virtual int connect(const std::shared_ptr<IDataSourceInfo>&, const std::shared_ptr<IConnectionOptions>&) = 0;
+	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
 	virtual int exec(std::string) = 0;
@@ -143,8 +143,6 @@ public:
 	virtual const char *get_error_message() = 0;
 	virtual int get_error_code() = 0;
 	virtual std::string get_state() = 0;
-	virtual void set_owner(std::shared_ptr<IConnection>) = 0;
-	virtual std::shared_ptr<IConnection> get_owner() = 0;
 	virtual int prepare(const std::string& stmt_name, const std::string& query) = 0;
 	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data> &paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;
@@ -161,7 +159,8 @@ public:
 
 protected:
 
-	std::shared_ptr<IConnection> owner;
+	//std::shared_ptr<IConnection> owner;
+
 	std::shared_ptr<spdlog::logger> lib_logger;
 
 private:
