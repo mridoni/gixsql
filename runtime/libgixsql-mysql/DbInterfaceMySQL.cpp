@@ -41,8 +41,10 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 
 DbInterfaceMySQL::~DbInterfaceMySQL()
 {
-	if (connaddr)
+	if (connaddr) {
 		mysql_close(connaddr);
+		mysql_library_end();
+	}
 }
 
 int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
@@ -83,6 +85,7 @@ int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 		rc = mysql_real_query(conn, qenc.c_str(), qenc.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			mysql_close(conn);
+			mysql_library_end();
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -94,6 +97,7 @@ int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 		rc = mysql_real_query(conn, q.c_str(), q.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			mysql_close(conn);
+			mysql_library_end();
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -144,6 +148,7 @@ int DbInterfaceMySQL::terminate_connection()
 
 	if (connaddr) {
 		mysql_close(connaddr);
+		mysql_library_end();
 		connaddr = nullptr;
 		// Apparently there isn't a way to check if an error 
 		// occurred when attempting to close the connection
