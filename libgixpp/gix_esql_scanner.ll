@@ -1367,6 +1367,10 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_VARYING(loc);
 	}
 
+	"VARRAW" {
+		return yy::gix_esql_parser::make_VARRAW(loc);
+	}
+
     "BINARY"(\([0-9]+\))?  { 
 		uint64_t l = extract_len(yytext);
 		l = l << 16;

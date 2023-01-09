@@ -131,6 +131,7 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token AT
 %token IS
 %token VARYING
+%token VARRAW
 %token IGNORE
 %token DECLARE_VAR		"EXEC SQL VAR"
 %token USING
@@ -188,7 +189,7 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %type <std::string> host_reference expr othersql_token
 
 %type <hostref_or_literal_t *> strliteral_or_hostref dbid opt_connect_as opt_at opt_using opt_dbid
-%type <int> opt_with_hold
+%type <int> opt_with_hold varusage_type
 %type <uint64_t> opt_sql_type_def sql_type
 
 %type <connect_to_info_t *> opt_auth_info opt_identified_by
@@ -919,7 +920,6 @@ picture_clause
 | occurs_clause
 | value_clause
 | external_clause
-| varying_clause
 ;
 
 picture_clause:
@@ -931,11 +931,22 @@ usage
 | USAGE _is usage
 ;
 
-varying_clause:
-VARYING {
+usage:
+COMP				{ driver.current_field->usage = Usage::Binary;  }
+| BINARY			{ driver.current_field->usage = Usage::Binary;  }
+| COMP_1			{ driver.current_field->usage = Usage::Float;   }
+| COMP_2			{ driver.current_field->usage = Usage::Double;  }
+| COMP_3			{ driver.current_field->usage = Usage::Packed;  }
+| COMP_5			{ driver.current_field->usage = Usage::NativeBinary;  }
+| WORD              { driver.current_field->usage = Usage::None;    }
+| varusage
+;
+
+varusage:
+varusage_type {
 	auto x = driver.current_field;
-	
-	uint64_t type_info = encode_sql_type_info(TYPE_SQL_VARCHAR, (uint32_t)x->picnsize, 0, FLAG_EMIT_VAR);
+
+	uint64_t type_info = encode_sql_type_info($1, (uint32_t)x->picnsize, 0, FLAG_EMIT_VAR);
 
 	x->sql_type = type_info;
 	x->is_varlen = true;
@@ -958,15 +969,9 @@ VARYING {
 }
 ;
 
-usage:
-COMP				{ driver.current_field->usage = Usage::Binary;  }
-| BINARY			{ driver.current_field->usage = Usage::Binary;  }
-| COMP_1			{ driver.current_field->usage = Usage::Float;   }
-| COMP_2			{ driver.current_field->usage = Usage::Double;  }
-| COMP_3			{ driver.current_field->usage = Usage::Packed;  }
-| COMP_5			{ driver.current_field->usage = Usage::NativeBinary;  }
-| WORD              { driver.current_field->usage = Usage::None;    }
-;
+varusage_type:
+VARYING		{ $$ = TYPE_SQL_VARCHAR; }	
+| VARRAW	{ $$ = TYPE_SQL_VARBINARY; }	
 
 value_clause: VALUE _is_are _all const_clause {} 
 
