@@ -46,6 +46,9 @@ USA.
 
 using namespace popl;
 
+bool is_alias(const std::string& f, std::string& ext);
+std::string get_basename(const std::string& f);
+
 int main(int argc, char** argv)
 {
 	int rc = -1;
@@ -188,8 +191,21 @@ int main(int argc, char** argv)
 			gp.verbose_debug = opt_verbose_debug->is_set();
 
 
-			gp.setInputFile(opt_infile->value(0));
-			gp.setOutputFile(opt_outfile->value(0));
+			std::string infile = opt_infile->value(0);
+			std::string outfile = opt_outfile->value(0);
+			std::string outext;
+
+			if (is_alias(outfile, outext)) {
+				outfile = get_basename(infile) + "." + outext;
+			}
+
+			if (infile == outfile) {
+				fprintf(stderr, "ERROR: input and output file must be different\n");
+				return 1;
+			}
+
+			gp.setInputFile(infile);
+			gp.setOutputFile(outfile);
 
 			bool b = gp.process();
 			if (!b) {
@@ -208,4 +224,23 @@ int main(int argc, char** argv)
 		return rc;
 	}
 
+}
+
+bool is_alias(const std::string& f, std::string& ext)
+{
+	std::filesystem::path p(f);
+
+	if (p.stem().string() == "@") {
+		ext = p.extension().string();
+		return true;
+	}
+
+	return false;
+}
+
+std::string get_basename(const std::string& f)
+{
+	std::filesystem::path p(f);
+
+	return p.stem().string();
 }
