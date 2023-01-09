@@ -275,39 +275,50 @@ void SqlVar::createRealData()
 
 		case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
 
-			if (this->length == 1) {	// 1 byte
-				uint8_t n8 = *((uint8_t*)addr);
-				snprintf((char*)db_data_buffer.data(), length, "%d", n8);
-			}
-			else {
-				if (this->length == 2) {	// 1 byte
+			switch (this->length) {
+				case 1: 
+				{	// 1 byte
 					uint8_t n8 = *((uint8_t*)addr);
 					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
 				}
-				else {
-					if (this->length == 3 || this->length == 4) {	// 2 bytes
-						uint16_t n16 = *((uint16_t*)addr);
-						n16 = COB_BSWAP_16(n16);
-						snprintf((char*)db_data_buffer.data(), length, "%d", n16);
-					}
-					else {
-						if (this->length >= 5 || this->length <= 9) {	// 4 bytes
-							uint32_t n32 = *((uint32_t*)addr);
-							n32 = COB_BSWAP_32(n32);
-							snprintf((char*)db_data_buffer.data(), length, "%d", n32);
-						}
-						else {
-							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
-								uint64_t n64 = *((uint64_t*)addr);
-								n64 = COB_BSWAP_64(n64);
-								snprintf((char*)db_data_buffer.data(), length, "%" PRIu64, n64);
-							}
-							else {
-								// Should never happen - TODO: log fatal and abort
-							}
-						}
-					}
+				break;
+				
+				case 2:
+				{	// 1 byte
+					uint8_t n8 = *((uint8_t*)addr);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
 				}
+				break;
+				
+				case 3:	case 4:
+				{	// 2 bytes
+					uint16_t n16 = *((uint16_t*)addr);
+					n16 = COB_BSWAP_16(n16);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n16);
+				}
+				break;
+
+				case 5: case 6: case 7: case 8: case 9:
+				{	// 4 bytes
+					uint32_t n32 = *((uint32_t*)addr);
+					n32 = COB_BSWAP_32(n32);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n32);
+				}
+				break;
+
+				case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
+				{
+					uint64_t n64 = *((uint64_t*)addr);
+					n64 = COB_BSWAP_64(n64);
+					snprintf((char*)db_data_buffer.data(), length, "%" PRIu64, n64);
+				}
+				break;
+
+				default:
+				{
+					// Should never happen - TODO: log fatal and abort 
+				}
+
 			}
 
 			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
@@ -315,40 +326,50 @@ void SqlVar::createRealData()
 
 		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 
-			if (this->length == 1) {	// 1 byte
-				int8_t n8 = *((int8_t*)addr);
-				snprintf((char*)db_data_buffer.data(), length, "%d", n8);
-			}
-			else {
-				if (this->length == 2) {	// 1 byte
-					//int8_t  s_byte_number = (int8_t)strtoll(retstr, NULL, 0);
+			switch (this->length) {
+				case 1: 
+				{	// 1 byte
 					int8_t n8 = *((int8_t*)addr);
 					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
 				}
-				else {
-					if (this->length == 3 || this->length == 4) {	// 2 bytes
-						int16_t n16 = *((int16_t*)addr);
-						n16 = COB_BSWAP_16(n16);
-						snprintf((char*)db_data_buffer.data(), length, "%d", n16);
-					}
-					else {
-						if (this->length >= 5 || this->length <= 9) {	// 4 bytes
-							int32_t n32 = *((int32_t*)addr);
-							n32 = COB_BSWAP_32(n32);
-							snprintf((char*)db_data_buffer.data(), length, "%d", n32);
-						}
-						else {
-							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
-								int64_t n64 = *((int64_t*)addr);
-								n64 = COB_BSWAP_64(n64);
-								snprintf((char*)db_data_buffer.data(), length, "%" PRId64, n64);
-							}
-							else {
-								// Should never happen - TODO: log fatal and abort
-							}
-						}
-					}
+				break;
+				
+				case 2:
+				{	// 1 byte
+					int8_t n8 = *((int8_t*)addr);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
 				}
+				break;
+				
+				case 3:	case 4:
+				{	// 2 bytes
+					int16_t n16 = *((int16_t*)addr);
+					n16 = COB_BSWAP_16(n16);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n16);
+				}
+				break;
+
+				case 5: case 6: case 7: case 8: case 9:
+				{	// 4 bytes
+					int32_t n32 = *((int32_t*)addr);
+					n32 = COB_BSWAP_32(n32);
+					snprintf((char*)db_data_buffer.data(), length, "%d", n32);
+				}
+				break;
+
+				case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
+				{	// 8 bytes
+					int64_t n64 = *((int64_t*)addr);
+					n64 = COB_BSWAP_64(n64);
+					snprintf((char*)db_data_buffer.data(), length, "%" PRId64, n64);
+				}
+				break;
+
+				default:
+				{
+					// Should never happen - TODO: log fatal and abort 
+				}
+
 			}
 
 			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
@@ -611,7 +632,7 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 				int i;
 				char* tmp = (char*)addr;
 				for (i = 0; i + 1 < length * 2; i = i + 2) {
-					tmp[i] = 0x81;
+					tmp[i] = (uint8_t)0x81;
 					tmp[i + 1] = 0x40;
 				}
 				memcpy(addr, retstr, strlen(retstr));
@@ -620,70 +641,93 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 
 		case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
 
-			if (this->length == 1) {	// 1 byte
-				*((uint8_t*)addr) = (uint8_t)strtoull(retstr, NULL, 0);
-			}
-			else {
-				if (this->length == 2) {	// 1 byte
+			switch (this->length) {
+				case 1: 
+				{	// 1 byte
+					*((uint8_t*)addr) = (uint8_t)strtoull(retstr, NULL, 0);
+				}
+				break;
+				
+				case 2:
+				{	// 1 byte
 					uint8_t  u_byte_number = (uint8_t)strtoull(retstr, NULL, 0);
 					*((uint8_t*)addr) = u_byte_number;
 				}
-				else {
-					if (this->length == 3 || this->length == 4) {	// 2 bytes
-						uint16_t  u_short_number = (uint16_t)strtoull(retstr, NULL, 0);
-						*((uint16_t*)addr) = COB_BSWAP_16(u_short_number);
-					}
-					else {
-						if (this->length >= 5 || this->length <= 9) {	// 4 bytes
-							uint32_t  u_int_number = (uint32_t)strtoull(retstr, NULL, 0);
-							uint32_t t = COB_BSWAP_32(u_int_number);
-							*((uint32_t*)addr) = COB_BSWAP_32(u_int_number);
-						}
-						else {
-							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
-								uint64_t  u_long_number = (uint64_t)strtoull(retstr, NULL, 0);
-								*((uint64_t*)addr) = COB_BSWAP_64(u_long_number);
-							}
-							else {
-								// Should never happen - TODO: log fatal and abort
-							}
-						}
-					}
+				break;
+				
+				case 3:	case 4:
+				{	// 2 bytes
+					uint16_t  u_short_number = (uint16_t)strtoull(retstr, NULL, 0);
+					*((uint16_t*)addr) = COB_BSWAP_16(u_short_number);
 				}
+				break;
+
+				case 5: case 6: case 7: case 8: case 9:
+				{	// 4 bytes
+					uint32_t  u_int_number = (uint32_t)strtoull(retstr, NULL, 0);
+					uint32_t t = COB_BSWAP_32(u_int_number);
+					*((uint32_t*)addr) = COB_BSWAP_32(u_int_number);
+				}
+				break;
+
+				case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
+				{	// 8 bytes
+					uint64_t  u_long_number = (uint64_t)strtoull(retstr, NULL, 0);
+					*((uint64_t*)addr) = COB_BSWAP_64(u_long_number);
+				}
+				break;
+
+				default:
+				{
+					// Should never happen - TODO: log fatal and abort 
+				}
+
 			}
+			
 			break;
 
 		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 
-			if (this->length == 1) {	// 1 byte
-				*((int8_t*)addr) = (int8_t)strtoll(retstr, NULL, 0);
-			}
-			else {
-				if (this->length == 2) {	// 1 byte
+			switch (this->length) {
+				case 1:
+				{	// 1 byte
+					*((int8_t*)addr) = (int8_t)strtoll(retstr, NULL, 0);
+				}
+				break;
+
+				case 2:
+				{	// 1 byte
 					int8_t  s_byte_number = (int8_t)strtoll(retstr, NULL, 0);
 					*((int8_t*)addr) = s_byte_number;
 				}
-				else {
-					if (this->length == 3 || this->length == 4) {	// 2 bytes
-						int16_t  s_short_number = (int16_t)strtoll(retstr, NULL, 0);
-						*((int16_t*)addr) = COB_BSWAP_16(s_short_number);
-					}
-					else {
-						if (this->length >= 5 || this->length <= 9) {	// 4 bytes
-							int32_t  s_int_number = (int32_t)strtoll(retstr, NULL, 0);
-							*((int32_t*)addr) = COB_BSWAP_32(s_int_number);
-						}
-						else {
-							if (this->length >= 10 || this->length <= 18) {	// 8 bytes
-								int64_t  s_long_number = (int64_t)strtoll(retstr, NULL, 0);
-								*((int64_t*)addr) = COB_BSWAP_64(s_long_number);
-							}
-							else {
-								// Should never happen - TODO: log fatal and abort
-							}
-						}
-					}
+				break;
+
+				case 3:	case 4:
+				{	// 2 bytes
+					int16_t  s_short_number = (int16_t)strtoll(retstr, NULL, 0);
+					*((int16_t*)addr) = COB_BSWAP_16(s_short_number);
 				}
+				break;
+
+				case 5: case 6: case 7: case 8: case 9:
+				{	// 4 bytes
+					int32_t  s_int_number = (int32_t)strtoll(retstr, NULL, 0);
+					*((int32_t*)addr) = COB_BSWAP_32(s_int_number);
+				}
+				break;
+
+				case 10: case 11: case 12: case 13: case 14: case 15: case 16: case 17: case 18:
+				{	// 8 bytes
+					int64_t  s_long_number = (int64_t)strtoll(retstr, NULL, 0);
+					*((int64_t*)addr) = COB_BSWAP_64(s_long_number);
+				}
+				break;
+
+				default:
+				{
+					// Should never happen - TODO: log fatal and abort 
+				}
+
 			}
 			break;
 
@@ -706,14 +750,6 @@ unsigned long SqlVar::getLength()
 {
 	return length;
 }
-
-//unsigned long SqlVar::getRealDataLength()
-//{
-//	if (!is_variable_length)
-//		return is_autotrim ? trimmed_len : realdata_len;
-//	else
-//		return (realdata_len - VARLEN_LENGTH_SZ);
-//}
 
 unsigned long SqlVar::getDbDataLength()
 {
@@ -902,30 +938,10 @@ void SqlVar::allocate_realdata_buffer()
 			break;
 	}
 
-	//if (realdata_len)
-	//	realdata = (char *)calloc(realdata_len + TERMINAL_LENGTH, sizeof(char));
-
 	if (db_data_buffer_len)
 		db_data_buffer = std_binary_data(db_data_buffer_len);
 
 }
-
-//void rtrim(char* const s)
-//{
-//	size_t len;
-//	char* cur;
-//
-//	if (s && *s) {
-//		len = strlen(s);
-//		cur = s + len - 1;
-//
-//		while (cur != s && isspace(*cur))
-//			--cur, --len;
-//
-//		cur[isspace(*cur) ? 0 : 1] = '\0';
-//	}
-//
-//}
 
 int get_trimmed_length(char* const s, int l)
 {
