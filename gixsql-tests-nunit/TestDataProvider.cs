@@ -464,6 +464,10 @@ namespace gixsql_tests
                                             int min = xps.HasAttribute("min") ? Int32.Parse(xps.Attributes["min"].Value) : 0;
                                             int max = xps.HasAttribute("max") ? Int32.Parse(xps.Attributes["max"].Value) : 255;
                                             byte[] random_data = Utils.RandomBytes(length, min, max);
+                                            // be sure to include a few 0s
+                                            for (int i = 0; i < length; i +=7) {
+                                                random_data[i] = 0;
+                                            }
                                             td.GeneratedPayload[id] = "#" + System.Convert.ToBase64String(random_data);
                                             break;
 

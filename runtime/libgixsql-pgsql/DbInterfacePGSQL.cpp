@@ -26,6 +26,7 @@ USA.
 #include "DbInterfacePGSQL.h"
 #include "IConnection.h"
 #include "utils.h"
+#include "cobol_var_flags.h"
 
 #define OID_BYTEA	17
 #define OID_NUMERIC 1700
@@ -315,19 +316,20 @@ int DbInterfacePGSQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 
 	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
 	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());	// will be used for binary data, currently ignored
+	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());
 
 	for (int i = 0; i < paramValues.size(); i++) {
 		param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
-		param_types[i] = get_pgsql_type(paramTypes.at(i));
+		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
 		param_lengths[i] = paramLengths.at(i);
-
+		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
 	}
 
 	int ret = DBERR_NO_ERROR;
 
 	std::shared_ptr<PGResultSetData> wk_rs = std::make_shared<PGResultSetData>();
 
-	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), paramValues.size(), param_vals->data(), NULL, NULL, 0);
+	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), paramValues.size(), param_vals->data(), param_lengths.get(), param_formats.get(), 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
@@ -438,13 +440,14 @@ int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, c
 	std::unique_ptr<pgsqlParamArray> param_vals = std::make_unique<pgsqlParamArray>(paramValues.size());
 
 	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
-	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());	// will be used for binary data, currently ignored
+	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());
+	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());	
 
 	for (int i = 0; i < paramValues.size(); i++) {
 		param_vals->assign(i, (char *)paramValues[i].data(), paramLengths[i]);
-		param_types[i] = get_pgsql_type(paramTypes.at(i));
+		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
 		param_lengths[i] = paramLengths.at(i);
-
+		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
 	} 
 
 	if (wk_rs && wk_rs == current_resultset_data) {
@@ -452,7 +455,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, c
 	}
 
 	wk_rs = std::make_shared<PGResultSetData>();
-	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), paramValues.size(), nullptr, param_vals->data(), nullptr, nullptr, 0);
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), paramValues.size(), param_types.get(), param_vals->data(), param_lengths.get(), param_formats.get(), 0);
 	wk_rs->num_rows = get_num_rows(wk_rs->resultset);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
@@ -804,7 +807,7 @@ void DbInterfacePGSQL::pgsqlSetError(int err_code, std::string sqlstate, std::st
 	last_state = sqlstate;
 }
 
-Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t)
+Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
 	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
@@ -820,7 +823,7 @@ Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t)
 
 	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 	case CobolVarType::COBOL_TYPE_JAPANESE:
-		return OID_VARCHAR;
+		return CBL_FIELD_IS_BINARY(flags) ? OID_BYTEA : OID_VARCHAR;
 
 	default:
 		return 0;

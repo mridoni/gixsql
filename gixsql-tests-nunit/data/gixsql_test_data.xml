@@ -3245,5 +3245,38 @@
 			<expected-preprocessed-file-content>
 			</expected-preprocessed-file-content>
 		</test>
+
+		<test name="TSQL041A" enabled="true" applies-to="pgsql">
+			<description>Not possible to insert binary data (including low-value) or UTF16 </description>
+			<issue-coverage>#125</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL041A.cbl" />
+			</cobol-sources>
+
+			<generate-payload id=":p1" type="random-bytes" length="256" />
+
+			<data-sources count="2" />
+			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (id serial, data bytea)</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" params=":p1" type="pgsql">insert into bintest (id, data) values (1, :p1)</pre-run-sql-statement>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+
+			</expected-output>
+		</test>
 	</tests>
 </test-data>
