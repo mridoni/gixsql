@@ -24,12 +24,10 @@
            01 BFLD1 PIC X(300) USAGE VARRAW.      
            01 BFLD2 PIC X(300) USAGE VARRAW.      
 
-           01 HASH-1 PIC X(64).
-           01 HASH-2 PIC X(64).
-
            01 REC-ID          PIC 9999.
 
            01 CUR-OP PIC X(32).
+           01 COMPARE-RES PIC X(64).
 
        EXEC SQL 
             INCLUDE SQLCA 
@@ -80,25 +78,19 @@
                 VALUES(2, :BFLD1)
            END-EXEC.
 
-           MOVE 'SELECT-H-1' TO CUR-OP.
+           MOVE 'COMPARE' TO CUR-OP.
            EXEC SQL
-              SELECT 
-                MD5(DATA) INTO :HASH-1
-              FROM BINTEST
-              WHERE ID = 1
+                SELECT 
+                CASE WHEN
+                    (SELECT DATA FROM BINTEST WHERE ID=1) = 
+                    (SELECT DATA FROM BINTEST WHERE ID=2) 
+                        THEN 'DATA COMPARE OK'
+                        ELSE 'DATA COMPARE KO'
+                END 
+                INTO :COMPARE-RES
            END-EXEC.
 
-           MOVE 'SELECT-H-2' TO CUR-OP.
-           EXEC SQL
-              SELECT 
-                MD5(DATA) INTO :HASH-2
-              FROM BINTEST
-              WHERE ID = 2
-           END-EXEC.
-
-           DISPLAY 'HASH-1: ' HASH-1.
-           DISPLAY 'HASH-2: ' HASH-2.
-
+           DISPLAY COMPARE-RES.
        
        100-DISCONNECT.
 
@@ -106,13 +98,6 @@
            EXEC SQL
               CONNECT RESET
            END-EXEC.      
-
-           IF HASH-1 EQUALS HASH-2 THEN
-                DISPLAY 'HASH COMPARE OK'
-           ELSE
-                DISPLAY 'HASH COMPARE KO'
-                MOVE 1 TO RETURN-CODE
-           END-IF.
        
        100-EXIT. 
              STOP RUN.

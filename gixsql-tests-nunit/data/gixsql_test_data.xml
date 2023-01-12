@@ -3275,7 +3275,7 @@
 			<run value="true" />
 
 			<expected-output>
-
+				<line>DATA COMPARE OK</line>
 			</expected-output>
 		</test>
 	</tests>
