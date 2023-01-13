@@ -63,20 +63,20 @@
        100-MAIN.
             
            MOVE 'SELECT-1' TO CUR-OP.
-           EXEC SQL
-              SELECT 
-                ID, DATA 
-              INTO 
-                :REC-ID, :BFLD1 
-              FROM BINTEST
-              WHERE ID = 1
-           END-EXEC.
-
-           MOVE 'INSERT-1' TO CUR-OP.
-           EXEC SQL
-              INSERT INTO BINTEST(ID, DATA)
-                VALUES(2, :BFLD1)
-           END-EXEC.
+      *     EXEC SQL
+      *        SELECT 
+      *          ID, DATA 
+      *        INTO 
+      *          :REC-ID, :BFLD1 
+      *        FROM BINTEST
+      *        WHERE ID = 1
+      *     END-EXEC.
+      *
+      *     MOVE 'INSERT-1' TO CUR-OP.
+      *     EXEC SQL
+      *        INSERT INTO BINTEST(ID, DATA)
+      *          VALUES(2, :BFLD1)
+      *     END-EXEC.
 
            MOVE 'COMPARE' TO CUR-OP.
            EXEC SQL

@@ -82,7 +82,7 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 */
 %token PERIOD
 %token<std::string> SELECT
-%token<std::string> SELECTFROM	"SELECT FROM"
+//%token<std::string> SELECTFROM	"SELECT FROM"
 %token<std::string> TOKEN
 %token<std::string> HOSTTOKEN	"host-variable"
 %token<std::string> WORD
@@ -579,12 +579,10 @@ EXECSQL INCLUDE INCLUDE_SQLCA END_EXEC{
 	driver.lexer.pushNewFile("SQLCA", &driver, true, true);
 }
 
-// execsql_with_opt_at     SELECT      token_list      INTO     res_host_references     SELECTFROM     token_list     END_EXEC 
-
 selectintosql:
-execsql_with_opt_at SELECT token_list opt_into_clause SELECTFROM token_list END_EXEC  {
+execsql_with_opt_at SELECT token_list opt_into_clause FROM token_list END_EXEC  {
 	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
-	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, $5));
+	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, "FROM"));
 	driver.cb_concat_text_list($$, $6);
 	driver.put_exec_list();
 }
@@ -1069,3 +1067,4 @@ void yy::gix_esql_parser::error (const location_type& l, const std::string& m)
 {
     driver.error(l, m, ERR_SYNTAX_ERROR);
 }
+

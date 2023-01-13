@@ -24,6 +24,7 @@
 #include <climits>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #include "gix_esql_driver.hh"
 #include "gix_esql_parser.hh"
@@ -38,6 +39,9 @@ int find_last_space(char * s);
 int count_crlf(char *s);
 uint32_t extract_len(char * s);
 void extract_precision_scale(char * s, uint32_t *precision, uint16_t *scale);
+
+std::vector<std::string> cur_token_list;
+
 
 #ifdef _MSC_VER 
 #define strncasecmp _strnicmp
@@ -84,6 +88,7 @@ const char *GixEsqlLexer::yy_state_descs[NUM_YY_STATES] = { "INITIAL", "PICTURE_
 													"ESQL_PREPARE_STATE", "ESQL_DECLARE_STATE", "ESQL_EXECUTE_STATE", "ESQL_CONNECT_STATE", "ESQL_IGNORE_STATE", "ESQL_WHENEVER_STATE"  };
 #endif
 
+#define __MAKE_TOKEN(T, L) cur_token_list.push_back(T); return yy::gix_esql_parser::make_TOKEN(T, L)
 %}
 
 /* Options: */
@@ -156,7 +161,7 @@ LOW_VALUE "LOW\-VALUE"
 <FD_STATE>{
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 	"." {    
@@ -183,7 +188,7 @@ LOW_VALUE "LOW\-VALUE"
 		driver.connectionid = new hostref_or_literal_t(yytext, true);
 		__yy_pop_state();
 
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -207,11 +212,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -256,12 +261,12 @@ LOW_VALUE "LOW\-VALUE"
 
 	{STRVALUE} {
 		//driver.connectionid = new hostref_or_literal_t(yytext, true);
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
 		//driver.connectionid = new hostref_or_literal_t(yytext, true);
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -314,7 +319,7 @@ LOW_VALUE "LOW\-VALUE"
 	
 
 	"SELECT" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 		flag_insqlstring = 1;
 		flag_selectcommand = 1;
 
@@ -327,7 +332,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"INSERT" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 		flag_insqlstring = 1;
 
 		driver.commandname = yytext;
@@ -339,7 +344,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"DELETE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 		flag_insqlstring = 1;
 
 		driver.commandname = yytext;
@@ -358,7 +363,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"CONNECT"[ ]+"RESET" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "CONNECT_RESET";
 		return yy::gix_esql_parser::make_CONNECT_RESET(loc);
@@ -366,14 +371,14 @@ LOW_VALUE "LOW\-VALUE"
 
      
 	"DISCONNECT" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 		//flag_insqlstring = 1;
 		driver.commandname = yytext;		
 		return yy::gix_esql_parser::make_DISCONNECT(yytext, loc);
 	}
 
 	"UPDATE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		flag_insqlstring = 1;
 
@@ -386,27 +391,27 @@ LOW_VALUE "LOW\-VALUE"
 	}	
 
 	"OPEN" {
-			__yy_push_state(ESQL_STATE);
+			__yy_push_state(ESQL_STATE); cur_token_list.clear();
     	    driver.commandname = "OPEN";
 			return yy::gix_esql_parser::make_OPEN(loc);
     }
 
 	"CLOSE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "CLOSE";
 		return yy::gix_esql_parser::make_CLOSE(loc);
 	}  
             
 	"FETCH" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "FETCH";
 		return yy::gix_esql_parser::make_FETCH(loc);
 	}
       
 	"COMMIT"[ ]+"WORK"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = true;
@@ -414,7 +419,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"COMMIT"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = true;
@@ -422,7 +427,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"COMMIT"[ ]+"WORK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = false;
@@ -430,7 +435,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
      
 	"COMMIT" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = false;
@@ -438,7 +443,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
      
 	"ROLLBACK"[ ]+"WORK"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = true;
@@ -446,7 +451,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"ROLLBACK"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = true;
@@ -454,7 +459,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"ROLLBACK"[ ]+"WORK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = false;
@@ -462,7 +467,7 @@ LOW_VALUE "LOW\-VALUE"
 	}     
 
 	"ROLLBACK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = false;
@@ -485,7 +490,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	({WORD}|{JPNWORD})+ {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		flag_insqlstring = 1;
 
@@ -525,12 +530,12 @@ LOW_VALUE "LOW\-VALUE"
 
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);	
+		__MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 }
@@ -593,12 +598,12 @@ LOW_VALUE "LOW\-VALUE"
 	/*
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);	
+		__MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	*/
 }
@@ -640,11 +645,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	          
 	(\r\n|\n) {   }
@@ -658,19 +663,19 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_STATE>{
 
 	{COMMA}   {
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+					__MAKE_TOKEN(yytext, loc);
 	          }
 	(\r\n|\n) {   }
          
 
 
 	[;]?(\r\n|\n)		{ 
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+				__MAKE_TOKEN(yytext, loc);
 	} 
 
-	"SELECT" {
+	/*"SELECT" {
 			if(flag_insqlstring){
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+					__MAKE_TOKEN(yytext, loc);
 			}
 			flag_insqlstring = 1;
 
@@ -681,42 +686,44 @@ LOW_VALUE "LOW\-VALUE"
 
 			return yy::gix_esql_parser::make_SELECT(yytext, loc);
 	}
-	
+	*/
+
 	"FROM" {
-			if(flag_insqlstring){
+			/*if(flag_insqlstring){
 				if(!flag_selectcommand){
-						return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+						__MAKE_TOKEN(yytext, loc);
 				} else {
 					if (!flag_select_from_passed) {
 						flag_select_from_passed = 1;
-		      			return yy::gix_esql_parser::make_SELECTFROM(yytext, loc);
+		      			return yy::gix_esql_parser::make_FROM(loc);
 					}
 					else {
-						return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+						__MAKE_TOKEN(yytext, loc);
 					}
 				}
-			}
+			}*/
 			return yy::gix_esql_parser::make_FROM(loc);
 	}  
+	
 
 	"TO" {
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_TO(loc);
 		else
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			__MAKE_TOKEN(yytext, loc);
 	}
 	
 	"SAVEPOINT" {
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_SAVEPOINT(loc);
 		else
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			__MAKE_TOKEN(yytext, loc);
 	}
      
 	"CURSOR" {
-			if(flag_insqlstring){ 
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
+			/*if(flag_insqlstring){ 
+					__MAKE_TOKEN(yytext, loc);
+			}*/
 			return yy::gix_esql_parser::make_CURSOR(loc);
 	 }
 
@@ -725,38 +732,39 @@ LOW_VALUE "LOW\-VALUE"
 	 }
 
 	"FOR" {
-			if(flag_insqlstring){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);   
+			/*if(flag_insqlstring){
+				__MAKE_TOKEN(yytext, loc);   
 			}
+			*/
 			return yy::gix_esql_parser::make_FOR(loc);
 	}      
 
 	"IDENTIFIED"[ ]+"BY" {
-			if(flag_insqlstring){   
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);  
-			}
+			/*if(flag_insqlstring){   
+				__MAKE_TOKEN(yytext, loc);  
+			}*/
 			return yy::gix_esql_parser::make_IDENTIFIED_BY(loc);
 
 	}
   
 	"USING" {
 			if(flag_insqlstring){  
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+				__MAKE_TOKEN(yytext, loc);
 			}
 			return yy::gix_esql_parser::make_USING(loc);
 	} 
      
 	"INTO" {
 			if(flag_insqlstring && !flag_selectcommand){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+				__MAKE_TOKEN(yytext, loc);
 			}
 			return yy::gix_esql_parser::make_INTO(yytext, loc);
 	} 
 
 	"ALL" {
-			if(flag_insqlstring && !flag_selectcommand){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
+			/*if(flag_insqlstring && !flag_selectcommand){
+				__MAKE_TOKEN(yytext, loc);
+			}*/
 			return yy::gix_esql_parser::make_ALL(loc);
 	} 
 
@@ -765,7 +773,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{OPERATOR} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -775,17 +783,17 @@ LOW_VALUE "LOW\-VALUE"
 	
 	{STRVALUE} {
 			driver.hostlineno = yylineno;   
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			__MAKE_TOKEN(yytext, loc);
 	}	
 
 	{PGSQL_CAST_OP} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	
 	/*
 	{FILENAME} {
 			driver.hostlineno = yylineno;   
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			__MAKE_TOKEN(yytext, loc);
 	}	
 	*/
 	
@@ -813,11 +821,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? { 
-			  return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			  __MAKE_TOKEN(yytext, loc);
 	}
 
 	{SELF} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -989,9 +997,9 @@ LOW_VALUE "LOW\-VALUE"
 	"FROM" {
 		if(flag_insqlstring){
 			if(!flag_selectcommand){
-		      		return yy::gix_esql_parser::make_TOKEN(yytext, loc);      
+		      		__MAKE_TOKEN(yytext, loc);      
 			} else {
-		      		return yy::gix_esql_parser::make_SELECTFROM(strdup (yytext), loc);
+		      		return yy::gix_esql_parser::make_FROM(loc);
 			}
 		}
 		return yy::gix_esql_parser::make_FROM(loc);
@@ -1025,14 +1033,14 @@ LOW_VALUE "LOW\-VALUE"
      
 	"INTO" {
 		if(flag_insqlstring && !flag_selectcommand){ 
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			__MAKE_TOKEN(yytext, loc);
 		}
 
 		return yy::gix_esql_parser::make_INTO(yytext, loc); 
 	} 
 
 	{OPERATOR} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -1041,7 +1049,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{PGSQL_CAST_OP} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 	
 	"END-EXEC"[ \r\n]*"." {
@@ -1064,7 +1072,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -1154,7 +1162,7 @@ LOW_VALUE "LOW\-VALUE"
 	
 
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-			  return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			  __MAKE_TOKEN(yytext, loc);
 	}
 }
 
