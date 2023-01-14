@@ -84,6 +84,8 @@ private:
     std::vector<std::string> reserved_words_list;
 
     bool is_current_cmd_dml();
+    bool is_current_cmd_select();
+    bool is_current_cmd_passthru();
 
 #if defined (_DEBUG) && defined (VERBOSE)
 

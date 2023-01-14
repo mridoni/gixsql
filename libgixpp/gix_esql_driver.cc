@@ -103,6 +103,9 @@ int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
 {
 	pp_inst = gpp;
 
+	trace_scanning = pp_inst->verbose_debug;
+	trace_parsing = pp_inst->verbose_debug;
+
 	std::string tf = filename_change_ext(f, "");
 
 	filenameID = filename_get_name(tf);
