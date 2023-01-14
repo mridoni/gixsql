@@ -205,3 +205,22 @@ int yyFlexLexer::yywrap()
 
 	return 1;
 }
+
+bool GixEsqlLexer::is_current_cmd_dml()
+{
+	return
+		this->driver->commandname == "SELECT" ||
+		this->driver->commandname == "INSERT" ||
+		this->driver->commandname == "UPDATE" ||
+		this->driver->commandname == "DELETE";
+}
+
+bool GixEsqlLexer::is_current_cmd_select()
+{
+	return this->driver->commandname == "SELECT";
+}
+
+bool GixEsqlLexer::is_current_cmd_passthru()
+{
+	return this->driver->commandname == "PASSTHRU";
+}

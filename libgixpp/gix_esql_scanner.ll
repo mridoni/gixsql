@@ -90,24 +90,6 @@ const char *GixEsqlLexer::yy_state_descs[NUM_YY_STATES] = { "INITIAL", "PICTURE_
 
 #define __MAKE_TOKEN(T, L) { cur_token_list.push_back(T); return yy::gix_esql_parser::make_TOKEN(T, L); }
 
-bool GixEsqlLexer::is_current_cmd_dml()
-{
-    return
-        this->driver->commandname == "SELECT" ||
-        this->driver->commandname == "INSERT" ||
-        this->driver->commandname == "UPDATE" ||
-        this->driver->commandname == "DELETE";
-}
-
-bool GixEsqlLexer::is_current_cmd_select()
-{
-    return this->driver->commandname == "SELECT";
-}
-
-bool GixEsqlLexer::is_current_cmd_passthru()
-{
-    return this->driver->commandname == "PASSTHRU";
-}
 
 %}
 
@@ -375,19 +357,19 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_DELETE(yytext, loc);
 	}		
 
-	"CONNECT" {
-		__yy_push_state(ESQL_CONNECT_STATE);
-
-		driver.commandname = "CONNECT";
-		return yy::gix_esql_parser::make_CONNECT(loc);
-	}
-
 	"CONNECT"[ ]+"RESET" {
 		__yy_push_state(ESQL_STATE); cur_token_list.clear();
 
 		driver.commandname = "CONNECT_RESET";
 		return yy::gix_esql_parser::make_CONNECT_RESET(loc);
 	}	
+
+	"CONNECT" {
+		__yy_push_state(ESQL_CONNECT_STATE);
+
+		driver.commandname = "CONNECT";
+		return yy::gix_esql_parser::make_CONNECT(loc);
+	}
 
      
 	"DISCONNECT" {
@@ -708,13 +690,15 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	*/
 
+	/* we mark the subquery start */
 	"("[ \r\n]*"SELECT" {
-		// subquery start
+
 		if (subquery_level == 0) {
 			subquery_level++;
-			//UNPUT_TOKEN();
 			REJECT;
 		}
+		else
+			__MAKE_TOKEN(yytext, loc);
 	}
 
 	"(" {
