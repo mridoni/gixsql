@@ -702,7 +702,8 @@ LOW_VALUE "LOW\-VALUE"
 		// subquery start
 		if (subquery_level == 0) {
 			subquery_level++;
-			UNPUT_TOKEN();
+			//UNPUT_TOKEN();
+			REJECT;
 		}
 	}
 
