@@ -103,8 +103,10 @@ int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
 {
 	pp_inst = gpp;
 
-	trace_scanning = pp_inst->verbose_debug;
-	trace_parsing = pp_inst->verbose_debug;
+	bool debug_parser_scanner = std::get<2>(pp_inst->getOpt("debug_parser_scanner", false));
+
+	trace_scanning = debug_parser_scanner;
+	trace_parsing = debug_parser_scanner;
 
 	std::string tf = filename_change_ext(f, "");
 

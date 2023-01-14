@@ -40,11 +40,11 @@ public:
 	GixPreProcessor();
 	~GixPreProcessor();
 
-	bool check_update_status;
+	bool check_update_status = false;
 
-	bool keep_temp_files;
-	bool verbose;
-	bool verbose_debug;
+	bool keep_temp_files = false;
+	bool verbose = false;
+	bool verbose_debug = false;
 
 	void setCopyResolver(const CopyResolver *cr);
 	CopyResolver *getCopyResolver() const;

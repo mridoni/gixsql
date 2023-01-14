@@ -224,3 +224,4 @@ bool GixEsqlLexer::is_current_cmd_passthru()
 {
 	return this->driver->commandname == "PASSTHRU";
 }
+

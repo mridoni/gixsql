@@ -82,6 +82,7 @@ int main(int argc, char** argv)
 	auto opt_keep = options.add<Switch>("k", "keep", "keep temporary files");
 	auto opt_verbose = options.add<Switch>("v", "verbose", "verbose");
 	auto opt_verbose_debug = options.add<Switch>("d", "verbose-debug", "verbose (debug)");
+	auto opt_parser_scanner_debug = options.add<Switch>("D", "parser-scanner-debug", "parser/scanner debug output");
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
 	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
@@ -171,6 +172,7 @@ int main(int argc, char** argv)
 				gp.setOpt("emit_map_file", opt_emit_map_file->is_set());
 				gp.setOpt("emit_cobol85", opt_emit_cobol85->is_set());
 				gp.setOpt("picx_as_varchar", to_lower(opt_picx_as_varchar->value()) == "varchar");
+				gp.setOpt("debug_parser_scanner", opt_parser_scanner_debug->is_set());
 
 				if (opt_esql_copy_exts->is_set())
 					copy_resolver.setExtensions(string_split(opt_esql_copy_exts->value(), ","));
