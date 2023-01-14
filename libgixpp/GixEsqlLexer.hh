@@ -83,6 +83,8 @@ private:
 
     std::vector<std::string> reserved_words_list;
 
+    bool is_current_cmd_dml();
+
 #if defined (_DEBUG) && defined (VERBOSE)
 
     #define __YY_START (((yy_start) - 1) / 2)
