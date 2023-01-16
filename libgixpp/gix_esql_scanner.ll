@@ -635,20 +635,20 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_STATE>{
 
 	{COMMA}   {
-					__MAKE_TOKEN(yytext, loc);
-	          }
-	(\r\n|\n) {   }
-         
-
+		__MAKE_TOKEN(yytext, loc);
+	}
+	
+	(\r\n|\n) {   } 
 
 	[;]?(\r\n|\n)		{ 
-				__MAKE_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	} 
 
 	/* we mark the subquery start */
 	"("[ \r\n]*"SELECT" {
 
 		if (subquery_level == 0) {
+			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level + 1, yylineno);
 			subquery_level++;
 			yylineno -= count_crlf(yytext);
 			REJECT;
@@ -658,15 +658,19 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"(" {
-		if (subquery_level > 0)
+		if (subquery_level > 0) {
+			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level + 1, yylineno);
 			subquery_level++;
+		}
 
 		__MAKE_TOKEN(yytext, loc);
 	}
 
 	")" {
-		if (subquery_level > 0)
+		if (subquery_level > 0) {
+			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level - 1, yylineno);
 			subquery_level--;	
+		}
 
 		__MAKE_TOKEN(yytext, loc);
 	}
@@ -773,7 +777,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? { 
-			  __MAKE_TOKEN(yytext, loc);
+		__MAKE_TOKEN(yytext, loc);
 	}
 
 	{SELF} {

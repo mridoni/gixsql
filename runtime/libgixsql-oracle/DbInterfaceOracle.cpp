@@ -20,6 +20,7 @@ USA.
 
 #include "DbInterfaceOracle.h"
 
+#include <cobol_var_flags.h>
 #include <cstring>
 #include "IConnection.h"
 #include "Logger.h"
@@ -210,7 +211,7 @@ int DbInterfaceOracle::prepare(const std::string& _stmt_name, const std::string&
 	return DBERR_NO_ERROR;
 }
 
-int get_oracle_type(CobolVarType t)
+int get_oracle_type(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
@@ -224,7 +225,7 @@ int get_oracle_type(CobolVarType t)
 
 		case CobolVarType::COBOL_TYPE_JAPANESE:
 		case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
-			return DPI_ORACLE_TYPE_VARCHAR;
+			return CBL_FIELD_IS_BINARY(flags) ? DPI_ORACLE_TYPE_BLOB: DPI_ORACLE_TYPE_VARCHAR;
 
 		default:
 			return DPI_ORACLE_TYPE_VARCHAR;
@@ -256,7 +257,7 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 	wk_rs->resizeParams(nParams);
 
 	for (int i = 0; i < nParams; i++) {
-		int rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+		int rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i), paramFlags[i]), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
@@ -280,10 +281,12 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 	wk_rs->resizeColumnData(nquery_cols);
 	for (int i = 1; i <= nquery_cols; i++) {
 
+		dpiNativeTypeNum native_type = (info.typeInfo.oracleTypeNum == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
+
 		rc = dpiStmt_getQueryInfo(wk_rs->statement, i, &info);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 
-		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, DPI_NATIVE_TYPE_BYTES, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i - 1], &wk_rs->coldata_bfrs[i - 1]);
+		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, native_type, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i - 1], &wk_rs->coldata_bfrs[i - 1]);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 
 		rc = dpiStmt_define(wk_rs->statement, i, wk_rs->coldata[i - 1]);
@@ -341,14 +344,14 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, const std::stri
 		rc = dpiStmt_getQueryInfo(wk_rs->statement, i, &info);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 
-		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, DPI_NATIVE_TYPE_BYTES, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i-1], &wk_rs->coldata_bfrs[i-1]);
+		dpiNativeTypeNum native_type = (info.typeInfo.oracleTypeNum == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
+
+		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, native_type, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i-1], &wk_rs->coldata_bfrs[i-1]);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 
 		rc = dpiStmt_define(wk_rs->statement, i, wk_rs->coldata[i-1]);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 	}
-
-
 
 	if (!prep_stmt_data) {
 		q = trim_copy(q);
@@ -448,7 +451,10 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 
 	for (int i = 0; i < nParams; i++) {
 
-		rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i)), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+		dpiOracleTypeNum oracle_type = get_oracle_type(paramTypes.at(i), paramFlags[i]);
+		dpiNativeTypeNum native_type = (oracle_type == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
+
+		rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
@@ -713,8 +719,6 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 		lib_logger->error("Invalid column data");
 		return false;
 	}
-	
-	uint32_t sz = col_info.typeInfo.sizeInChars;
 
 	char *c = col_data->value.asBytes.ptr;
 	uint32_t l = col_data->value.asBytes.length;
@@ -726,12 +730,12 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 #endif
 
 	if (l > bfrlen) {
+		lib_logger->error("ODPI: ERROR: data truncated: needed {} bytes, {} allocated", l, bfrlen);	// was just a warning
 		return false;
 	}
 
-	*value_len = (int)l;
+	*value_len = l;
 	memcpy(bfr, c, l);
-	bfr[l] = '\0';
 
 	return true;
 }
