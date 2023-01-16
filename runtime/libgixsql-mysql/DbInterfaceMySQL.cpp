@@ -25,6 +25,7 @@
 #include "Logger.h"
 #include "utils.h"
 #include "varlen_defs.h"
+#include "cobol_var_flags.h"
 
 #define CLIENT_SIDE_CURSOR_STORAGE
 #define MYSQL_OK	0
@@ -248,14 +249,14 @@ int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
-		bound_param->buffer_type = MYSQL_TYPE_STRING;
+		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 		bound_param->buffer = (char*)paramValues.at(i).data();
 		bound_param->buffer_length = paramLengths.at(i);
 	}
 
 	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs.get());
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		lib_logger->error("MySQL: Error while binding paramenter definitions ({}): {}", last_rc, last_error);
+		lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
 		return DBERR_SQL_ERROR;
 	}
 
@@ -292,6 +293,7 @@ int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
 		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
@@ -422,12 +424,12 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
-		bound_param->buffer_type = MYSQL_TYPE_STRING;
+		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 		bound_param->buffer = (char*)paramValues.at(i).data();
 		bound_param->buffer_length = paramLengths.at(i);
 	}
 
-	// This will only be used if we are performing an update/delete on an aupdatable cursor
+	// This will only be used if we are performing an update/delete on an updatable cursor
 	for (int i = 0; i < key_params_size; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[nParams + i];
 
@@ -473,9 +475,11 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 	if (wk_rs->column_count) {
 		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
 
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
+
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			bound_res_col->buffer_type = column_types[i];
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
 		}
@@ -618,13 +622,15 @@ int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::stri
 
 	if (wk_rs->column_count) {
 		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
 
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
 			
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			bound_res_col->buffer_type = column_types[i];
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
 		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
@@ -850,8 +856,8 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 			return false;
 		}
 
-		strcpy(bfr, wk_rs->data_buffers.at(col));
-		*value_len = strlen(bfr);
+		memcpy(bfr, wk_rs->data_buffers[col], datalen);
+		*value_len = datalen;
 
 		return true;
 	}
@@ -1116,6 +1122,17 @@ std::vector<std::string> DbInterfaceMySQL::get_resultset_column_names(MYSQL_STMT
 	std::vector<std::string> crsr_cols;
 	for (int i = 0; i < rsdata->field_count; i++) {
 		crsr_cols.push_back(to_upper(rsdata->fields[i].name));
+	}
+	mysql_free_result(rsdata);
+	return crsr_cols;
+}
+
+std::vector<enum_field_types> DbInterfaceMySQL::get_resultset_column_types(MYSQL_STMT* stmt)
+{
+	MYSQL_RES* rsdata = mysql_stmt_result_metadata(stmt);
+	std::vector<enum_field_types> crsr_cols;
+	for (int i = 0; i < rsdata->field_count; i++) {
+		crsr_cols.push_back(rsdata->fields[i].type);
 	}
 	mysql_free_result(rsdata);
 	return crsr_cols;

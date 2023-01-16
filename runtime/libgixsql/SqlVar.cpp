@@ -257,8 +257,6 @@ void SqlVar::createRealData()
 				memcpy(db_data_buffer.data(), (char*)addr, length);
 				if (is_autotrim) {
 					db_data_len = get_trimmed_length(reinterpret_cast<char*>(db_data_buffer.data()), length);
-					//rtrim(reinterpret_cast<char*>(realdata.data()));
-					//length = strlen(reinterpret_cast<char*>(realdata.data()));
 				}
 				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			}

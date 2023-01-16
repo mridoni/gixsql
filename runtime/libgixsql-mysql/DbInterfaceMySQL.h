@@ -128,5 +128,6 @@ private:
 	bool has_unique_key(std::string table_name, std::shared_ptr<ICursor> crsr, std::vector<std::string>& unique_key);
 	bool prepare_updatable_cursor_query(const std::string& qry, std::shared_ptr<ICursor> crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, MYSQL_BIND** key_params, int* key_params_size);
 	std::vector<std::string> get_resultset_column_names(MYSQL_STMT* stmt);
+	std::vector<enum_field_types> get_resultset_column_types(MYSQL_STMT* stmt);
 };
 
