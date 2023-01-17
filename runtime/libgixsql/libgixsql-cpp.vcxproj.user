@@ -13,7 +13,7 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL005A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL005B.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64

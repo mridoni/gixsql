@@ -394,8 +394,8 @@
 			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
 			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
 			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
@@ -447,8 +447,8 @@
 			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
 			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
 			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 

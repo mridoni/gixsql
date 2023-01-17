@@ -401,12 +401,12 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 	switch (type) {
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
 		{
-			char* ptr;
 			int int_fillzero;
+			char* ptr = nullptr;
 
 			// before decimal point
 			int beforedp = 0;
-			for (ptr = retstr; *ptr != '\0'; ptr++) {
+			for (ptr = retstr; ptr < (retstr + datalen); ptr++) {
 				if (*ptr == _decimal_point) {
 					break;
 				}
@@ -431,11 +431,11 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 			if (power < 0) {
 				int afterdp = 0;
 
-				if (*ptr != '\0') {
+				if (ptr < (retstr + datalen)) {
 					ptr++;
 
 					// after decimal point
-					for (; *ptr != '\0'; ptr++) {
+					for (; ptr < (retstr + datalen); ptr++) {
 						afterdp++;
 					}
 
@@ -469,7 +469,7 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 
 			// before decimal point
 			int beforedp = 0;
-			for (ptr = value; *ptr != '\0'; ptr++) {
+			for (ptr = value; ptr < (retstr + datalen); ptr++) {
 				if (*ptr == _decimal_point) {
 					break;
 				}
@@ -494,11 +494,11 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 			if (power < 0) {
 				int afterdp = 0;
 
-				if (*ptr != '\0') {
+				if (ptr < (retstr + datalen)) {
 					ptr++;
 
 					// after decimal point
-					for (; *ptr != '\0'; ptr++) {
+					for (; ptr < (retstr + datalen); ptr++) {
 						afterdp++;
 					}
 					memcpy((uint8_t*)addr + int_fillzero + beforedp, value +
