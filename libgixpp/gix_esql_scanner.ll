@@ -36,6 +36,8 @@ int cursor_hold = 0;
 
 int find_last_space(char * s);
 int count_crlf(char *s);
+int count_open_par(char *s);
+int count_close_par(char *s);
 uint32_t extract_len(char * s);
 void extract_precision_scale(char * s, uint32_t *precision, uint16_t *scale);
 
@@ -86,8 +88,7 @@ const char *GixEsqlLexer::yy_state_descs[NUM_YY_STATES] = { "INITIAL", "PICTURE_
 													"ESQL_PREPARE_STATE", "ESQL_DECLARE_STATE", "ESQL_EXECUTE_STATE", "ESQL_CONNECT_STATE", "ESQL_IGNORE_STATE", "ESQL_WHENEVER_STATE"  };
 #endif
 
-#define __MAKE_TOKEN(T, L) { cur_token_list.push_back(T); return yy::gix_esql_parser::make_TOKEN(T, L); }
-
+yy::gix_esql_parser::symbol_type __MAKE_TOKEN(char *s, yy::location loc);
 
 %}
 
@@ -161,7 +162,7 @@ LOW_VALUE "LOW\-VALUE"
 <FD_STATE>{
 
 	({WORD}|{JPNWORD})+ {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	"." {    
@@ -188,7 +189,7 @@ LOW_VALUE "LOW\-VALUE"
 		driver.connectionid = new hostref_or_literal_t(yytext, true);
 		__yy_pop_state();
 
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -210,11 +211,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -253,11 +254,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -510,12 +511,12 @@ LOW_VALUE "LOW\-VALUE"
 
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		__MAKE_TOKEN(yytext, loc);	
+		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 }
@@ -574,12 +575,12 @@ LOW_VALUE "LOW\-VALUE"
 	/*
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		__MAKE_TOKEN(yytext, loc);	
+		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	*/
 }
@@ -617,11 +618,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	          
 	(\r\n|\n) {   }
@@ -635,49 +636,30 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_STATE>{
 
 	{COMMA}   {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	(\r\n|\n) {   } 
 
 	[;]?(\r\n|\n)		{ 
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	} 
 
 	/* we mark the subquery start */
 	"("[ \r\n]*"SELECT" {
 
 		if (subquery_level == 0) {
-			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level + 1, yylineno);
 			subquery_level++;
 			yylineno -= count_crlf(yytext);
 			REJECT;
 		}
 		else
-			__MAKE_TOKEN(yytext, loc);
-	}
-
-	"(" {
-		if (subquery_level > 0) {
-			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level + 1, yylineno);
-			subquery_level++;
-		}
-
-		__MAKE_TOKEN(yytext, loc);
-	}
-
-	")" {
-		if (subquery_level > 0) {
-			fprintf(stderr, "*** subquery_level %d => %d @ %d\n", subquery_level, subquery_level - 1, yylineno);
-			subquery_level--;	
-		}
-
-		__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}
 
 	"FROM" {
 		if (!is_current_cmd_select() || subquery_level > 0) {
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 		}
 		else
 			return yy::gix_esql_parser::make_FROM(loc);
@@ -688,14 +670,14 @@ LOW_VALUE "LOW\-VALUE"
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_TO(loc);
 		else
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	"SAVEPOINT" {
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_SAVEPOINT(loc);
 		else
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}
      
 	"CURSOR" {
@@ -723,7 +705,7 @@ LOW_VALUE "LOW\-VALUE"
 		if (!is_current_cmd_passthru())
 			return yy::gix_esql_parser::make_INTO(yytext, loc);
 		else
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	} 
 
 	"ALL" {
@@ -735,7 +717,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{OPERATOR} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -745,17 +727,17 @@ LOW_VALUE "LOW\-VALUE"
 	
 	{STRVALUE} {
 			driver.hostlineno = yylineno;   
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}	
 
 	{PGSQL_CAST_OP} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	/*
 	{FILENAME} {
 			driver.hostlineno = yylineno;   
-			__MAKE_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}	
 	*/
 	
@@ -777,11 +759,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? { 
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	{SELF} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -951,7 +933,7 @@ LOW_VALUE "LOW\-VALUE"
 	} 
 
 	{OPERATOR} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -960,7 +942,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{PGSQL_CAST_OP} {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	"END-EXEC"[ \r\n]*"." {
@@ -979,7 +961,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-		__MAKE_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -1067,7 +1049,7 @@ LOW_VALUE "LOW\-VALUE"
 	
 
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-			  __MAKE_TOKEN(yytext, loc);
+			  return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -1509,6 +1491,34 @@ int count_crlf(char *s)
 	return n;
 }
 
+int count_open_par(char *s)
+{
+	int n = 0;
+	char *e = (s + strlen(s)) - 1;
+
+	while (e >= s) {
+		if (*e == '(')
+			n++;
+			
+		e--;
+	}
+	return n;
+}
+
+int count_close_par(char *s)
+{
+	int n = 0;
+	char *e = (s + strlen(s)) - 1;
+
+	while (e >= s) {
+		if (*e == ')')
+			n++;
+			
+		e--;
+	}
+	return n;
+}
+
 uint32_t extract_len(char * s)
 {
 	std::string st = s;
@@ -1562,3 +1572,14 @@ void extract_precision_scale(char *s, uint32_t *precision, uint16_t *scale)
 	*scale = (uint16_t) atoi(sn.c_str());
 }
 
+yy::gix_esql_parser::symbol_type __MAKE_TOKEN(char *s, yy::location loc)
+{
+	cur_token_list.push_back(s);
+	if (subquery_level > 0) {
+		int sq_add = count_open_par(s);
+		int sq_sub = count_close_par(s);
+		subquery_level += sq_add;
+		subquery_level -= sq_sub;
+	}
+	return yy::gix_esql_parser::make_TOKEN(s, loc);
+}

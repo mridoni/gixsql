@@ -581,6 +581,7 @@ EXECSQL INCLUDE INCLUDE_SQLCA END_EXEC{
 
 selectintosql:
 execsql_with_opt_at SELECT token_list opt_into_clause FROM token_list END_EXEC  {
+	auto a = $3;
 	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
 	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, "FROM"));
 	driver.cb_concat_text_list($$, $6);
