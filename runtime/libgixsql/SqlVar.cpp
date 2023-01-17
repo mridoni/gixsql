@@ -582,13 +582,13 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
 		{
-			display_to_comp3(retstr, false);
+			display_to_comp3(retstr, datalen, false);
 			break;
 		} 
 
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
 		{
-			display_to_comp3(retstr, true);
+			display_to_comp3(retstr, datalen, true);
 			break;
 		}
 
@@ -774,7 +774,7 @@ bool SqlVar::isAutoTrim()
 	return is_autotrim;
 }
 
-void SqlVar::display_to_comp3(const char *data, bool has_sign) // , int total_len, int scale, int has_sign, uint8_t *addr
+void SqlVar::display_to_comp3(const char *data, int _datalen, bool has_sign) // , int total_len, int scale, int has_sign, uint8_t *addr
 {
 	uint8_t *addr = (uint8_t *) this->addr;
 	bool is_negative = false;
@@ -790,7 +790,7 @@ void SqlVar::display_to_comp3(const char *data, bool has_sign) // , int total_le
 	int dlen = 0;
 	bool data_has_dp = false;
 
-	for (uint8_t *ptr = (uint8_t *)(data + (strlen(data) - 1)); ptr >= (uint8_t *)data; ptr--) {
+	for (uint8_t *ptr = (uint8_t *)(data + (_datalen - 1)); ptr >= (uint8_t *)data; ptr--) {
 		if (*ptr == '-' || *ptr == '+')
 			continue;
 
@@ -807,7 +807,7 @@ void SqlVar::display_to_comp3(const char *data, bool has_sign) // , int total_le
 		is_negative = true;
 	}
 
-	data_intpart_len = strlen(data) - (data_decpart_len + (data_has_dp ? 1 : 0) + (data_has_sign ? 1 : 0));
+	data_intpart_len = _datalen - (data_decpart_len + (data_has_dp ? 1 : 0) + (data_has_sign ? 1 : 0));
 
 	unsigned int abs_power = abs(this->power);
 	unsigned int disp_intpart_len = this->length - abs_power;

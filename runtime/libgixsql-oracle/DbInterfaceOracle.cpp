@@ -257,14 +257,40 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 	wk_rs->resizeParams(nParams);
 
 	for (int i = 0; i < nParams; i++) {
-		int rc = dpiConn_newVar(connaddr, get_oracle_type(paramTypes.at(i), paramFlags[i]), DPI_NATIVE_TYPE_BYTES, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+
+		dpiOracleTypeNum oracle_type = get_oracle_type(paramTypes.at(i), paramFlags[i]);
+		dpiNativeTypeNum native_type = (oracle_type == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
+
+		int rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
 		}
-		rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char *>(paramValues.at(i).data()), paramLengths.at(i));
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
+
+		if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
+			// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
+			// We handle this here instead of patching ODPI so we can update it in the future
+			if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
+				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
+			}
+			else {
+				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+			}
+
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
 		}
+		else
+		{
+			dpiLob* lob = nullptr;
+			rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+			rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+			rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+		}
+
 		rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
@@ -459,18 +485,32 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 			return DBERR_SQL_ERROR;
 		}
 
-		// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
-		// We handle this here instead of patching ODPI so we can update it in the future
-		if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
-			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char *>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
-		}
-		else {
-			rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
-		}
+		if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
+			// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
+			// We handle this here instead of patching ODPI so we can update it in the future
+			if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
+				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
+			}
+			else {
+				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+			}
 		
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
 		}
+		else
+		{
+			dpiLob* lob = nullptr;
+			rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+			rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+			rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
+			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+		}
+
+
 		rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
@@ -720,8 +760,44 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 		return false;
 	}
 
-	char *c = col_data->value.asBytes.ptr;
-	uint32_t l = col_data->value.asBytes.length;
+	char* c = nullptr;
+	uint32_t l = 0;
+
+	if (nativeTypeNum != DPI_NATIVE_TYPE_LOB) {
+		c = col_data->value.asBytes.ptr;
+		l = col_data->value.asBytes.length;
+
+		if (l > bfrlen) {
+			lib_logger->error("ODPI: ERROR: data truncated: needed {} bytes, {} allocated", l, bfrlen);	// was just a warning
+			return false;
+		}
+
+		*value_len = l;
+		memcpy(bfr, c, l);
+	}
+	else
+	{
+		uint64_t lobsize = 0;
+		dpiLob* lob = col_data->value.asLOB;
+		rc = dpiLob_getSize(lob, &lobsize);
+		if (dpiRetrieveError(rc) < 0) {
+			lib_logger->error("Invalid column length");
+			return false;
+		}
+
+		if (lobsize > bfrlen) {
+			lib_logger->error("ODPI: ERROR: data truncated: needed {} bytes, {} allocated", lobsize, bfrlen);	// was just a warning
+			return false;
+		}
+
+		rc = dpiLob_readBytes(lob, 1, lobsize, bfr , &bfrlen);
+		if (dpiRetrieveError(rc) < 0) {
+			lib_logger->error("Invalid column data");
+			return false;
+		}
+
+		*value_len = lobsize;
+	}
 
 #ifdef VERBOSE
 	lib_logger->trace(FMT_FILE_FUNC "col: {}, data: {}", __FILE__, __func__, col, std::string(c, l));
@@ -729,13 +805,7 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 	fprintf(stderr, "%s\n", s.c_str());
 #endif
 
-	if (l > bfrlen) {
-		lib_logger->error("ODPI: ERROR: data truncated: needed {} bytes, {} allocated", l, bfrlen);	// was just a warning
-		return false;
-	}
 
-	*value_len = l;
-	memcpy(bfr, c, l);
 
 	return true;
 }

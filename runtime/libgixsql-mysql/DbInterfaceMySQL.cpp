@@ -288,9 +288,11 @@ int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 
 	if (wk_rs->column_count) {
 		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
+
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
 			bound_res_col->length = wk_rs->data_lengths.at(i);
@@ -479,9 +481,10 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = column_types[i];
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
 		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
@@ -627,7 +630,7 @@ int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::stri
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
 			
-			bound_res_col->buffer_type = column_types[i];
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
 			bound_res_col->length = wk_rs->data_lengths.at(i);

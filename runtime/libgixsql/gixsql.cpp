@@ -351,7 +351,7 @@ GIXSQLExecParams(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 		return RESULT_FAILED;
 	}
 
-
+	
 	return _gixsqlExecParams(conn, st, _query, nParams);
 }
 

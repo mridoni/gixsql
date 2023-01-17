@@ -80,7 +80,7 @@ private:
 
     static const char _decimal_point;
 
-	void display_to_comp3(const char *data, bool has_sign);	// , int total_len, int scale, int has_sign, uint8_t *addr
+	void display_to_comp3(const char *data, int datalen, bool has_sign);	// , int total_len, int scale, int has_sign, uint8_t *addr
 	void allocate_realdata_buffer();
 
 };
