@@ -105,8 +105,8 @@ private:
 	std::shared_ptr<IDataSourceInfo> data_source_info;
 	std::shared_ptr<IConnectionOptions> connection_opts;
 
-	int cobol2odbctype(CobolVarType);
-	int cobol2ctype(CobolVarType);
+	SQLSMALLINT cobol2odbctype(CobolVarType t, uint32_t flags);
+	SQLSMALLINT cobol2ctype(CobolVarType t, uint32_t flags);
 	int get_data_len(SQLHANDLE hStmt, int cnum);
 
 	static SQLHANDLE odbc_global_env_context;

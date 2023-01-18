@@ -307,6 +307,9 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 	wk_rs->resizeColumnData(nquery_cols);
 	for (int i = 1; i <= nquery_cols; i++) {
 
+		rc = dpiStmt_getQueryInfo(wk_rs->statement, i, &info);
+		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
+
 		dpiNativeTypeNum native_type = (info.typeInfo.oracleTypeNum == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
 
 		rc = dpiStmt_getQueryInfo(wk_rs->statement, i, &info);
@@ -510,7 +513,6 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
 		}
 
-
 		rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
 		if (dpiRetrieveError(rc) < 0) {
 			return DBERR_SQL_ERROR;
@@ -525,6 +527,7 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 
 	dpiQueryInfo col_info;
 	for (int i = 1; i <= nquery_cols; i++) {
+
 		rc = dpiStmt_getQueryInfo(wk_rs->statement, i, &col_info);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) {
 			return DBERR_SQL_ERROR;

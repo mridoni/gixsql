@@ -24,6 +24,7 @@
 #include "Logger.h"
 #include "utils.h"
 #include "varlen_defs.h"
+#include "cobol_var_flags.h"
 
 #include <cstring>
 
@@ -270,16 +271,16 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 	std::vector<SQLLEN> lengths(paramLengths.size());
 
 	for (int i = 0; i < nParams; i++) {
-		int ptype = cobol2odbctype(paramTypes[i]);
-		int ctype = cobol2ctype(paramTypes[i]);
+		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
+		int c_type = cobol2ctype(paramTypes[i], paramFlags[i]);
 
 		lengths[i] = paramLengths[i];
 
 		int rc = SQLBindParameter(wk_rs->statement,
 			i + 1,
 			SQL_PARAM_INPUT,
-			SQL_C_CHAR,
-			ptype, // SQL_VARCHAR,
+			c_type,
+			sql_type, // SQL_VARCHAR,
 			10,
 			0,
 			(SQLPOINTER)paramValues.at(i).data(),
@@ -426,16 +427,17 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 	std::vector<SQLLEN> lengths(paramLengths.size());
 
 	for (int i = 0; i < nParams; i++) {
-		int ptype = cobol2odbctype(paramTypes[i]);
-		int ctype = cobol2ctype(paramTypes[i]);
+		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
+		int c_type = cobol2ctype(paramTypes[i], paramFlags[i]);
 
 		lengths[i] = paramLengths[i];
 
-		rc = SQLBindParameter(wk_rs->statement,
+		rc = SQLBindParameter(
+			wk_rs->statement,
 			i + 1,
 			SQL_PARAM_INPUT,
-			SQL_C_CHAR,
-			ptype, 
+			c_type,
+			sql_type, 
 			10,
 			0,
 			(SQLPOINTER)paramValues.at(i).data(),
@@ -698,46 +700,19 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	if (!column_is_binary(wk_rs->statement, col + 1, &is_binary))
 		return false;
 
-	if (!is_binary) {
-		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, bfr, bfrlen, &reslen);
-		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			return false;
-		}
-		// TODO: fix this, with proper null handling
-		if (reslen != SQL_NULL_DATA)
-			*value_len = reslen;
-		else {
-			bfr[0] = '\0';
-			*value_len = 0;
-		}
-	}
-	else {
-		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
-		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
-		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			return false;
-		}
+	short target_type = is_binary ? SQL_C_BINARY : SQL_C_CHAR;
 
-		for (int i = 0; i < bfrlen; i++) {
-			uint8_t b1 = tmp_bfr[i * 2];
-			uint8_t b0 = tmp_bfr[(i * 2) + 1];
-			if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
-			if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
-			bfr[i] = b0 + (b1 << 4);
-		}
-
-		delete[] tmp_bfr;
-
-		// TODO: fix this, with proper null handling
-		if (reslen != SQL_NULL_DATA)
-			*value_len = reslen / 2;
-		else {
-			bfr[0] = '\0';
-			*value_len = 0;
-		}
-	}
+	rc = SQLGetData(wk_rs->statement, col + 1, target_type, bfr, (SQLLEN) bfrlen, &reslen);
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return false;
+	}
+
+	// TODO: fix this, with proper null handling
+	if (reslen != SQL_NULL_DATA)
+		*value_len = reslen;
+	else {
+		bfr[0] = '\0';
+		*value_len = 0;
 	}
 
 #ifdef VERBOSE
@@ -832,7 +807,7 @@ int DbInterfaceODBC::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 	return -1;
 }
 
-int DbInterfaceODBC::cobol2odbctype(CobolVarType t)
+SQLSMALLINT DbInterfaceODBC::cobol2odbctype(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
 	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
@@ -848,14 +823,14 @@ int DbInterfaceODBC::cobol2odbctype(CobolVarType t)
 
 	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 	case CobolVarType::COBOL_TYPE_JAPANESE:
-		return SQL_VARCHAR;
+		return CBL_FIELD_IS_BINARY(flags) ? SQL_BINARY : SQL_VARCHAR;
 
 	default:
 		return SQL_VARCHAR;
 	}
 }
 
-int DbInterfaceODBC::cobol2ctype(CobolVarType t)
+SQLSMALLINT DbInterfaceODBC::cobol2ctype(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
 	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
@@ -871,7 +846,7 @@ int DbInterfaceODBC::cobol2ctype(CobolVarType t)
 
 	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 	case CobolVarType::COBOL_TYPE_JAPANESE:
-		return SQL_C_CHAR;
+		return CBL_FIELD_IS_BINARY(flags) ? SQL_C_BINARY : SQL_C_CHAR;
 
 	default:
 		return SQL_C_CHAR;
