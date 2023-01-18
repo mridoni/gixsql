@@ -855,7 +855,7 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 		unsigned long datalen = *(wk_rs->data_lengths.at(col));
 		
 		if (datalen > bfrlen) {
-			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	// was just a warning
+			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	
 			return false;
 		}
 

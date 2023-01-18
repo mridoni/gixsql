@@ -272,7 +272,7 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 
 	for (int i = 0; i < nParams; i++) {
 		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
-		int c_type = cobol2ctype(paramTypes[i], paramFlags[i]);
+		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
 
 		lengths[i] = paramLengths[i];
 
@@ -428,7 +428,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 
 	for (int i = 0; i < nParams; i++) {
 		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
-		int c_type = cobol2ctype(paramTypes[i], paramFlags[i]);
+		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
 
 		lengths[i] = paramLengths[i];
 

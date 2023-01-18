@@ -25,6 +25,7 @@ USA.
 #include "Logger.h"
 #include "utils.h"
 #include "varlen_defs.h"
+#include "cobol_var_flags.h"
 
 #define DEFAULT_CURSOR_ARRAYSIZE	100
 
@@ -238,7 +239,13 @@ int DbInterfaceSQLite::exec_prepared(const std::string& _stmt_name, std::vector<
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const char *>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		int rc = 0;
+		if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
+			rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		}
+		else {
+			rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		}
 		if (sqliteRetrieveError(rc) != SQLITE_OK)
 			return DBERR_SQL_ERROR;
 	}
@@ -270,7 +277,7 @@ int DbInterfaceSQLite::_sqlite_exec(const std::shared_ptr<ICursor>& crsr, const 
 	std::string cursor_name, table_name, update_query;
 	std::vector<std::string> unique_key;
 	std::vector<std::string> key_params;
-	sqlite3_stmt *upd_del_statement = nullptr;
+	sqlite3_stmt* upd_del_statement = nullptr;
 	char* err_msg = 0;
 	uint32_t nquery_cols = 0;
 
@@ -290,9 +297,9 @@ int DbInterfaceSQLite::_sqlite_exec(const std::shared_ptr<ICursor>& crsr, const 
 		wk_rs = std::make_shared<SQLiteStatementData>();
 
 		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
-			
+
 			is_updatable_crsr_stmt = true;
-			
+
 			// No cursor was passed, we need to find it
 			if (cursor_name.empty() || this->_declared_cursors.find(cursor_name) == this->_declared_cursors.end() || !this->_declared_cursors[cursor_name]) {
 				spdlog::error("Cannot find updatable cursor {}", cursor_name);
@@ -370,7 +377,7 @@ int DbInterfaceSQLite::_sqlite_exec(const std::shared_ptr<ICursor>& crsr, const 
 		if (affected_rows != 1) {
 			// Something went wrong, we should have updated/deleted exactly one row
 			spdlog::error("UPDATE/DELETE on updatable cursor affected {} rows (expected: 1)", affected_rows);
-			last_error =  "UPDATE/DELETE on updatable cursor affected " + std::to_string(affected_rows) + " rows (expected: 1)";
+			last_error = "UPDATE/DELETE on updatable cursor affected " + std::to_string(affected_rows) + " rows (expected: 1)";
 			last_rc = -1;
 			last_state = "22000";
 			return DBERR_SQL_ERROR;
@@ -473,7 +480,14 @@ int DbInterfaceSQLite::_sqlite_exec_params(const std::shared_ptr<ICursor>& crsr,
 
 	for (int i = 0; i < nParams; i++) {
 
-		int rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char *>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+		int rc = 0;
+
+		if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
+			rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+		}
+		else {
+			rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+		}
 		if (sqliteRetrieveError(rc))
 			return DBERR_SQL_ERROR;
 	}
@@ -566,44 +580,44 @@ bool DbInterfaceSQLite::has_unique_key(std::string table_name, const std::shared
 	int err_idx = 1;
 	std::string q1 = "SELECT name, case when il.\"origin\" = 'pk' then 0 else 1 end a FROM pragma_index_list(?) il where \"unique\"=1 order by a";
 
-	sqlite3_stmt* idxs_stmt = nullptr, *key_stmt = nullptr;
+	sqlite3_stmt* idxs_stmt = nullptr, * key_stmt = nullptr;
 
 	int rc = sqlite3_prepare_v2(connaddr, q1.c_str(), q1.size(), &idxs_stmt, 0);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_bind_text(idxs_stmt, 1, table_name.c_str(), table_name.size(), SQLITE_TRANSIENT);
+		rc = sqlite3_bind_text(idxs_stmt, 1, table_name.c_str(), table_name.size(), SQLITE_TRANSIENT);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_step(idxs_stmt);
+		rc = sqlite3_step(idxs_stmt);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_ROW)
 
-	if (sqlite3_data_count(idxs_stmt) <= 0) {
-		lib_logger->error("Could not extract unique key data for table {} ({})", table_name, err_idx++);
-		return false;
-	}
+		if (sqlite3_data_count(idxs_stmt) <= 0) {
+			lib_logger->error("Could not extract unique key data for table {} ({})", table_name, err_idx++);
+			return false;
+		}
 
-	std::string index_name = (char *)sqlite3_column_text(idxs_stmt, 0);
+	std::string index_name = (char*)sqlite3_column_text(idxs_stmt, 0);
 
 	rc = sqlite3_finalize(idxs_stmt);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	// we got an index, now we need its columns
+		// we got an index, now we need its columns
 
-	q1 = "SELECT name FROM pragma_index_info(?) order by seqno";
+		q1 = "SELECT name FROM pragma_index_info(?) order by seqno";
 
 	rc = sqlite3_prepare_v2(connaddr, q1.c_str(), q1.size(), &key_stmt, 0);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_bind_text(key_stmt, 1, index_name.c_str(), index_name.size(), SQLITE_TRANSIENT);
+		rc = sqlite3_bind_text(key_stmt, 1, index_name.c_str(), index_name.size(), SQLITE_TRANSIENT);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	rc = sqlite3_step(key_stmt);
+		rc = sqlite3_step(key_stmt);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_ROW)
 
-	if (sqlite3_data_count(key_stmt) <= 0) {
-		lib_logger->error("Could not extract unique key data for table {} ({})", table_name, err_idx++);
-		return false;
-	}
+		if (sqlite3_data_count(key_stmt) <= 0) {
+			lib_logger->error("Could not extract unique key data for table {} ({})", table_name, err_idx++);
+			return false;
+		}
 
 	do {
 		std::string col = (char*)sqlite3_column_text(key_stmt, 0);
@@ -614,7 +628,7 @@ bool DbInterfaceSQLite::has_unique_key(std::string table_name, const std::shared
 	rc = sqlite3_finalize(key_stmt);
 	CHECK_UNIQUE_KEY_ERR(SQLITE_OK)
 
-	return true;
+		return true;
 }
 
 bool DbInterfaceSQLite::prepare_updatable_cursor_query(const std::string& qry, const std::shared_ptr<ICursor>& crsr, const std::vector<std::string>& unique_key, sqlite3_stmt** update_stmt, std::vector<std::string>& key_params)
@@ -757,7 +771,7 @@ int DbInterfaceSQLite::cursor_open(const std::shared_ptr<ICursor>& cursor)
 			squery = squery.substr(0, squery.size() - 10);
 		}
 	}
-	
+
 	if (cursor->getNumParams() > 0) {
 		std::vector<std_binary_data> param_values = cursor->getParameterValues();
 		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
@@ -859,21 +873,31 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 		return false;
 	}
 
-	const unsigned char* c = sqlite3_column_text(wk_rs->statement, col);
-	if (c) {
-		int l = strlen((const char*)c);
+	bool is_binary = sqlite3_column_type(wk_rs->statement, col) == SQLITE_BLOB;
+	int datalen = sqlite3_column_bytes(wk_rs->statement, col);
 
-		if (l > bfrlen) {
-			return false;
-		}
-
-		*value_len = l;
-		memcpy(bfr, c, l);
-		bfr[l] = '\0';
+	if (datalen > bfrlen) {
+		lib_logger->error("SQLite: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);
+		return false;
 	}
-	else
-		bfr[0] = '\0';
 
+
+	if (is_binary) {
+		const void* data = sqlite3_column_blob(wk_rs->statement, col);
+		memcpy(bfr, data, datalen);
+		*value_len = datalen;
+	}
+	else {
+		const unsigned char* c = sqlite3_column_text(wk_rs->statement, col);
+		if (c) {
+			*value_len = datalen;
+			memcpy(bfr, c, datalen);
+		}
+		else {
+			*value_len = 0;
+			bfr[0] = '\0';
+		}
+	}
 	return true;
 }
 
@@ -1089,7 +1113,7 @@ static std::string sqlite_fixup_parameters(const std::string& sql)
 		default:
 			out_sql += c;
 
-}
+		}
 	}
 
 	return out_sql;
