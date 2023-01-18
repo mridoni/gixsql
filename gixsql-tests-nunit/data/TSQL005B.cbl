@@ -28,6 +28,9 @@
 
            01 VCFLD PIC X(100) VARYING.      
 
+           01 VBFLD1 PIC X(100) USAGE VARYING.      
+           01 VBFLD2 PIC X(100) USAGE VARRAW.      
+
            01 NUM1          PIC 99V99.
 
            01 TOT           PIC 9(8).

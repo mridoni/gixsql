@@ -40,4 +40,10 @@ extern "C" {
 		return dbi;
 	}
 
+	LIBGIXSQL_API void release_dblib(IDbInterface *dbi)
+	{
+		 if (dbi)
+		 	delete dbi;
+	}	
+
 }

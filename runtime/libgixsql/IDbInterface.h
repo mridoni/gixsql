@@ -23,6 +23,7 @@ USA.
 #include <string>
 #include <vector>
 #include <variant>
+#include <memory>
 
 #include "ICursor.h"
 #include "Logger.h"
@@ -30,6 +31,10 @@ USA.
 #include "IDataSourceInfo.h"
 #include "IConnectionOptions.h"
 #include "IDbManagerInterface.h"
+#include "IResultSetContextData.h"
+#include "cobol_var_types.h"
+
+using std_binary_data = std::vector<unsigned char>;
 
 #define USE_DEFAULT_CONNECTION		-998
 
@@ -65,7 +70,9 @@ USA.
 
 #define DBERR_NUM_OUT_OF_RANGE		-410
 
-#define DBERR_NOT_IMPL				-990099
+#define DBERR_INTERNAL_ERR			-8880
+
+#define DBERR_NOT_IMPL				-9990
 
 #define FETCH_NEXT_ROW	1
 #define FETCH_PREV_ROW	2
@@ -114,32 +121,31 @@ enum class DbPropertySetResult {
 
 class IDbInterface
 {
+	friend class DbInterfaceFactory;
+
 public:
-	virtual ~IDbInterface() {}
+	virtual ~IDbInterface() { }
 
 	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
-	virtual int connect(IDataSourceInfo *, IConnectionOptions *) = 0;
+	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
 	virtual int exec(std::string) = 0;
-	virtual int exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats) = 0;
-	virtual int close_cursor(ICursor *) = 0;
-	virtual int cursor_declare(ICursor *, bool, int) = 0;
-	virtual int cursor_declare_with_params(ICursor *, char **, bool, int) = 0;
-	virtual int cursor_open(ICursor *) = 0;
-	virtual int fetch_one(ICursor *, int) = 0;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, void *context, int row, int col, char* bfr, int bfrlen, int* value_len) = 0;
-	virtual bool move_to_first_record(std::string stmt_name = "") = 0;
+	virtual int exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
+	virtual int cursor_declare(const std::shared_ptr<ICursor>& crsr) = 0;
+	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) = 0;
+	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) = 0;
+	virtual int cursor_fetch_one(const std::shared_ptr<ICursor>& crsr, int) = 0;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len) = 0;
+	virtual bool move_to_first_record(const std::string& stmt_name = "") = 0;
 	virtual uint64_t get_native_features() = 0;
-	virtual int get_num_rows(ICursor* crsr) = 0;
-	virtual int get_num_fields(ICursor *crsr) = 0;
-	virtual char *get_error_message() = 0;
+	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) = 0;
+	virtual int get_num_fields(const std::shared_ptr<ICursor>& crsr) = 0;
+	virtual const char *get_error_message() = 0;
 	virtual int get_error_code() = 0;
 	virtual std::string get_state() = 0;
-	virtual void set_owner(IConnection *) = 0;
-	virtual IConnection* get_owner() = 0;
-	virtual int prepare(std::string stmt_name, std::string sql) = 0;
-	virtual int exec_prepared(std::string stmt_name, std::vector<std::string> &paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats) = 0;
+	virtual int prepare(const std::string& stmt_name, const std::string& query) = 0;
+	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data> &paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags) = 0;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) = 0;
 
 	IDbManagerInterface* manager()
@@ -153,7 +159,10 @@ public:
 	}
 
 protected:
-	IConnection* owner;
+
 	std::shared_ptr<spdlog::logger> lib_logger;
+
+private:
+	void *native_lib_ptr = nullptr;	
 };
 

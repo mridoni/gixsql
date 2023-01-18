@@ -22,32 +22,81 @@ USA.
 #include <string>
 #include <vector>
 
-
 #include "Logger.h"
 #include "DbInterfacePGSQL.h"
 #include "IConnection.h"
 #include "utils.h"
+#include "cobol_var_flags.h"
 
-#define OID_TYPEA	17
+#define OID_BYTEA	17
+#define OID_NUMERIC 1700
+#define OID_VARCHAR 1043
 
 static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string pgsql_fixup_parameters(const std::string& sql);
 static std::string pg_get_sqlstate(PGresult* r);
+
+template<typename T>
+using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
+		
+struct PGresult_deleter {
+    void operator()(PGresult *ptr) {
+      if (ptr)
+	  	PQclear(ptr);
+    }
+};
+using PGresultPtr = std::unique_ptr<PGresult, PGresult_deleter>;
+
+class pgsqlParamArray {
+
+public:
+
+	pgsqlParamArray(int sz) {
+		_data = new char* [sz];
+		nitems = sz;
+	}
+
+	~pgsqlParamArray()
+	{
+		if (_data) {
+			for (int i = 0; i < nitems; i++) {
+				if (_data[i])
+					delete _data[i];
+			}
+			delete[] _data;
+		}
+	}
+
+	void assign(int i, char* d, int l)
+	{
+		_data[i] = new char[l + 1];
+		memcpy(_data[i], d, l);
+		_data[i][l] = '\0';
+	}
+
+	char** data() const
+	{
+		return _data;
+	}
+
+private:
+
+	char** _data = nullptr;
+	int nitems = 0;
+
+};
 
 DbInterfacePGSQL::DbInterfacePGSQL()
 {}
 
 DbInterfacePGSQL::~DbInterfacePGSQL()
 {
-	if (current_resultset_data) {
-		delete current_resultset_data;
-		current_resultset_data = nullptr;
-	}
+	if (connaddr)
+		PQfinish(connaddr);
 }
 
 int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
-	owner = NULL;
 	connaddr = NULL;
 	current_resultset_data = nullptr;
 	last_rc = 0;
@@ -61,12 +110,12 @@ int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_opts)
+int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	PGconn* conn;
 	std::string connstr;
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
 	connaddr = NULL;
 	current_resultset_data = nullptr;
@@ -75,11 +124,11 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 	last_error = "";
 	last_state = "";
 
-	connstr = "dbname=" + (conn_info->getDbName().empty() ? "''" : conn_info->getDbName()) + " " +
-		"host=" + (conn_info->getHost().empty() ? "''" : conn_info->getHost()) + " " +
-		"port=" + (conn_info->getPort() == 0 ? "''" : std::to_string(conn_info->getPort())) + " " +
-		"user=" + (conn_info->getUsername().empty() ? "''" : conn_info->getUsername()) + " " +
-		"password=" + (conn_info->getPassword().empty() ? "''" : conn_info->getPassword());
+	connstr = "dbname=" + (_conn_info->getDbName().empty() ? "''" : _conn_info->getDbName()) + " " +
+		"host=" + (_conn_info->getHost().empty() ? "''" : _conn_info->getHost()) + " " +
+		"port=" + (_conn_info->getPort() == 0 ? "''" : std::to_string(_conn_info->getPort())) + " " +
+		"user=" + (_conn_info->getUsername().empty() ? "''" : _conn_info->getUsername()) + " " +
+		"password=" + (_conn_info->getPassword().empty() ? "''" : _conn_info->getPassword());
 
 	lib_logger->trace("libpq - connection string: [{}]", connstr);
 
@@ -98,8 +147,8 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!g_opts->client_encoding.empty()) {
-		if (PQsetClientEncoding(conn, g_opts->client_encoding.c_str())) {
+	if (!_conn_opts->client_encoding.empty()) {
+		if (PQsetClientEncoding(conn, _conn_opts->client_encoding.c_str())) {
 			last_rc = 1;
 			last_error = PQerrorMessage(conn);
 			lib_logger->error("libpq: {}", last_error);
@@ -108,7 +157,7 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 		}
 	}
 
-	auto opts = conn_info->getOptions();
+	auto opts = _conn_info->getOptions();
 	if (opts.find("default_schema") != opts.end()) {
 		std::string default_schema = opts["default_schema"];
 		if (!default_schema.empty()) {
@@ -129,14 +178,16 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 
 	// Autocommit is set to off. Since PostgreSQL is ALWAYS in autocommit mode 
 	// we will optionally start a transaction
-	if (g_opts->autocommit == AutoCommitMode::Off) {
+	if (_conn_opts->autocommit == AutoCommitMode::Off) {
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect: autocommit is off, starting initial transaction", __FILE__, __func__);
-		auto r = PQexec(conn, "BEGIN TRANSACTION");
-		auto rc = PQresultStatus(r);
+
+		PGresultPtr r(PQexec(conn, "BEGIN TRANSACTION"));
+
+		auto rc = PQresultStatus(r.get());
 		if (rc != PGRES_COMMAND_OK) {
 			last_rc = rc;
-			last_error = PQresultErrorMessage(r);
-			last_state = pg_get_sqlstate(r);
+			last_error = PQresultErrorMessage(r.get());
+			last_state = pg_get_sqlstate(r.get());
 			lib_logger->error("libpq: {}", last_error);
 			PQfinish(conn);
 			return DBERR_CONNECTION_FAILED;
@@ -171,8 +222,8 @@ int DbInterfacePGSQL::connect(IDataSourceInfo* conn_info, IConnectionOptions* g_
 
 	connaddr = conn;
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -193,50 +244,29 @@ int DbInterfacePGSQL::terminate_connection()
 		connaddr = NULL;
 	}
 
-	if (current_resultset_data) {
-		delete current_resultset_data;
-		current_resultset_data = nullptr;
-	}
-
-	if (owner)
-		owner->setOpened(false);
+	current_resultset_data.reset();
 
 	return DBERR_NO_ERROR;
 }
 
-//int DbInterfacePGSQL::begin_transaction()
-//{
-//	int rc = exec("BEGIN TRANSACTION");
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_BEGIN_TX_FAILED;
-//}
-//
-//int DbInterfacePGSQL::end_transaction(std::string completion_type)
-//{
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	int rc = exec(completion_type);
-//	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_END_TX_FAILED;
-//}
-
-int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
+int DbInterfacePGSQL::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = pgsql_fixup_parameters(sql);
+	if (connection_opts->fixup_parameters) {
+		prepared_sql = pgsql_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "PGSQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	PGresult* res = PQprepare(connaddr, stmt_name.c_str(), prepared_sql.c_str(), 0, nullptr);
@@ -257,49 +287,60 @@ int DbInterfacePGSQL::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfacePGSQL::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	stmt_name = to_lower(stmt_name);
+	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, stmt_name);
-
+	std::string stmt_name = to_lower(_stmt_name);
+	
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Invalid prepared statment name: {}", stmt_name);
 		return DBERR_SQL_ERROR;
 	}
-
-	int nParams = (int)paramValues.size();
-	char** pvals = nullptr;
-
-	if (paramValues.size() > 0) {
-		pvals = new char* [nParams];
-		for (int i = 0; i < nParams; i++) {
-			pvals[i] = (char*)paramValues.at(i).c_str();
-		}
+	
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
 	}
 
-	PGResultSetData* wk_rs = _prepared_stmts[stmt_name];
-	if (wk_rs) {	// should not happen, but just in case of some weird/broken program flow
-		delete wk_rs;
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
+
+	std::unique_ptr<pgsqlParamArray> param_vals = std::make_unique<pgsqlParamArray>(paramValues.size());
+
+	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
+	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());	// will be used for binary data, currently ignored
+	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());
+
+	for (int i = 0; i < paramValues.size(); i++) {
+		param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
+		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
+		param_lengths[i] = paramLengths.at(i);
+		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
 	}
 
 	int ret = DBERR_NO_ERROR;
-	wk_rs = new PGResultSetData();
-	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), nParams, pvals, NULL, NULL, 0);
+
+	std::shared_ptr<PGResultSetData> wk_rs = std::make_shared<PGResultSetData>();
+
+	wk_rs->resultset = PQexecPrepared(connaddr, stmt_name.c_str(), paramValues.size(), param_vals->data(), param_lengths.get(), param_formats.get(), 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
-	
 	
 	if (last_rc == PGRES_COMMAND_OK || last_rc == PGRES_TUPLES_OK) {
 		_prepared_stmts[stmt_name] = wk_rs;
 		return DBERR_NO_ERROR;
 	}
 	else {
-		if (wk_rs) delete wk_rs;
 		last_rc = -(10000 + last_rc);
-		PQclear(wk_rs->resultset);
 		return DBERR_SQL_ERROR;
 	}
 }
@@ -314,24 +355,18 @@ int DbInterfacePGSQL::exec(std::string query)
 	return _pgsql_exec(nullptr, query);
 }
 
-//template<typename T>
-//using deleted_unique_ptr = std::unique_ptr<T, std::function<void(T*)>>;
-
-int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
+int DbInterfacePGSQL::_pgsql_exec(const std::shared_ptr<ICursor>& crsr, const std::string& query)
 {
-	//std::string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
+	
+	std::shared_ptr<PGResultSetData> wk_rs = (crsr != nullptr) ? std::static_pointer_cast<PGResultSetData>(crsr->getPrivateData()) : current_resultset_data;
 
-	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
-
-	if (wk_rs) {
-		if (wk_rs == current_resultset_data) {
-			delete current_resultset_data;
-			current_resultset_data = nullptr;
-		}
+	// Is this really necessary?
+	if (wk_rs && wk_rs == current_resultset_data) {
+		current_resultset_data.reset();
 	}
 
-	wk_rs = new PGResultSetData();
+	wk_rs = std::make_shared<PGResultSetData>();
 	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), 0, NULL, NULL, NULL, NULL, 0);
 
 	last_rc = PQresultStatus(wk_rs->resultset);
@@ -339,13 +374,10 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 		
 		// we clean up: whether the COMMIT/ROLLBACK failed or not this is probably useless anyway
-		if (current_resultset_data) {
-			delete current_resultset_data;
-			current_resultset_data = nullptr;
-		}
+		current_resultset_data.reset();
 
 		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
 			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
@@ -386,91 +418,55 @@ int DbInterfacePGSQL::_pgsql_exec(ICursor* crsr, std::string query)
 
 }
 
-bool DbInterfacePGSQL::retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src)
+int DbInterfacePGSQL::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	lib_logger->trace(FMT_FILE_FUNC "Retrieving SQL source for prepared statement {}", __FILE__, __func__, prep_stmt_name);
-
-	char** pvals = new char* [1];
-	pvals[0] = (char*)prep_stmt_name.c_str();
-	std::string qry = "select statement from pg_prepared_statements where lower(name) = lower($1)";
-	PGresult* tr = PQexecParams(connaddr, qry.c_str(), 1, NULL, pvals, NULL, NULL, 0);
-
-	delete[] pvals;
-
-	last_rc = PQresultStatus(tr);
-	last_error = PQresultErrorMessage(tr);
-	last_state = pg_get_sqlstate(tr);
-
-	if (last_rc == PGRES_TUPLES_OK) {
-		if (PQntuples(tr) != 1) {
-			last_rc = 42704;
-			last_error = "\"" + prep_stmt_name + "\" not found";
-			last_state = "42704";
-			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
-			return false;
-
-		}
-		const char* res = PQgetvalue(tr, 0, 0);
-		if (!res) {
-			last_rc = PQresultStatus(tr);
-			last_error = PQresultErrorMessage(tr);
-			last_state = pg_get_sqlstate(tr);
-			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
-			return false;
-		}
-		src = res;
-		return true;
-	}
-
-	return false;
+	return _pgsql_exec_params(nullptr, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
-int DbInterfacePGSQL::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _pgsql_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
-}
-
-int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
-{
-	std::vector<int> empty;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
-	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
+	std::shared_ptr<PGResultSetData> wk_rs = (crsr != nullptr) ? std::static_pointer_cast<PGResultSetData>(crsr->getPrivateData()) : current_resultset_data;
 
-	char** pvals = new char* [nParams];
-
-	for (int i = 0; i < nParams; i++) {
-		pvals[i] = (char*)paramValues.at(i).c_str();
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
 	}
 
-	if (wk_rs) {
-		if (wk_rs == current_resultset_data) {
-			delete current_resultset_data;
-			current_resultset_data = nullptr;
-		}
+	std::unique_ptr<pgsqlParamArray> param_vals = std::make_unique<pgsqlParamArray>(paramValues.size());
+
+	std::unique_ptr<Oid[]> param_types = std::make_unique<Oid[]>(paramTypes.size());
+	std::unique_ptr<int[]> param_lengths = std::make_unique<int[]>(paramLengths.size());
+	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());	
+
+	for (int i = 0; i < paramValues.size(); i++) {
+		param_vals->assign(i, (char *)paramValues[i].data(), paramLengths[i]);
+		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
+		param_lengths[i] = paramLengths.at(i);
+		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
+	} 
+
+	if (wk_rs && wk_rs == current_resultset_data) {
+		current_resultset_data.reset();
 	}
 
-	wk_rs = new PGResultSetData();
-	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), nParams, NULL, pvals, empty.data(), empty.data(), 0);
+	wk_rs = std::make_shared<PGResultSetData>();
+	wk_rs->resultset = PQexecParams(connaddr, query.c_str(), paramValues.size(), param_types.get(), param_vals->data(), param_lengths.get(), param_formats.get(), 0);
 	wk_rs->num_rows = get_num_rows(wk_rs->resultset);
-
-
 
 	last_rc = PQresultStatus(wk_rs->resultset);
 	last_error = PQresultErrorMessage(wk_rs->resultset);
 	last_state = pg_get_sqlstate(wk_rs->resultset);
 
-	delete[] pvals;
-
 	// we trap COMMIT/ROLLBACK
-	if (owner->getConnectionOptions()->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
+	if (connection_opts->autocommit == AutoCommitMode::Off && is_tx_termination_statement(query)) {
 
 		// we clean up: if the COMMIT/ROLLBACK failed this is probably useless anyway
-		if (current_resultset_data) {
-			delete current_resultset_data;
-			current_resultset_data = nullptr;
-		}
+		current_resultset_data.reset();
 
 		if (last_rc == PGRES_COMMAND_OK) {	// COMMIT/ROLLBACK succeeded, we try to start a new transaction
 			lib_logger->trace(FMT_FILE_FUNC "autocommit mode is disabled, trying to start a new transaction", __FILE__, __func__);
@@ -510,7 +506,7 @@ int DbInterfacePGSQL::_pgsql_exec_params(ICursor* crsr, const std::string query,
 }
 
 
-int DbInterfacePGSQL::close_cursor(ICursor* cursor)
+int DbInterfacePGSQL::cursor_close(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = DBERR_NO_ERROR;
 
@@ -523,20 +519,18 @@ int DbInterfacePGSQL::close_cursor(ICursor* cursor)
 	}
 
 	if (cursor->getPrivateData()) {
-		PGResultSetData* wk_rs = (PGResultSetData*)cursor->getPrivateData();
-		delete wk_rs;
-		cursor->setPrivateData(nullptr);
+		cursor->clearPrivateData();
 	}
 
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_CLOSE_CURSOR_FAILED;
 }
 
-int DbInterfacePGSQL::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfacePGSQL::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -544,34 +538,20 @@ int DbInterfacePGSQL::cursor_declare(ICursor* cursor, bool with_hold, int res_ty
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfacePGSQL::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
+int DbInterfacePGSQL::cursor_open(const std::shared_ptr<ICursor>& crsr)
 {
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfacePGSQL::cursor_open(ICursor* cursor)
-{
-	if (!cursor)
+	if (!crsr)
 		return DBERR_OPEN_CURSOR_FAILED;
 
-	std::string sname = cursor->getName();
+	std::string sname = crsr->getName();
 	std::string full_query;
 
-	std::string squery = cursor->getQuery();
-	std::vector<int> empty;
+	std::string squery = crsr->getQuery();
 	void* src_addr = nullptr;
 	int src_len = 0;
 
 	if (squery.size() == 0) {
-		cursor->getQuerySource(&src_addr, &src_len);
+		crsr->getQuerySource(&src_addr, &src_len);
 		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
@@ -589,7 +569,7 @@ int DbInterfacePGSQL::cursor_open(ICursor* cursor)
 	}
 
 	if (use_native_cursors) {
-		if (cursor->isWithHold()) {
+		if (crsr->isWithHold()) {
 			full_query = "DECLARE " + sname + " CURSOR WITH HOLD FOR " + squery;
 		}
 		else {
@@ -601,22 +581,17 @@ int DbInterfacePGSQL::cursor_open(ICursor* cursor)
 	}
 
 	// execute query
-	auto pvalues = cursor->getParameterValues();
-	int rc = _pgsql_exec_params(cursor, full_query, cursor->getNumParams(), empty, pvalues, empty, empty);
+	int rc = _pgsql_exec_params(crsr, full_query, crsr->getParameterTypes(), crsr->getParameterValues(), crsr->getParameterLengths(), crsr->getParameterFlags());
 
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_OPEN_CURSOR_FAILED;
 }
 
-int DbInterfacePGSQL::fetch_one(ICursor* cursor, int fetchmode)
+int DbInterfacePGSQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int fetchmode)
 {
-	if (owner == NULL) {
-		return DBERR_CONN_NOT_FOUND;
-	}
-
 	if (!cursor)
 		return DBERR_FETCH_ROW_FAILED;
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
 	std::string sname = cursor->getName();
 
@@ -648,7 +623,7 @@ int DbInterfacePGSQL::fetch_one(ICursor* cursor, int fetchmode)
 		}
 	}
 	else {
-		PGResultSetData *wk_rs = (PGResultSetData *)cursor->getPrivateData();
+		std::shared_ptr<PGResultSetData> wk_rs = std::dynamic_pointer_cast<PGResultSetData>(cursor->getPrivateData());
 		wk_rs->current_row_index++;
 		if (wk_rs->current_row_index >= wk_rs->num_rows)
 			return DBERR_NO_DATA;
@@ -657,12 +632,12 @@ int DbInterfacePGSQL::fetch_one(ICursor* cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	size_t to_length = 0;
 	*value_len = 0;
 
-	PGResultSetData* wk_rs = nullptr;
+	std::shared_ptr<PGResultSetData> wk_rs;
 
 	switch (resultset_context_type) {
 
@@ -672,10 +647,9 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 		case ResultSetContextType::PreparedStatement:
 		{
-			if (!context)
-				return false;
+			PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-			std::string stmt_name = (char*)context;
+			std::string stmt_name = p.prepared_statement_name;
 			stmt_name = to_lower(stmt_name);
 			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
@@ -688,12 +662,13 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 
 		case ResultSetContextType::Cursor:
 		{
-			ICursor* c = (ICursor*)context;
+			CursorContextData& p = (CursorContextData&)context;
+			std::shared_ptr <ICursor> c = p.cursor;
 			if (!c) {
 				lib_logger->error("Invalid cursor reference");
 				return false;
 			}
-			wk_rs = (PGResultSetData*)c->getPrivateData();
+			wk_rs = std::dynamic_pointer_cast<PGResultSetData>(c->getPrivateData());
 			// we overwrite the row index (for ?)
 			if (wk_rs->current_row_index != -1) {
 				row = wk_rs->current_row_index;
@@ -715,7 +690,7 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 	}
 
 	auto type = PQftype(wk_rs->resultset, col);
-	if (type != OID_TYPEA || !this->decode_binary) {
+	if (type != OID_BYTEA || !this->decode_binary) {
 		to_length = strlen(res);
 		if (to_length > bfrlen) {
 			return false;
@@ -745,15 +720,15 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 	return true;
 }
 
-bool DbInterfacePGSQL::move_to_first_record(std::string stmt_name)
+bool DbInterfacePGSQL::move_to_first_record(const std::string& _stmt_name)
 {
-	PGResultSetData* wk_rs = nullptr;
+	std::shared_ptr<PGResultSetData> wk_rs;
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (stmt_name.empty()) {
 		wk_rs = current_resultset_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			pgsqlSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
@@ -781,9 +756,9 @@ uint64_t DbInterfacePGSQL::get_native_features()
 	return (uint64_t)DbNativeFeature::ResultSetRowCount;
 }
 
-int DbInterfacePGSQL::get_num_rows(ICursor* crsr)
+int DbInterfacePGSQL::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 {
-	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
+	std::shared_ptr<PGResultSetData> wk_rs = (crsr != nullptr) ? std::static_pointer_cast<PGResultSetData>(crsr->getPrivateData()) : current_resultset_data;
 
 	if (!wk_rs)
 		return -1;
@@ -796,9 +771,9 @@ int DbInterfacePGSQL::get_num_rows(ICursor* crsr)
 	return n;
 }
 
-int DbInterfacePGSQL::get_num_fields(ICursor* crsr)
+int DbInterfacePGSQL::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
-	PGResultSetData* wk_rs = (PGResultSetData*)((crsr != NULL) ? crsr->getPrivateData() : current_resultset_data);
+	std::shared_ptr<PGResultSetData> wk_rs = (crsr != nullptr) ? std::static_pointer_cast<PGResultSetData>(crsr->getPrivateData()) : current_resultset_data;
 	if (!wk_rs)
 		return -1;
 
@@ -830,6 +805,29 @@ void DbInterfacePGSQL::pgsqlSetError(int err_code, std::string sqlstate, std::st
 	last_error = err_msg;
 	last_rc = err_code;
 	last_state = sqlstate;
+}
+
+Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t, uint32_t flags)
+{
+	switch (t) {
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
+		return OID_NUMERIC;
+
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
+		return CBL_FIELD_IS_BINARY(flags) ? OID_BYTEA : OID_VARCHAR;
+
+	default:
+		return 0;
+	}
 }
 
 PGResultSetData::PGResultSetData()
@@ -927,7 +925,7 @@ static std::string pgsql_fixup_parameters(const std::string& sql)
 }
 
 
-char* DbInterfacePGSQL::get_error_message()
+const char* DbInterfacePGSQL::get_error_message()
 {
 	if (current_resultset_data != NULL)
 		return PQresultErrorMessage(current_resultset_data->resultset);
@@ -948,16 +946,6 @@ std::string DbInterfacePGSQL::get_state()
 	return last_state;
 }
 
-void DbInterfacePGSQL::set_owner(IConnection* conn)
-{
-	owner = conn;
-}
-
-IConnection* DbInterfacePGSQL::get_owner()
-{
-	return owner;
-}
-
 std::string vector_join(const std::vector<std::string>& v, char sep)
 {
 	std::string s;
@@ -969,4 +957,44 @@ std::string vector_join(const std::vector<std::string>& v, char sep)
 			s += sep;
 	}
 	return s;
+}
+
+
+bool DbInterfacePGSQL::retrieve_prepared_statement_source(const std::string& prep_stmt_name, std::string& src)
+{
+	lib_logger->trace(FMT_FILE_FUNC "Retrieving SQL source for prepared statement {}", __FILE__, __func__, prep_stmt_name);
+
+	auto pvals = std::make_unique<char*[]>(1);
+	pvals[0] = (char*)prep_stmt_name.c_str();
+
+	std::string qry = "select statement from pg_prepared_statements where lower(name) = lower($1)";
+	
+	PGresultPtr tr(PQexecParams(connaddr, qry.c_str(), 1, NULL, pvals.get(), NULL, NULL, 0));
+
+	last_rc = PQresultStatus(tr.get());
+	last_error = PQresultErrorMessage(tr.get());
+	last_state = pg_get_sqlstate(tr.get());
+
+	if (last_rc == PGRES_TUPLES_OK) {
+		if (PQntuples(tr.get()) != 1) {
+			last_rc = 42704;
+			last_error = "\"" + prep_stmt_name + "\" not found";
+			last_state = "42704";
+			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
+			return false;
+		}
+
+		const char* res = PQgetvalue(tr.get(), 0, 0);
+		if (!res) {
+			last_rc = PQresultStatus(tr.get());
+			last_error = PQresultErrorMessage(tr.get());
+			last_state = pg_get_sqlstate(tr.get());
+			lib_logger->error("Cannot retrieve prepared statement source: {}", last_error);
+			return false;
+		}
+		src = res;
+		return true;
+	}
+
+	return false;
 }

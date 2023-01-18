@@ -24,20 +24,24 @@
 #include <climits>
 #include <cstdlib>
 #include <string>
+#include <vector>
 
 #include "gix_esql_driver.hh"
 #include "gix_esql_parser.hh"
 #include "libcpputils.h"
 
-int flag_insqlstring = 0;
-int flag_selectcommand = 0;
-int flag_select_from_passed = 0;
+
+int subquery_level = 0;
 int cursor_hold = 0;
 
 int find_last_space(char * s);
 int count_crlf(char *s);
+int count_open_par(char *s);
+int count_close_par(char *s);
 uint32_t extract_len(char * s);
 void extract_precision_scale(char * s, uint32_t *precision, uint16_t *scale);
+
+std::vector<std::string> cur_token_list;
 
 #ifdef _MSC_VER 
 #define strncasecmp _strnicmp
@@ -83,6 +87,8 @@ const char *GixEsqlLexer::yy_state_descs[NUM_YY_STATES] = { "INITIAL", "PICTURE_
 													"ESQL_SELECT_STATE", "ESQL_STATE", "INCLUDE_STATE", "FD_STATE", "ESQL_DBNAME_STATE", "VAR_DECLARE_STATE", 
 													"ESQL_PREPARE_STATE", "ESQL_DECLARE_STATE", "ESQL_EXECUTE_STATE", "ESQL_CONNECT_STATE", "ESQL_IGNORE_STATE", "ESQL_WHENEVER_STATE"  };
 #endif
+
+yy::gix_esql_parser::symbol_type __MAKE_TOKEN(char *s, yy::location loc);
 
 %}
 
@@ -156,7 +162,7 @@ LOW_VALUE "LOW\-VALUE"
 <FD_STATE>{
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	"." {    
@@ -183,7 +189,7 @@ LOW_VALUE "LOW\-VALUE"
 		driver.connectionid = new hostref_or_literal_t(yytext, true);
 		__yy_pop_state();
 
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -194,8 +200,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
@@ -207,11 +211,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -230,8 +234,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC"[ \r\n]*"." {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.period = 1;
 		driver.endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
@@ -240,8 +242,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.period = 0;
 		driver.endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
@@ -250,18 +250,15 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{HOSTWORD} {
-		//driver.connectionid = new hostref_or_literal_t(yytext, false);
 		return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
 	}
 
 	{STRVALUE} {
-		//driver.connectionid = new hostref_or_literal_t(yytext, true);
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		//driver.connectionid = new hostref_or_literal_t(yytext, true);
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -286,7 +283,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"DECLARE" {
-		__yy_push_state(ESQL_DECLARE_STATE);
+		__yy_push_state(ESQL_DECLARE_STATE); 
 		return yy::gix_esql_parser::make_DECLARE(loc);
 	}
 
@@ -314,9 +311,7 @@ LOW_VALUE "LOW\-VALUE"
 	
 
 	"SELECT" {
-		__yy_push_state(ESQL_STATE);
-		flag_insqlstring = 1;
-		flag_selectcommand = 1;
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = yytext;
 
@@ -327,8 +322,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"INSERT" {
-		__yy_push_state(ESQL_STATE);
-		flag_insqlstring = 1;
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = yytext;
 					
@@ -339,8 +333,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"DELETE" {
-		__yy_push_state(ESQL_STATE);
-		flag_insqlstring = 1;
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = yytext;
 					
@@ -350,6 +343,13 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_DELETE(yytext, loc);
 	}		
 
+	"CONNECT"[ ]+"RESET" {
+		__yy_push_state(ESQL_STATE); 
+
+		driver.commandname = "CONNECT_RESET";
+		return yy::gix_esql_parser::make_CONNECT_RESET(loc);
+	}	
+
 	"CONNECT" {
 		__yy_push_state(ESQL_CONNECT_STATE);
 
@@ -357,25 +357,16 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_CONNECT(loc);
 	}
 
-	"CONNECT"[ ]+"RESET" {
-		__yy_push_state(ESQL_STATE);
-
-		driver.commandname = "CONNECT_RESET";
-		return yy::gix_esql_parser::make_CONNECT_RESET(loc);
-	}	
-
      
 	"DISCONNECT" {
-		__yy_push_state(ESQL_STATE);
-		//flag_insqlstring = 1;
+		__yy_push_state(ESQL_STATE); 
+
 		driver.commandname = yytext;		
 		return yy::gix_esql_parser::make_DISCONNECT(yytext, loc);
 	}
 
 	"UPDATE" {
-		__yy_push_state(ESQL_STATE);
-
-		flag_insqlstring = 1;
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = yytext;
 					
@@ -386,27 +377,28 @@ LOW_VALUE "LOW\-VALUE"
 	}	
 
 	"OPEN" {
-			__yy_push_state(ESQL_STATE);
+			__yy_push_state(ESQL_STATE); 
+
     	    driver.commandname = "OPEN";
 			return yy::gix_esql_parser::make_OPEN(loc);
     }
 
 	"CLOSE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "CLOSE";
 		return yy::gix_esql_parser::make_CLOSE(loc);
 	}  
             
 	"FETCH" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "FETCH";
 		return yy::gix_esql_parser::make_FETCH(loc);
 	}
       
 	"COMMIT"[ ]+"WORK"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = true;
@@ -414,7 +406,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"COMMIT"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = true;
@@ -422,7 +414,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"COMMIT"[ ]+"WORK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = false;
@@ -430,7 +422,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
      
 	"COMMIT" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "COMMIT";
 		driver.transaction_release = false;
@@ -438,7 +430,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
      
 	"ROLLBACK"[ ]+"WORK"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = true;
@@ -446,7 +438,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"ROLLBACK"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = true;
@@ -454,7 +446,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"ROLLBACK"[ ]+"WORK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = false;
@@ -462,7 +454,7 @@ LOW_VALUE "LOW\-VALUE"
 	}     
 
 	"ROLLBACK" {
-		__yy_push_state(ESQL_STATE);
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "ROLLBACK";
 		driver.transaction_release = false;
@@ -485,9 +477,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	({WORD}|{JPNWORD})+ {
-		__yy_push_state(ESQL_STATE);
-
-		flag_insqlstring = 1;
+		__yy_push_state(ESQL_STATE); 
 
 		driver.commandname = "PASSTHRU";
 
@@ -506,8 +496,6 @@ LOW_VALUE "LOW\-VALUE"
 		driver.endlineno = yylineno;
 		driver.in_ignore_string = false;
 		driver.period = 1;
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -516,8 +504,6 @@ LOW_VALUE "LOW\-VALUE"
 	"END-EXEC" {
 		driver.endlineno = yylineno;
 		driver.in_ignore_string = false;
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -525,12 +511,12 @@ LOW_VALUE "LOW\-VALUE"
 
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);	
+		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 }
@@ -541,8 +527,6 @@ LOW_VALUE "LOW\-VALUE"
 		driver.endlineno = yylineno;
 		driver.in_ignore_string = false;
 		driver.period = 1;
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -551,8 +535,6 @@ LOW_VALUE "LOW\-VALUE"
 	"END-EXEC" {
 		driver.endlineno = yylineno;
 		driver.in_ignore_string = false;
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -593,12 +575,12 @@ LOW_VALUE "LOW\-VALUE"
 	/*
 	(\r\n|\n|\t) {   
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);	
+		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
 		driver.text_content += yytext;
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	*/
 }
@@ -615,8 +597,6 @@ LOW_VALUE "LOW\-VALUE"
 	"IDENTIFIED"[ \r\n]+"BY" { return yy::gix_esql_parser::make_IDENTIFIED_BY(loc); }
 
 	"END-EXEC"[ \r\n]*"." {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.endlineno = yylineno;
 		driver.period = 1;
 		__yy_pop_state();	// Not an error, we pop twice
@@ -625,8 +605,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.endlineno = yylineno;
 		driver.period = 0;
 		__yy_pop_state();	// Not an error, we pop twice
@@ -640,11 +618,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{STRVALUE} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	          
 	(\r\n|\n) {   }
@@ -658,65 +636,51 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_STATE>{
 
 	{COMMA}   {
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-	          }
-	(\r\n|\n) {   }
-         
-
-
-	[;]?(\r\n|\n)		{ 
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-	} 
-
-	"SELECT" {
-			if(flag_insqlstring){
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
-			flag_insqlstring = 1;
-
-			driver.commandname = yytext;
-					
-			driver.sqlnum++;
-			driver.sqlname = string_format("SQ%04d", driver.sqlnum);
-
-			return yy::gix_esql_parser::make_SELECT(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
+	(\r\n|\n) {   } 
+
+	[;]?(\r\n|\n)		{ 
+		return __MAKE_TOKEN(yytext, loc);
+	} 
+
+	/* we mark the subquery start */
+	"("[ \r\n]*"SELECT" {
+
+		if (subquery_level == 0) {
+			subquery_level++;
+			yylineno -= count_crlf(yytext);
+			REJECT;
+		}
+		else
+			return __MAKE_TOKEN(yytext, loc);
+	}
+
 	"FROM" {
-			if(flag_insqlstring){
-				if(!flag_selectcommand){
-						return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-				} else {
-					if (!flag_select_from_passed) {
-						flag_select_from_passed = 1;
-		      			return yy::gix_esql_parser::make_SELECTFROM(yytext, loc);
-					}
-					else {
-						return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-					}
-				}
-			}
+		if (!is_current_cmd_select() || subquery_level > 0) {
+			return __MAKE_TOKEN(yytext, loc);
+		}
+		else
 			return yy::gix_esql_parser::make_FROM(loc);
 	}  
+	
 
 	"TO" {
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_TO(loc);
 		else
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	"SAVEPOINT" {
 		if (driver.commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_SAVEPOINT(loc);
 		else
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}
      
 	"CURSOR" {
-			if(flag_insqlstring){ 
-					return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
 			return yy::gix_esql_parser::make_CURSOR(loc);
 	 }
 
@@ -725,39 +689,27 @@ LOW_VALUE "LOW\-VALUE"
 	 }
 
 	"FOR" {
-			if(flag_insqlstring){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);   
-			}
-			return yy::gix_esql_parser::make_FOR(loc);
+		return yy::gix_esql_parser::make_FOR(loc);
 	}      
 
 	"IDENTIFIED"[ ]+"BY" {
-			if(flag_insqlstring){   
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);  
-			}
-			return yy::gix_esql_parser::make_IDENTIFIED_BY(loc);
+		return yy::gix_esql_parser::make_IDENTIFIED_BY(loc);
 
 	}
   
 	"USING" {
-			if(flag_insqlstring){  
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
-			return yy::gix_esql_parser::make_USING(loc);
+		return yy::gix_esql_parser::make_USING(loc);
 	} 
      
 	"INTO" {
-			if(flag_insqlstring && !flag_selectcommand){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
+		if (!is_current_cmd_passthru())
 			return yy::gix_esql_parser::make_INTO(yytext, loc);
+		else
+			return __MAKE_TOKEN(yytext, loc);
 	} 
 
 	"ALL" {
-			if(flag_insqlstring && !flag_selectcommand){
-				return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-			}
-			return yy::gix_esql_parser::make_ALL(loc);
+		return yy::gix_esql_parser::make_ALL(loc);
 	} 
 
 	"WHERE CURRENT OF" {
@@ -765,7 +717,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{OPERATOR} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -775,24 +727,21 @@ LOW_VALUE "LOW\-VALUE"
 	
 	{STRVALUE} {
 			driver.hostlineno = yylineno;   
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}	
 
 	{PGSQL_CAST_OP} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	/*
 	{FILENAME} {
 			driver.hostlineno = yylineno;   
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			return __MAKE_TOKEN(yytext, loc);
 	}	
 	*/
 	
 	"END-EXEC"[ \r\n]*"." {
-			flag_insqlstring = 0;
-			flag_selectcommand = 0;
-			flag_select_from_passed = 0;
 			driver.period = 1;
 			driver.endlineno = yylineno;
 			__yy_pop_state();	// Not an error, we pop twice
@@ -802,9 +751,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	"END-EXEC" {
-			flag_insqlstring = 0;
-			flag_selectcommand = 0;
-			flag_select_from_passed = 0;
 			driver.endlineno = yylineno;
 			__yy_pop_state();	// Not an error, we pop twice
 			__yy_pop_state();
@@ -813,11 +759,11 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? { 
-			  return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 
 	{SELF} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -841,26 +787,7 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_COPY(loc);
 	}
 }
-	/*
-	"EXEC"[ ]+"SQL"[ \r\n]+"INCLUDE" {
-		driver.period = 0;
-		int n = count_crlf(yytext);
-		driver.startlineno = yylineno - n; 
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
 
-		driver.cursorname = "";
-		driver.sqlname = "";
-		driver.incfilename = "";
-	
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
-
-		__yy_push_state(ESQL_INCLUDE_STATE); 
-		return yy::gix_esql_parser::make_EXECSQL_INCLUDE(loc);
-	}
-	*/
 
 <ESQL_INCLUDE_STATE>{
 	(\r\n|\n) {   } 
@@ -873,7 +800,6 @@ LOW_VALUE "LOW\-VALUE"
 	"END-EXEC"[ \r\n]*"." {
 		driver.period = 1;
 		driver.endlineno = yylineno;
-		flag_insqlstring = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -881,7 +807,6 @@ LOW_VALUE "LOW\-VALUE"
 	
 	"END-EXEC" {
 		driver.endlineno = yylineno;
-		flag_insqlstring = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -973,10 +898,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	"SELECT" {
-		if(flag_insqlstring){
-			return yy::gix_esql_parser::make_TOKEN(strdup (yytext), loc);
-		}
-		flag_insqlstring = 1;
 
 		driver.commandname = yytext;
 						
@@ -985,22 +906,9 @@ LOW_VALUE "LOW\-VALUE"
 
 		return yy::gix_esql_parser::make_SELECT(yytext, loc); 
 	}
-	
-	"FROM" {
-		if(flag_insqlstring){
-			if(!flag_selectcommand){
-		      		return yy::gix_esql_parser::make_TOKEN(yytext, loc);      
-			} else {
-		      		return yy::gix_esql_parser::make_SELECTFROM(strdup (yytext), loc);
-			}
-		}
-		return yy::gix_esql_parser::make_FROM(loc);
-	}  
      
 	"CURSOR" {
-		if(flag_insqlstring){ 
-			return yy::gix_esql_parser::make_TOKEN(strdup (yytext), loc);
-		}
+		cur_token_list.push_back("CURSOR");
 		return yy::gix_esql_parser::make_CURSOR(loc);
 	 }
 
@@ -1009,30 +917,23 @@ LOW_VALUE "LOW\-VALUE"
 	 }
 
 	"FOR" {
-		if(flag_insqlstring){
+		if (cur_token_list.back() == "CURSOR")
+			return yy::gix_esql_parser::make_FOR(loc);
+		else
 			return yy::gix_esql_parser::make_TOKEN(strdup (yytext), loc);
-		}
-		return yy::gix_esql_parser::make_FOR(loc);
 	}     
 	
 	"STATEMENT" {
-		if(flag_insqlstring){
-			return yy::gix_esql_parser::make_TOKEN(strdup (yytext), loc);
-		}
 		return yy::gix_esql_parser::make_STATEMENT(loc);
 	}  
 
      
 	"INTO" {
-		if(flag_insqlstring && !flag_selectcommand){ 
-			return yy::gix_esql_parser::make_TOKEN(yytext, loc);
-		}
-
 		return yy::gix_esql_parser::make_INTO(yytext, loc); 
 	} 
 
 	{OPERATOR} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	{HOSTWORD} {
@@ -1041,12 +942,10 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{PGSQL_CAST_OP} {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	"END-EXEC"[ \r\n]*"." {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.period = 1;
 		driver.endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
@@ -1055,8 +954,6 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	"END-EXEC" {
-		flag_insqlstring = 0;
-		flag_selectcommand = 0;
 		driver.endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
@@ -1064,7 +961,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-		return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+		return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -1137,24 +1034,22 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-			driver.endlineno = yylineno;
-			flag_insqlstring = 0;
-			__yy_pop_state();
-			return yy::gix_esql_parser::make_END_EXEC(loc);
+		driver.endlineno = yylineno;
+		__yy_pop_state();
+		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC"[ \r\n]*"." {
-			driver.period = 1;
-			driver.endlineno = yylineno;
-			flag_insqlstring = 0;
-			__yy_pop_state();
+		driver.period = 1;
+		driver.endlineno = yylineno;
+		__yy_pop_state();
 
-			return yy::gix_esql_parser::make_END_EXEC(loc);
+		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 	
 
 	({WORD}|{JPNWORD})+("."(("*")|({WORD}|{JPNWORD})+))? {
-			  return yy::gix_esql_parser::make_TOKEN(yytext, loc);
+			  return __MAKE_TOKEN(yytext, loc);
 	}
 }
 
@@ -1367,6 +1262,10 @@ LOW_VALUE "LOW\-VALUE"
 		return yy::gix_esql_parser::make_VARYING(loc);
 	}
 
+	"VARRAW" {
+		return yy::gix_esql_parser::make_VARRAW(loc);
+	}
+
     "BINARY"(\([0-9]+\))?  { 
 		uint64_t l = extract_len(yytext);
 		l = l << 16;
@@ -1548,7 +1447,6 @@ LOW_VALUE "LOW\-VALUE"
 
 <<EOF>> {
 	return yy::gix_esql_parser::make_YYEOF(loc);
-	//yyterminate ();
 }
 
 
@@ -1583,9 +1481,37 @@ int count_crlf(char *s)
 {
 	int n = 0;
 	char *e = (s + strlen(s)) - 1;
-	//while (*e) {
+
 	while (e >= s) {
 		if (*e == '\n')
+			n++;
+			
+		e--;
+	}
+	return n;
+}
+
+int count_open_par(char *s)
+{
+	int n = 0;
+	char *e = (s + strlen(s)) - 1;
+
+	while (e >= s) {
+		if (*e == '(')
+			n++;
+			
+		e--;
+	}
+	return n;
+}
+
+int count_close_par(char *s)
+{
+	int n = 0;
+	char *e = (s + strlen(s)) - 1;
+
+	while (e >= s) {
+		if (*e == ')')
 			n++;
 			
 		e--;
@@ -1644,4 +1570,16 @@ void extract_precision_scale(char *s, uint32_t *precision, uint16_t *scale)
 	sn = st.substr(pos + 1);
 	trim(sn);
 	*scale = (uint16_t) atoi(sn.c_str());
+}
+
+yy::gix_esql_parser::symbol_type __MAKE_TOKEN(char *s, yy::location loc)
+{
+	cur_token_list.push_back(s);
+	if (subquery_level > 0) {
+		int sq_add = count_open_par(s);
+		int sq_sub = count_close_par(s);
+		subquery_level += sq_add;
+		subquery_level -= sq_sub;
+	}
+	return yy::gix_esql_parser::make_TOKEN(s, loc);
 }

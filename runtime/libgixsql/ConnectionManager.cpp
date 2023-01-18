@@ -30,9 +30,9 @@
 
 #define GIXSQL_DEFAULT_CONN_PREFIX "DEFAULT"
 
-static std::vector<Connection *> _connections;
-static std::map<int, Connection *> _connection_map;
-static std::map<std::string, Connection *> _connection_name_map;
+static std::vector<std::shared_ptr<Connection>> _connections;
+static std::map<int, std::shared_ptr<Connection>> _connection_map;
+static std::map<std::string, std::shared_ptr<Connection>> _connection_name_map;
 
 static int next_conn_id = 1;
 
@@ -43,32 +43,37 @@ ConnectionManager::ConnectionManager()
 
 ConnectionManager::~ConnectionManager()
 {
-
+	// clear();
 }
 
-Connection *ConnectionManager::create()
+std::shared_ptr<Connection> ConnectionManager::create()
 {
-	return new Connection();
+	return std::make_shared<Connection>();
 }
 
-Connection *ConnectionManager::get(std::string name)
+std::shared_ptr<Connection> ConnectionManager::get(const std::string& name)
 {
-	trim(name);
+	std::string n = trim_copy(name);
 
-	if (name.empty())
+	if (n.empty())
 		return default_connection;
 
-	if (_connection_name_map.find(name) != _connection_name_map.end())
-		return _connection_name_map[name];
+	if (_connection_name_map.find(n) != _connection_name_map.end())
+		return _connection_name_map[n];
 
 	return nullptr;
 }
 
-int ConnectionManager::add(Connection *conn)
+int ConnectionManager::add(std::shared_ptr<Connection> conn)
 {
 	conn->id = ++next_conn_id;
 	if (conn->name.empty()) {
 		conn->name = GIXSQL_DEFAULT_CONN_PREFIX + std::to_string(conn->id);
+		if (this->default_connection && starts_with(this->default_connection->name, GIXSQL_DEFAULT_CONN_PREFIX)) {
+			spdlog::warn("terminating current default connection (probably still open): {}", default_connection->name);
+			ConnectionManager::remove(this->default_connection);
+		}
+
 		this->default_connection = conn;
 	}
 
@@ -79,7 +84,7 @@ int ConnectionManager::add(Connection *conn)
 	return conn->id;
 }
 
-void ConnectionManager::remove(Connection *conn)
+void ConnectionManager::remove(std::shared_ptr<Connection> conn)
 {
 	if (conn == NULL)
 		return;
@@ -91,19 +96,23 @@ void ConnectionManager::remove(Connection *conn)
 	_connection_name_map.erase(name);
 
 	if (conn == default_connection)
-		default_connection = nullptr;
-
-	delete (conn);
+		default_connection.reset();
 }
 
-bool ConnectionManager::exists(std::string cname)
+bool ConnectionManager::exists(const std::string& cname)
 {
 	return _connection_name_map.find(cname) != _connection_name_map.end();
 }
 
-std::vector<Connection*> ConnectionManager::list()
+std::vector<std::shared_ptr<Connection>> ConnectionManager::list()
 {
 	return _connections;
 }
 
-
+void ConnectionManager::clear()
+{	
+	default_connection.reset();
+	_connections.clear();
+	_connection_map.clear();
+	_connection_name_map.clear();	
+}

@@ -237,7 +237,7 @@ bool caseInsensitiveStringCompare(const std::string& str1, const std::string& st
 
 std::string to_lower(const std::string& s)
 {
-	std::string s1 = s;
+	std::string s1(s);
 	std::transform(s1.begin(), s1.end(), s1.begin(), ::tolower);
 	return s1;
 }

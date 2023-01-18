@@ -40,9 +40,9 @@ Cursor::~Cursor()
 {
 }
 
-void Cursor::setConnection(IConnection* c)
+void Cursor::setConnection(std::shared_ptr<IConnection> c)
 {
-	connection = (Connection*)c;
+	connection = c;
 }
 
 void Cursor::setConnectionName(std::string n)
@@ -71,9 +71,9 @@ void Cursor::setNumParams(int np)
 	nParams = np;
 }
 
-IConnection* Cursor::getConnection()
+std::shared_ptr<IConnection> Cursor::getConnection()
 {
-	return (IConnection*)connection;
+	return connection;
 }
 
 std::string Cursor::getConnectionName()
@@ -155,22 +155,22 @@ void Cursor::increaseRowNum()
 	rownum++;
 }
 
-std::vector<std::string> Cursor::getParameterValues()
+std::vector<std_binary_data> Cursor::getParameterValues()
 {
-	std::vector<std::string> params;
+	std::vector<std_binary_data> params;
 
 	createRealDataforParameters();	// Just in case
 
 	for (int i = 0; i < parameter_list.size(); i++) {
-		params.push_back(std::string(parameter_list.at(i)->getRealData()));
+		params.push_back(parameter_list.at(i)->getDbData());
 	}
 
 	return params;
 }
 
-std::vector<int> Cursor::getParameterTypes()
+std::vector<CobolVarType> Cursor::getParameterTypes()
 {
-	std::vector<int> param_types;
+	std::vector<CobolVarType> param_types;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
 		param_types.push_back(parameter_list.at(i)->getType());
@@ -178,9 +178,9 @@ std::vector<int> Cursor::getParameterTypes()
 	return param_types;
 }
 
-std::vector<int> Cursor::getParameterLengths()
+std::vector<unsigned long> Cursor::getParameterLengths()
 {
-	std::vector<int> param_lengths;
+	std::vector<unsigned long> param_lengths;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
 		param_lengths.push_back(parameter_list.at(i)->getLength());
@@ -188,17 +188,26 @@ std::vector<int> Cursor::getParameterLengths()
 	return param_lengths;
 }
 
-void* Cursor::getPrivateData()
+std::vector<uint32_t> Cursor::getParameterFlags()
+{
+	std::vector<uint32_t> param_flags;
+
+	for (int i = 0; i < parameter_list.size(); i++) {
+		param_flags.push_back(parameter_list.at(i)->getFlags());
+	}
+	return param_flags;
+}
+
+std::shared_ptr<IPrivateStatementData> Cursor::getPrivateData()
 {
 	return dbi_data;
 }
 
-void Cursor::setPrivateData(IPrivateStatementData* d)
+void Cursor::setPrivateData(std::shared_ptr<IPrivateStatementData> d)
 {
-	if (dbi_data) {
-		spdlog::warn("Private data is being set without first being deleted/cleared");
-		delete dbi_data;
-	}
+	// if (dbi_data) {
+	// 	spdlog::warn("Private data is being set without first being deleted/cleared");
+	// }
 
 	dbi_data = d;
 }

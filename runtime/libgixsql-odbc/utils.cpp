@@ -219,21 +219,22 @@ bool caseInsensitiveStringCompare(const std::string& str1, const std::string& st
 	return true;
 }
 
-std::string to_lower(const std::string s)
+std::string to_lower(const std::string& s)
 {
-	std::string s1 = s;
-	std::transform(s1.begin(), s1.end(), s1.begin(), ::tolower);
-	return s1;
+	std::string d;
+	d.resize(s.size());
+	std::transform(s.begin(), s.end(), d.begin(), ::tolower);	
+	return d;				 
 }
 
-std::string to_upper(const std::string s)
+std::string to_upper(const std::string& s)
 {
 	std::string s1 = s;
 	std::transform(s1.begin(), s1.end(), s1.begin(), ::toupper);
 	return s1;
 }
 
-int find_nocase(const std::string needle, const std::string haystack)
+int find_nocase(const std::string& needle, const std::string& haystack)
 {
 	std::string sn = to_upper(needle);
 	std::string sh = to_upper(haystack);

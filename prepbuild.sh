@@ -12,7 +12,7 @@ if [ "$1" != "/E" ] ; then
 	# These indicates the current version of GixSQL included in Gix-IDE
 	GIXSQLMAJ=1
 	GIXSQLMIN=0
-	GIXSQLREL=19
+	GIXSQLREL=20dev1
 	# These indicates the current version of GixSQL included in Gix-IDE (end)
 
 fi

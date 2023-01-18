@@ -109,6 +109,8 @@ namespace gixsql_tests
                             {
                                 cmd.Transaction = tx;
                                 cmd.CommandText = sql_block;
+                                if (TestDataProvider.TestVerbose)
+                                    Console.WriteLine($"Executing: {sql_block}");
 
                                 cmd.ExecuteNonQuery();
                             }
@@ -259,7 +261,7 @@ namespace gixsql_tests
             }
             catch (Exception ex)
             {
-                if (report_error)
+                 if (report_error)
                     Console.WriteLine(ex.Message);
 
                 return false;

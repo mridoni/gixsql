@@ -24,11 +24,10 @@
 #include <cstring>
 
 #include "gixsql.h"
-#include "IDbInterface.h"
 
-static std::map<IDbInterface *, LIBHANDLE> lib_map;
+//static std::map<std::shared_ptr<IDbInterface>, LIBHANDLE> lib_map;
 
-typedef IDbInterface *(*DBLIB_PROVIDER_FUNC)();
+typedef IDbInterface * (*DBLIB_PROVIDER_FUNC)();
 
 #if defined(_WIN32)
 //Returns the last Win32 error, in string format. Returns an empty string if there is no error.
@@ -57,7 +56,7 @@ std::string GetLastErrorAsString()
 }
 #endif
 
-IDbInterface *DbInterfaceFactory::getInterface(int type, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(int type, const std::shared_ptr<spdlog::logger>& _logger)
 {
 	switch (type) {
 		case DB_PGSQL:
@@ -80,7 +79,7 @@ IDbInterface *DbInterfaceFactory::getInterface(int type, const std::shared_ptr<s
 	}
 }
 
-IDbInterface* DbInterfaceFactory::getInterface(std::string t, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(std::string t, const std::shared_ptr<spdlog::logger>& _logger)
 {
 		if (t == "pgsql")
 			return load_dblib("pgsql");
@@ -110,10 +109,10 @@ IDbManagerInterface* DbInterfaceFactory::getManagerInterface(std::string type)
 	return dynamic_cast<IDbManagerInterface *>(getManagerInterface(type));
 }
 
-IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 {
 	char bfr[256];
-	IDbInterface *dbi = NULL;
+	std::shared_ptr<IDbInterface> dbi;
 	LIBHANDLE libHandle = NULL;
 	DBLIB_PROVIDER_FUNC dblib_provider;
 
@@ -142,8 +141,16 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 				spdlog::debug(FMT_FILE_FUNC "DB provider loaded from: {}", __FILE__, __func__, dll_path);
 			}
 #endif
-			dbi = dblib_provider();
-			lib_map[dbi] = libHandle;
+
+#if defined(_DEBUG) && defined(VERBOSE)
+			dbi = std::shared_ptr<IDbInterface>(dblib_provider(), [](IDbInterface* p) {
+				fprintf(stderr, "- Deallocated IDbInterface: 0x%p\n", p);
+				delete p;
+			});
+			fprintf(stderr, "+ Allocated IDbInterface: 0x%p\n", dbi.get());
+#else
+			dbi.reset(dblib_provider());
+#endif
 		}
 		else {
 			spdlog::error("ERROR while accessing DB provider: {}", bfr);
@@ -162,18 +169,25 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 #else
 
 	strcat(bfr, ".so");
-	spdlog::debug("loading DB provider: {}", __FILE__, __func__, bfr);
+	spdlog::debug(FMT_FILE_FUNC "loading DB provider: {}", __FILE__, __func__, bfr);
 
 	libHandle = dlopen(bfr, RTLD_NOW);
 	if (libHandle != NULL)
 	{
 		dblib_provider = (DBLIB_PROVIDER_FUNC)dlsym(libHandle, "get_dblib");
-		spdlog::debug("Accessing DB provider: {}", __FILE__, __func__, bfr);
+		spdlog::debug(FMT_FILE_FUNC "Accessing DB provider: {}", __FILE__, __func__, bfr);
 		// If the function address is valid, call the function. 
 		if (dblib_provider != NULL)
 		{
-			dbi = dblib_provider();
-			lib_map[dbi] = libHandle;
+#if defined(_DEBUG) && defined(VERBOSE)
+			dbi = std::shared_ptr<IDbInterface>(dblib_provider(), [](IDbInterface *p) { 
+				fprintf(stderr, "- Deallocated IDbInterface: 0x%p\n", p);
+				delete p; 
+			});
+			fprintf(stderr, "+ Allocated IDbInterface: 0x%p\n", dbi.get());
+#else
+			dbi.reset(dblib_provider());
+#endif
 		}
 		else {
 			spdlog::error("ERROR while accessing DB provider: {}", bfr);
@@ -187,33 +201,13 @@ IDbInterface *DbInterfaceFactory::load_dblib(const char *lib_id)
 
 #endif
 
-	if (dbi != NULL) {
+	dbi->native_lib_ptr = (void *) libHandle;
+
+	if (dbi != nullptr) {
 		dbi->init(gixsql_logger);
 	}
 	return dbi;
 }
-
-int DbInterfaceFactory::removeInterface(IDbInterface *dbi)
-{
-	if (dbi == NULL)
-		return 1;
-
-	if (lib_map.find(dbi) == lib_map.end())
-		return 1;
-
-	lib_map.erase(dbi);
-	delete dbi; 
-
-	LIBHANDLE lib_ptr = lib_map[dbi];
-#if defined(_WIN32) || defined(_WIN64)
-	auto b = FreeLibrary(lib_ptr);
-#else
-	dlclose(lib_ptr);
-#endif
-
-	return 0;
-}
-
 
 // TODO: this should really be generated dynamically
 std::vector<std::string> DbInterfaceFactory::getAvailableDrivers()
@@ -221,3 +215,13 @@ std::vector<std::string> DbInterfaceFactory::getAvailableDrivers()
 	return std::vector<std::string> { "odbc", "mysql", "pgsql", "oracle", "sqlite" } ;
 }
 
+void DbInterfaceFactory::releaseInterface(std::shared_ptr<IDbInterface> dbi)
+{
+	if (dbi && dbi->native_lib_ptr) {
+#if defined(_WIN32)
+		FreeLibrary((HMODULE)dbi->native_lib_ptr);
+#else
+		dlclose(dbi->native_lib_ptr);
+#endif
+	}		
+}

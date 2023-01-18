@@ -24,7 +24,7 @@ USA.
 
 #include "gix_esql_parser.hh"
 #include "libcpputils.h"
-#include "cobol_var_types.h"
+//#include "cobol_var_types.h"
 
 #include "TPESQLProcessing.h"
 
@@ -102,6 +102,11 @@ void gix_esql_driver::setCaller(TPESQLProcessing* p)
 int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
 {
 	pp_inst = gpp;
+
+	bool debug_parser_scanner = std::get<2>(pp_inst->getOpt("debug_parser_scanner", false));
+
+	trace_scanning = debug_parser_scanner;
+	trace_parsing = debug_parser_scanner;
 
 	std::string tf = filename_change_ext(f, "");
 
@@ -207,12 +212,13 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 {
 	// Handle placeholders for group items passed as host variables
 	if (map_contains(_field_map, text.substr(1))) {
-		int f_type = 0, f_size = 0, f_scale = 0;
+		CobolVarType f_type = CobolVarType::UNKNOWN;
+		int f_size = 0, f_scale = 0;
 		cb_field_ptr f = _field_map[text.substr(1)];
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") && 
-				f_type == COBOL_TYPE_GROUP && !is_varlen) {
+				f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 			cb_field_ptr c = f->children;
 			std::string s;
 			while (c) {
@@ -243,12 +249,13 @@ std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference
 {
 	// Handle placeholders for group items passed as host variables
 	if (map_contains(_field_map, text.substr(1))) {
-		int f_type = 0, f_size = 0, f_scale = 0;
+		CobolVarType f_type = CobolVarType::UNKNOWN;
+		int f_size = 0, f_scale = 0;
 		cb_field_ptr f = _field_map[text.substr(1)];
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
-			f_type == COBOL_TYPE_GROUP && !is_varlen) {
+				f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 			cb_field_ptr c = f->children;
 			std::string s;
 			while (c) {

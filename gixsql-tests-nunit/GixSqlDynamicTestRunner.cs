@@ -1,4 +1,6 @@
-﻿using CliWrap;
+
+
+using CliWrap;
 using CliWrap.Buffered;
 using Microsoft.VisualStudio.TestPlatform.CrossPlatEngine;
 //using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -25,11 +27,19 @@ namespace gixsql_tests
 
         private bool except = false;
 
-        private static bool factories_init = false;
+        //private static bool factories_init = false;
+        private static bool isWindows = !File.Exists(@"/proc/sys/kernel/ostype");
+
+        private static int cur_index = 1;
 
         static GixSqlDynamicTestRunner()
         {
 
+        }
+
+        public static void ResetCounter()
+        {
+            cur_index = 1;
         }
 
         public void Init(GixSqlTestData td)
@@ -60,7 +70,6 @@ namespace gixsql_tests
 
         }
 
-        int cur_index = 1;
 
         public void Execute(GixSqlTestData td)
         {
@@ -101,10 +110,14 @@ namespace gixsql_tests
                     string sql_file_ext = Path.GetExtension(sql_file);
 
                     string sql = Utils.GetResource(sql_file_root + "-" + client_type + sql_file_ext);
-                    if (String.IsNullOrWhiteSpace(sql))
+                    if (String.IsNullOrWhiteSpace(sql)) {
                         sql = Utils.GetResource(sql_file);
+                        if (!String.IsNullOrWhiteSpace(sql) && TestDataProvider.TestVerbose)
+                            Console.WriteLine($"Loaded {sql_file}");
+                    }
 
                     Assert.IsFalse(String.IsNullOrWhiteSpace(sql));
+                    
 
                     string[] sql_blocks = sql.Split(new string[] { "--" }, StringSplitOptions.RemoveEmptyEntries)
                                                 .ToList().ConvertAll(a => a.Trim()).Where(a => !String.IsNullOrWhiteSpace(a)).ToArray();
@@ -176,8 +189,10 @@ namespace gixsql_tests
             catch (Exception ex)
             {
                 except = true;
-                Console.WriteLine(ex.StackTrace);
-                throw ex;
+                if (TestDataProvider.TestVerbose)
+                    Console.WriteLine(ex.StackTrace);
+
+                throw;
             }
 
         }
@@ -185,6 +200,22 @@ namespace gixsql_tests
         private void compile(GixSqlTestData td)
         {
             string compiler_init_cmd = "break"; // break does nothing
+            string _shell = String.Empty;
+            string _shell_args = String.Empty;
+            bool _shell_implode_args = false;
+
+            if (isWindows)
+            {
+                _shell = "cmd.exe";
+                _shell_implode_args = true;
+            }
+            else
+            {
+                _shell = "/bin/bash";
+                _shell_args = "-c";
+                _shell_implode_args = true;
+            }
+
 
             Assert.IsTrue(td.CobolModules.Count > 0);
 
@@ -210,7 +241,7 @@ namespace gixsql_tests
                         if (client_pp_params == null)
                             client_pp_params = String.Empty;
                     }
-                    string gixpp_args = $"-e -v -S -I. -I{cc.gix_copy_path} -i {msrc} -o {pp_file} {client_pp_params}";
+                    string gixpp_args = $"-e -v -S -I. -I{cc.gixsql_copy_path} -i {msrc} -o {pp_file} {client_pp_params}";
                     if (td.AdditionalPreProcessParams != String.Empty)
                         gixpp_args += (" " + td.AdditionalPreProcessParams);
 
@@ -219,13 +250,22 @@ namespace gixsql_tests
                         Console.WriteLine($"[gixpp]: {cc.gixpp_exe} {gixpp_args}");
                     }
 
+                    gixpp_args = cc.gixpp_exe + " " + gixpp_args;
+
+                    if (_shell_implode_args)
+                        gixpp_args = "\"" + gixpp_args + "\"";
+
+                    gixpp_args = _shell_args + " " + gixpp_args;
+
+                    if (isWindows)
+                        gixpp_args = "/C " + gixpp_args;
+                    else
+                        gixpp_args = "-c " + gixpp_args;
+
                     var r1 = Task.Run(async () =>
                     {
-                        return await Cli.Wrap(cc.gixpp_exe)
+                        return await Cli.Wrap(_shell)
                              .WithArguments(gixpp_args)
-                             //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer, System.Text.Encoding.ASCII))
-                             //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer, System.Text.Encoding.ASCII))
-                             //.WithEnvironmentVariables(env)
                              .WithValidation(CommandResultValidation.None)
                              .ExecuteBufferedAsync();
 
@@ -244,8 +284,8 @@ namespace gixsql_tests
                     if (!td.ExpectedToFailPreProcess)
                     {
                         Assert.IsTrue(r1.Result.ExitCode == 0, $"Exit code : {r1.Result.ExitCode:x}");
-                        Assert.IsTrue(File.Exists(pp_file));
-                        Assert.IsTrue((new FileInfo(pp_file)).Length > 0);
+                        Assert.IsTrue(File.Exists(pp_file), $"File not found: {pp_file}");
+                        Assert.IsTrue((new FileInfo(pp_file)).Length > 0, $"File empty: {pp_file}");
                     }
                     else
                     {
@@ -294,16 +334,21 @@ namespace gixsql_tests
                         Console.WriteLine($"[cobc]: {cc.cobc_exe}");
                     }
 
-                    string outfile = msrc.Replace(".cbl", "." + td.BuildType);
+                    string outfile = msrc.Replace(".cbl", isWindows ? "." + td.BuildType : "");
 
                     string opt_exe = td.BuildType == "exe" ? "-x" : "";
 
                     var r2 = Task.Run(async () =>
                     {
-                        string cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gix_copy_path} {pp_file} -L{cc.link_lib_dir_path} -l{cc.link_lib_lname}";
+                        string cobc_args;
+                        if (td.CompilerConfiguration.IsVsBased)
+                            cobc_args = $"/C \"{compiler_init_cmd} && {cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
+                        else
+                            cobc_args = $"{cc.cobc_exe} {opt_exe} -I. -I{cc.gixsql_copy_path} {pp_file} -L{cc.gixsql_link_lib_dir_path} -l{cc.gixsql_link_lib_lname}";
+
                         if (TestDataProvider.TestVerbose)
                         {
-                            Console.WriteLine($"[cobc]: cmd.exe {cobc_args}");
+                            Console.WriteLine($"[cobc]: {TestDataProvider.Shell} {cobc_args}");
                         }
 
 
@@ -315,14 +360,17 @@ namespace gixsql_tests
                         if (td.AdditionalCompileParams != String.Empty)
                             cobc_args += (" " + td.AdditionalCompileParams);
 
-                        return await Cli.Wrap("cmd.exe")
+                        if (_shell_implode_args)
+                            cobc_args = "\"" + cobc_args + "\"";
+
+                        cobc_args = _shell_args + " " + cobc_args;
+
+                        return await Cli.Wrap(_shell)
                            .WithArguments(cobc_args)
-                           //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                           //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                            .WithEnvironmentVariables(new Dictionary<string, string>
                            {
                                ["COB_CONFIG_DIR"] = cc.cobc_config_dir_path,
-                               ["PATH"] = Environment.GetEnvironmentVariable("PATH") + $";{cc.cobc_bin_dir_path}"
+                               ["PATH"] = Environment.GetEnvironmentVariable("PATH") + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}"
                            })
                            .WithValidation(CommandResultValidation.None)
                            .ExecuteBufferedAsync();
@@ -391,7 +439,7 @@ namespace gixsql_tests
                 string module_src = td.CobolModules[module_index][0];
                 string module_filename = Path.GetFileName(module_src);
 
-                string outfile = module_filename.Replace(".cbl", "." + td.BuildType);
+                string outfile = module_filename.Replace(".cbl", isWindows ? "." + td.BuildType : "");
                 Assert.IsTrue(File.Exists(outfile));
 
                 CompilerConfig2 cc = td.CompilerConfiguration;
@@ -422,28 +470,51 @@ namespace gixsql_tests
                 if (td.BuildType == "exe")
                 {
                     exe = outfile;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}{Path.PathSeparator}{cc.gixsql_link_lib_dir_path}";
                 }
                 else
                 {
                     exe = cc.cobcrun_exe;
-                    env["PATH"] = env["PATH"] + $";{cc.cobc_bin_dir_path};{cc.link_lib_dir_path}";
+                    env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{cc.cobc_bin_dir_path}{Path.PathSeparator}{cc.gixsql_link_lib_dir_path}";
                     args = module_filename.Substring(0, module_filename.IndexOf("."));
                 }
 
-                //set_db_client_path(td.Architecture, env);
+                env["PATH"] = env["PATH"] + $"{Path.PathSeparator}{TestTempDir}";
+
+                if (!isWindows)
+                {
+                    env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
+                }
 
                 if (TestDataProvider.TestVerbose)
                 {
                     Console.WriteLine($"Running {exe} {args}");
+                    Console.WriteLine($"PATH: {env["PATH"]}");
+                }
+
+                if (!String.IsNullOrWhiteSpace(TestDataProvider.MemCheck))
+                {
+                    string mc = TestDataProvider.MemCheck.Replace("${testid}", td.Name);
+                    mc = mc.Replace("${dbtype}", dbid);
+                    mc = mc.Replace("${arch}", td.Architecture);
+                    mc = mc.Replace("${date}", DateTime.Now.ToString("yyyyMMdd"));
+                    mc = mc.Replace("${time}", DateTime.Now.ToString("HHmmss"));
+
+                    if (mc.Contains(' ')) {
+                        args = mc.Substring(mc.IndexOf(' ') + 1) + " " + exe;
+                        exe = mc.Substring(0, mc.IndexOf(' '));
+                    }
+                    else
+                    {
+                        args = exe;
+                        exe = TestDataProvider.MemCheck;
+                    }
                 }
 
                 var res = Task.Run(async () =>
                 {
                     return await Cli.Wrap(exe)
                         .WithArguments(args)
-                        //.WithStandardOutputPipe(PipeTarget.ToStringBuilder(stdOutBuffer))
-                        //.WithStandardErrorPipe(PipeTarget.ToStringBuilder(stdErrBuffer))
                         .WithEnvironmentVariables(env)
                         .WithValidation(CommandResultValidation.None)
                         .ExecuteBufferedAsync();
@@ -453,7 +524,7 @@ namespace gixsql_tests
                 if (TestDataProvider.TestVerbose)
                 {
                     Console.WriteLine(res.Result.StandardOutput);
-                    Console.WriteLine(res.Result.StandardError);
+                    Console.Error.WriteLine(res.Result.StandardError);
                 }
 
                 File.WriteAllText(Path.Combine(TestTempDir, td.Name + "-" + td.Architecture + "-" + (td.DataSources.Count > 0 ? td.DataSources[0].type : "nodata") + "-run-stdout.log"), res.Result.StandardOutput);
@@ -471,7 +542,8 @@ namespace gixsql_tests
                 if (!String.IsNullOrWhiteSpace(expected_md5_output_hash))
                 {
                     string out_md5 = Utils.CreateMD5(File.ReadAllBytes(res.Result.StandardOutput));
-                    Assert.AreEqual(expected_md5_output_hash, out_md5, $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
+                    //Assert.AreEqual(expected_md5_output_hash, out_md5, $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
+                    Assert.That(out_md5, Is.EqualTo(expected_md5_output_hash), $"Expected: {expected_md5_output_hash}, actual: {out_md5}");
                     b1 = true;
                 }
 
@@ -505,14 +577,14 @@ namespace gixsql_tests
                                 }
                             }
 
-                            var content_lines = content.Split("\r\n").ToList();
+                            var content_lines = content.Split(Environment.NewLine).ToList();
                             if (t.StartsWith("{{SW}}"))
                                 Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(6).Trim())) > 0, $"Output mismatch (index: {i}, expected: {t}");
                             else
                                 if (t.StartsWith("{{NOT}}"))
-                                    Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
-                                else
-                                    Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: {t}");
+                                Assert.IsTrue(content_lines.Count(a => a.Trim().StartsWith(t.Substring(7).Trim())) == 0, $"Output mismatch (index: {i}, NOT expected: {t}");
+                            else
+                                Assert.IsTrue(content_lines.Count(a => a.Trim() == t.Trim()) > 0, $"Output mismatch (index: {i}, expected: [{t}]");
                         }
                         b2 = true;
                     }

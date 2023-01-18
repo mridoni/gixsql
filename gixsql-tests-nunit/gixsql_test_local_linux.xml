@@ -1,0 +1,154 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<test-local-config>
+
+	<global>
+		<gixsql-install-base>/home/marchetto/gixsql/dist</gixsql-install-base>
+		<keep-temps>1</keep-temps>
+		<verbose>0</verbose>
+		<test-filter>TSQL001A</test-filter>
+		<dbtype-filter>sqlite</dbtype-filter>
+		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
+		<temp-dir>/tmp/gixsql-test</temp-dir>
+		<environment>
+			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
+		</environment>
+	</global>
+
+	<architectures>
+		<architecture id="x64" />
+	</architectures>
+	<compiler-types>
+		<compiler-type id="gcc" />
+	</compiler-types>
+
+	<compilers>
+		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-linux-gcc-x64">
+			<bin_dir_path>/usr/bin</bin_dir_path>
+			<lib_dir_path>/usr/lib</lib_dir_path>
+			<config_dir_path>/etc/gnucobol</config_dir_path>
+			<environment>
+				<!--<variable key="PATH" value="/opt/gnucobol=3.1.2/bin" />
+				<variable key="COB_CONFIG_DIR" value="/opt/gnucobol=3.1.2/share/config" />-->
+			</environment>
+		</compiler>
+	</compilers>
+
+	<data-source-clients>
+		<data-source-client type="pgsql" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="Npgsql" />
+		</data-source-client>
+
+		<data-source-client type="mysql" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="MySql.Data.MySqlClient" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+
+		<data-source-client type="oracle" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="Oracle.ManagedDataAccess.Client" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+
+		<data-source-client type="sqlite" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="System.Data.SQLite" />
+			<additional-preprocess-params value="-z c" />
+		</data-source-client>
+
+		<data-source-client type="odbc" architecture="x64">
+			<environment>
+			</environment>
+			<provider value="System.Data.Odbc" />
+			<additional-preprocess-params value="-z a" />
+		</data-source-client>
+	</data-source-clients>
+
+	<data-sources>
+		<data-source type="pgsql" index="1">
+			<hostname>192.168.56.1</hostname>
+			<port>5432</port>
+			<dbname>testdb1</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options>native_cursors=off</options>
+		</data-source>
+		<data-source type="pgsql" index="2">
+			<hostname>192.168.56.1</hostname>
+			<port>5432</port>
+			<dbname>testdb2</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options>native_cursors=off</options>
+		</data-source>
+		<data-source type="mysql" index="1">
+			<hostname>192.168.1.171</hostname>
+			<port>3306</port>
+			<dbname>testdb1</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="mysql" index="2">
+			<hostname>192.168.1.171</hostname>
+			<port>3306</port>
+			<dbname>testdb2</dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="oracle" index="1">
+			<hostname>localhost</hostname>
+			<port>1521</port>
+			<dbname>orcl</dbname>
+			<username>test1</username>
+			<password>test1</password>
+			<options></options>
+		</data-source>
+		<data-source type="oracle" index="2">
+			<hostname>localhost</hostname>
+			<port>1521</port>
+			<dbname>orcl</dbname>
+			<username>test2</username>
+			<password>test2</password>
+			<options></options>
+		</data-source>
+		<data-source type="sqlite" index="1">
+			<hostname>/tmp/gixsql-test/test_sqlite_1.db</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username></username>
+			<password></password>
+			<options></options>
+		</data-source>
+		<data-source type="sqlite" index="2">
+			<hostname>/tmp/gixsql-test/test_sqlite_2.db</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username></username>
+			<password></password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="1">
+			<hostname>ODBC_TEST1</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+		<data-source type="odbc" index="2">
+			<hostname>ODBC_TEST2</hostname>
+			<port></port>
+			<dbname></dbname>
+			<username>test</username>
+			<password>test</password>
+			<options></options>
+		</data-source>
+	</data-sources>
+</test-local-config>

@@ -318,21 +318,20 @@
 			<run value="true" />
 
 			<expected-output>
-				<line>${{NOT}}employee #: [+0123]</line>
-				<line>${{NOT}}last name : [Doe       ]</line>
-				<line>${{NOT}}first name: [John      ]</line>
-				<line>${{NOT}}street    : [123, Nowhere Lane   ]</line>
-				<line>${{NOT}}city      : [Noplace        ]</line>
-				<line>${{NOT}}state     : [NA]</line>
-				<line>${{NOT}}zip code  : [00100]</line>
-				<line>${{NOT}}department: [DEP1]</line>
-				<line>${{NOT}}payrate   : [+0000000000200.00]</line>
-				<line>${{NOT}}commission: [+1.23]</line>
-				<line>${{NOT}}misc      : [abcd1234                                                                                                                        ]</line>
-				<line>${{NOT}}misc (len): [0000000008]</line>
-				<line>${{NOT}}dnum1     : [+00.00]</line>
-				<line>${{NOT}}dnum2     : [+22.33]</line>
-				<line>${{NOT}}dnum3     : [+33.44]</line>
+				<line>{{NOT}}employee #: [+0123]</line>
+				<line>{{NOT}}last name : [Doe       ]</line>
+				<line>{{NOT}}first name: [John      ]</line>
+				<line>{{NOT}}street    : [123, Nowhere Lane   ]</line>
+				<line>{{NOT}}city      : [Noplace        ]</line>
+				<line>{{NOT}}zip code  : [00100]</line>
+				<line>{{NOT}}department: [DEP1]</line>
+				<line>{{NOT}}payrate   : [+0000000000200.00]</line>
+				<line>{{NOT}}commission: [+1.23]</line>
+				<line>{{NOT}}misc      : [abcd1234                                                                                                                        ]</line>
+				<line>{{NOT}}misc (len): [0000000008]</line>
+				<line>{{NOT}}dnum1     : [+00.00]</line>
+				<line>{{NOT}}dnum2     : [+22.33]</line>
+				<line>{{NOT}}dnum3     : [+33.44]</line>
 				<line>employee #: [+0456]</line>
 				<line>last name : [Smith     ]</line>
 				<line>first name: [Jane      ]</line>
@@ -370,10 +369,10 @@
 				<line>reopen msg :                                                                     </line>
 				<line>refetch +0000000000</line>
 				<line>refetch                                                                      </line>
-				<line>(reopen) employee #: [+0123]</line>
-				<line>(reopen) last name : [Doe       ]</line>
-				<line>(reopen) first name: [John      ]</line>
-				<line>(reopen) street    : [123, Nowhere Lane   ]</line>
+				<line>(reopen) employee #: [+0789]</line>
+				<line>(reopen) last name : [Smith2    ]</line>
+				<line>(reopen) first name: [Jane2     ]</line>
+				<line>(reopen) street    : [789, Someplace 2 Rd.]</line>
 			</expected-output>
 		</test>
 
@@ -395,8 +394,8 @@
 			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
 			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
 			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
@@ -448,8 +447,8 @@
 			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
 			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
-			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(200), vbfld varbinary(200), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
 			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
 
@@ -1393,7 +1392,7 @@
 			<compiler-type>all</compiler-type>
 
 			<cobol-sources>
-				<src name="TSQL021A.cbl" />
+				<src name="TSQL021A.cbl" deps="EMPREC.cpy" />
 			</cobol-sources>
 
 			<data-sources count="1" />
@@ -1462,7 +1461,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL021B-2" enabled="true">
+		<test name="TSQL021B-2" enabled="true" not-applies-to="odbc,sqlite">>
 			<description>More formats for connect</description>
 			<issue-coverage>#043</issue-coverage>
 			<architecture>all</architecture>
@@ -1501,7 +1500,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL021B-3" enabled="true" not-applies-to="odbc">
+		<test name="TSQL021B-3" enabled="true" not-applies-to="odbc,sqlite">
 			<description>More formats for connect</description>
 			<issue-coverage>#043</issue-coverage>
 			<architecture>all</architecture>
@@ -2045,8 +2044,8 @@
 
 			<expected-output>
 				<line>SET APPLICATION_NAME TO "Identifier1 Identifier2 Identifier3"</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE                VCFLD1 NOT IN (                'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'                )</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE                VCFLD1 NOT IN (                'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,                ' DDDD' ,'  EEEEEEEE    '                )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'               )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,               ' DDDD' ,'  EEEEEEEE    '               )</line>
 			</expected-output>
 
 			<expected-preprocessed-file-content>
@@ -3246,5 +3245,82 @@
 			<expected-preprocessed-file-content>
 			</expected-preprocessed-file-content>
 		</test>
+
+		<test name="TSQL041A" enabled="true" not-applies-to="oracle">
+			<description>Not possible to insert binary data (including low-value) or UTF16 </description>
+			<issue-coverage>#125</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL041A.cbl" />
+			</cobol-sources>
+
+			<generate-payload id=":p1" type="random-bytes" length="256" />
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
+
+			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (id serial, data bytea)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (id serial, data varbinary(2000))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (id serial, data varbinary(2000))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (id serial, data bytea)</pre-run-sql-statement>
+
+
+			<pre-run-sql-statement data-source-index="1" params=":p1" type="pgsql">insert into bintest (id, data) values (1, :p1)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1" type="sqlite">insert into bintest (id, data) values (1, :p1)</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" params=":p1" type="mysql">insert into bintest (id, data) values (1, ?)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1" type="odbc">insert into bintest (id, data) values (1, ?)</pre-run-sql-statement>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>DATA COMPARE OK</line>
+			</expected-output>
+		</test>
+
+		<test name="TSQL041A-ORACLE" enabled="true" applies-to="oracle">
+			<description>Not possible to insert binary data (including low-value) or UTF16 </description>
+			<issue-coverage>#125</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL041A-ORACLE.cbl" />
+			</cobol-sources>
+
+			<generate-payload id=":p1" type="random-bytes" length="256" />
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
+
+			<pre-run-sql-statement data-source-index="1">create table bintest (id number GENERATED BY DEFAULT as IDENTITY, data BLOB)</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" params=":p1">insert into bintest (id, data) values (1, :p1)</pre-run-sql-statement>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>DATA COMPARE OK</line>
+			</expected-output>
+		</test>
+
 	</tests>
 </test-data>

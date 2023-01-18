@@ -73,7 +73,7 @@
                     DNUM2,
                     DNUM3
                  FROM EMPTABLE
-               WHERE ENO BETWEEN $1 AND $2
+               WHERE ENO BETWEEN :ENO-START AND :ENO-END
            END-EXEC.
            
        PROCEDURE DIVISION. 
@@ -96,6 +96,33 @@
            END-IF.
        100-MAIN.
 
+           MOVE 123 TO ENO-START.
+           EXEC SQL
+               SELECT                     
+                        ENO,
+                        LNAME,
+                        FNAME,
+                        STREET,
+                        CITY,
+                        ST,
+                        ZIP,
+                        DEPT,
+                        PAYRATE,
+                        COM,
+                        MISCDATA,
+                        DNUM1,
+                        DNUM2,
+                        DNUM3
+               INTO :ENO,:LNAME,:FNAME,:STREET,:CITY, 
+                 :ST,:ZIP,:DEPT,:PAYRATE, 
+                 :COM,:MISCDATA,:DNUM1,:DNUM2,:DNUM3
+               FROM EMPTABLE
+                  WHERE ENO BETWEEN :ENO-START AND :ENO-START
+           END-EXEC.
+
+           DISPLAY 'select code:' SQLCODE.
+           DISPLAY 'select msg :' SQLERRMC.
+
            MOVE 456 TO ENO-START.
            MOVE 789 TO ENO-END.
 
@@ -108,6 +135,7 @@
            MOVE SQLCODE TO DISP-CODE
            DISPLAY 'open code:' DISP-CODE.
            DISPLAY 'open msg :' SQLERRMC.
+
        
       *  fetch a data item 
            EXEC SQL
@@ -174,6 +202,9 @@
        
       * we try a single open + fetch + close to see if the cursor
       * is still available for opening after being closed
+
+           MOVE 789 TO ENO-START.
+           MOVE 999 TO ENO-END.
 
       *  open cursor
            EXEC SQL

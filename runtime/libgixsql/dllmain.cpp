@@ -19,3 +19,38 @@
 */
 
 /* Nothing here */
+
+#include <stdio.h>
+
+#if 0
+extern void gixsql_shutdown();
+
+#ifdef __linux__
+void __attribute__ ((destructor)) some_name_unload(void)
+{    
+    fprintf(stderr, "--- terminating libgixsql\n");
+    gixsql_shutdown();
+} 
+#endif
+
+#ifdef _WIN32
+
+#include "Windows.h"
+
+BOOL WINAPI DllMain(
+    HINSTANCE hinstDLL,  // handle to DLL module
+    DWORD fdwReason,     // reason for calling function
+    LPVOID lpvReserved)  // reserved
+{
+    switch (fdwReason)
+    {
+    case DLL_PROCESS_DETACH:
+        fprintf(stderr, "--- terminating libgixsql\n");    
+        gixsql_shutdown();
+        break;
+    }
+    return TRUE;  // Successful DLL_PROCESS_ATTACH.
+}
+#endif
+
+#endif

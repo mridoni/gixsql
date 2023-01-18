@@ -25,7 +25,7 @@
 #include <vector>
 
 #define SIGN_LENGTH 1
-#define TERMINAL_LENGTH 1
+
 #define DECIMAL_LENGTH 1
 
 #define BUFFSIZE 256

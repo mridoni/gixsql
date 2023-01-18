@@ -233,7 +233,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -250,7 +250,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -267,7 +267,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -284,7 +284,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -301,7 +301,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -318,7 +318,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;_DEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -337,7 +337,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -358,7 +358,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -380,7 +380,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;Win32;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;%sqlite32_HOME%\include;..\libgixsql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -401,7 +401,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -423,7 +423,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
@@ -445,7 +445,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>SPDLOG_FMT_EXTERNAL;_CRT_SECURE_NO_WARNINGS;_CRT_NONSTDC_NO_DEPRECATE;NDEBUG;_WINDOWS;_USRDLL;LIBOCESQLsqlite_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(VCPKG_ROOT)\installed\$(PlatformShortName)-windows\include;$(VCPKG_ROOT)\packages\spdlog_$(PlatformShortName)-windows-static-md\include;$(VCPKG_ROOT)\packages\fmt_$(PlatformShortName)-windows-static-md\include;$(SolutionDir)common;..\libgixsql;%sqlite_HOME%\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>

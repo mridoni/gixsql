@@ -83,6 +83,10 @@ private:
 
     std::vector<std::string> reserved_words_list;
 
+    bool is_current_cmd_dml();
+    bool is_current_cmd_select();
+    bool is_current_cmd_passthru();
+
 #if defined (_DEBUG) && defined (VERBOSE)
 
     #define __YY_START (((yy_start) - 1) / 2)
@@ -98,6 +102,7 @@ private:
 
     void __yy_push_state(int newstate)
     {
+        cur_token_list.clear();
         int oldstate = __YY_START;
         yy_push_state(newstate);
         fprintf(stderr, "%04d =============>>> PUSHING STATE %s -> %s\n", yylineno, yy_state_desc(oldstate), yy_state_desc(newstate));
@@ -117,7 +122,7 @@ private:
     static const char *yy_state_descs[NUM_YY_STATES];
     
 #else
-#define __yy_push_state(s) yy_push_state(s)
-#define __yy_pop_state() yy_pop_state()
+#define __yy_push_state(s) { yy_push_state(s); cur_token_list.clear(); }
+#define __yy_pop_state() { yy_pop_state(); cur_token_list.clear(); }
 #endif
 };

@@ -1,0 +1,127 @@
+name: gixsql-linux-test
+
+on:
+  workflow_dispatch
+
+env:
+  WORKSPACE: ${{ github.workspace }}
+  INSTALL_DIR: /opt/gixsql
+  GIXSQL_VERSION: 1.0.20dev1
+  GIXSQL_BRANCH: v1.0.20dev
+  GIXSQL_TEST_DIR: /tmp/gixsql-test
+
+permissions:
+  contents: read
+
+jobs:
+  gixsql-linux-x64-test:
+    name: linux-x64-test
+    runs-on: ubuntu-latest
+    
+    steps:
+          
+    - uses: actions/checkout@v3
+      with:
+          repository: mridoni/gixsql
+#          ref: ${{ env.GIXSQL_BRANCH }}
+
+    - name: Configure ACT (local only)
+      if: ${{ env.ACT }}
+      run: |
+        sudo sed -i -e 's/http:\/\/archive.ubuntu.com\/ubuntu\//mirror:\/\/mirrors.ubuntu.com\/mirrors.txt/' /etc/apt/sources.list
+
+    - name: Update package list
+      run: |
+        apt-get update -y    
+        sudo printf '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d        
+
+    - name: Prepare test environment
+      run: |
+        mkdir -p ${{ env.GIXSQL_TEST_DIR }}
+        sudo apt install -y build-essential valgrind libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
+        sudo apt remove 'dotnet*' 'aspnet*' 'netstandard*'
+        sudo rm /etc/apt/sources.list.d/microsoft-prod.list
+        sudo apt install dotnet-sdk-6.0 -y
+        sudo rm -f /etc/odbc.ini
+        echo '[ODBC_TEST1]' >> /etc/odbc.ini
+        echo 'Description = PostgreSQL test DB 1' >> /etc/odbc.ini
+        echo 'Driver  = PostgreSQL ANSI' >> /etc/odbc.ini
+        echo 'Username = test' >> /etc/odbc.ini
+        echo 'Password = test' >> /etc/odbc.ini
+        echo 'Servername = 127.0.0.1' >> /etc/odbc.ini
+        echo 'Database = testdb1' >> /etc/odbc.ini
+        echo 'Port = 5432' >> /etc/odbc.ini
+        echo '[ODBC_TEST2]' >> /etc/odbc.ini
+        echo 'Description = PostgreSQL test DB 2' >> /etc/odbc.ini
+        echo 'Driver  = PostgreSQL ANSI' >> /etc/odbc.ini
+        echo 'Username = test' >> /etc/odbc.ini
+        echo 'Password = test' >> /etc/odbc.ini
+        echo 'Servername = 127.0.0.1' >> /etc/odbc.ini
+        echo 'Database = testdb2' >> /etc/odbc.ini
+        echo 'Port = 5432' >> /etc/odbc.ini
+
+    - name: Configure PostgreSQL
+      run: |
+        sudo printf '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d
+        sudo apt-get install postgresql-14 -yq
+        sudo -u postgres createuser --createdb --superuser test
+        sudo -u postgres createdb -O test testdb1
+        sudo -u postgres createdb -O test testdb2
+        sudo -u postgres createdb -O test testdb3
+        sudo -u postgres psql -c "ALTER USER test PASSWORD 'test';" testdb1
+        sudo -u postgres psql -c "ALTER USER test PASSWORD 'test';" testdb2
+        sudo -u postgres psql -c "ALTER USER test PASSWORD 'test';" testdb3
+
+    - name: Configure MySQL
+      run: |
+        sudo debconf-set-selections <<< 'mariadb-server-10.6 mysql-server/root_password password rootpass'
+        sudo debconf-set-selections <<< 'mariadb-server-10.6 mysql-server/root_password_again password rootpass'      
+        sudo DEBIAN_FRONTEND=noninteractive apt install mariadb-server -yq
+        sudo rm -f /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo echo "[mysqld]" >> /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo echo "lower_case_table_names = 1" >> /etc/mysql/mariadb.conf.d/51-server-misc.cnf
+        sudo service mariadb restart
+        sudo mysql -uroot -prootpass -e "create user test identified by 'test'"     
+        sudo mysql -uroot -prootpass -e "create database testdb1"     
+        sudo mysql -uroot -prootpass -e "create database testdb2"     
+        sudo mysql -uroot -prootpass -e "create database testdb3"     
+        sudo mysql -uroot -prootpass -e "grant all on testdb1.* to test@'%' identified by 'test'"     
+        sudo mysql -uroot -prootpass -e "grant all on testdb2.* to test@'%' identified by 'test'"     
+        sudo mysql -uroot -prootpass -e "grant all on testdb3.* to test@'%' identified by 'test'"     
+        
+          
+    - name: Set up build dependencies
+      run: |
+        sudo apt update
+        sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev bison flex libspdlog-dev libfmt-dev -yq
+
+#    - name: Check and build source package
+#      working-directory: ${{env.GITHUB_WORKSPACE}}
+#      run: |
+#        chmod 755 prepdist.sh && ./prepdist.sh
+#        autoreconf --install --force
+#        ./configure
+#        make distcheck
+
+    - name: Build binaries
+      run: |
+        # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
+        # :cd gixsql-${{ env.GIXSQL_VERSION }}
+        autoreconf --install --force
+        ./configure --prefix=${{ env.INSTALL_DIR }}
+        make -j4 
+        sudo make install
+        ls -lR ${{ env.INSTALL_DIR }}
+
+    - name: Run test suite
+      env:
+        GIXTEST_LOCAL_CONFIG: gixsql-tests-nunit/gixsql_test_gh_linux.xml  
+      run: |
+        dotnet build gixsql-tests-nunit/gixsql-tests-nunit.csproj
+        dotnet gixsql-tests-nunit/bin/Debug/net6.0/gixsql-tests-nunit.dll
+
+    - name: Archive test logs
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-linux-test-${{ env.GIXSQL_VERSION }}
+        path: ${{ env.GIXSQL_TEST_DIR }}/*

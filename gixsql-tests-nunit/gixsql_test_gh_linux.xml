@@ -2,59 +2,46 @@
 <test-local-config>
 
 	<global>
-		<gix-install-base>D:\gix-ide-x64</gix-install-base>
-		<gix-data-dir>C:\Users\marchetto\AppData\Local\Gix</gix-data-dir>
+		<gixsql-install-base>/opt/gixsql</gixsql-install-base>
 		<keep-temps>1</keep-temps>
-		<temp-dir>D:\gix_tmp_test</temp-dir>
-		<verbose>1</verbose>
+		<verbose>0</verbose>
 		<test-filter></test-filter>
-		<dbtype-filter>pgsql,mysql,sqlite,oracle</dbtype-filter>
+		<dbtype-filter>pgsql,mysql,odbc,sqlite</dbtype-filter><!-- Oracle can not be installed directly , so it will not be tested-->
+		<mem-check>valgrind --log-file=valgrind-${testid}-${arch}-${dbtype}.txt --leak-check=full</mem-check>
+		<temp-dir>/tmp/gixsql-test</temp-dir>
+		<environment>
+			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
+		</environment>
 	</global>
-
-	<environment>
-		<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
-	</environment>
 
 	<architectures>
 		<architecture id="x64" />
-		<!--<architecture id="x86" />-->
 	</architectures>
 	<compiler-types>
-		<compiler-type id="msvc" />
-		<!--<compiler-type id="gcc" />-->
+		<compiler-type id="gcc" />
 	</compiler-types>
 
 	<compilers>
-		<compiler type="msvc" architecture="x64" id="gnucobol-3.1.2-windows-msvc-all" />
-		<compiler type="msvc" architecture="x86" id="gnucobol-3.1.2-windows-msvc-all" />
-		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-windows-mingw-x64" />
-		<compiler type="gcc" architecture="x86" id="gnucobol-3.1.2-windows-mingw-x86" />
+		<compiler type="gcc" architecture="x64" id="gnucobol-3.1.2-linux-gcc-x64">
+			<bin_dir_path>/usr/bin</bin_dir_path>
+			<lib_dir_path>/usr/lib</lib_dir_path>
+			<config_dir_path>/etc/gnucobol</config_dir_path>
+			<environment>
+				<!--<variable key="PATH" value="/opt/gnucobol=3.1.2/bin" />
+				<variable key="COB_CONFIG_DIR" value="/opt/gnucobol=3.1.2/share/config" />-->
+			</environment>
+		</compiler>
 	</compilers>
 
 	<data-source-clients>
 		<data-source-client type="pgsql" architecture="x64">
 			<environment>
-				<variable key="PATH" value="C:\vcpkg\installed\x64-windows\bin;C:\vcpkg\installed\x64-mingw-dynamic\bin" />
-			</environment>
-			<provider value="Npgsql" />
-		</data-source-client>
-		<data-source-client type="pgsql" architecture="x86">
-			<environment>
-				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
 			</environment>
 			<provider value="Npgsql" />
 		</data-source-client>
 
-		<data-source-client type="mysql" architecture="x86">
-			<environment>
-				<variable key="PATH" value="C:\vcpkg\installed\x86-windows\bin;C:\vcpkg\installed\x86-mingw-dynamic\bin" />
-			</environment>
-			<provider value="MySql.Data.MySqlClient" />
-			<additional-preprocess-params value="-z a" />
-		</data-source-client>
 		<data-source-client type="mysql" architecture="x64">
 			<environment>
-				<variable key="PATH" value="C:\vcpkg\installed\x64-windows\bin;C:\vcpkg\installed\x64-mingw-dynamic\bin" />
 			</environment>
 			<provider value="MySql.Data.MySqlClient" />
 			<additional-preprocess-params value="-z a" />
@@ -62,26 +49,12 @@
 
 		<data-source-client type="oracle" architecture="x64">
 			<environment>
-				<variable key="PATH" value="D:\oracle\instantclient_21_6_x64" />
-			</environment>
-			<provider value="Oracle.ManagedDataAccess.Client" />
-			<additional-preprocess-params value="-z c" />
-		</data-source-client>
-		<data-source-client type="oracle" architecture="x86">
-			<environment>
-				<variable key="PATH" value="D:\oracle\instantclient_21_6_x86" />
 			</environment>
 			<provider value="Oracle.ManagedDataAccess.Client" />
 			<additional-preprocess-params value="-z c" />
 		</data-source-client>
 
 		<data-source-client type="sqlite" architecture="x64">
-			<environment>
-			</environment>
-			<provider value="System.Data.SQLite" />
-			<additional-preprocess-params value="-z c" />
-		</data-source-client>
-		<data-source-client type="sqlite" architecture="x86">
 			<environment>
 			</environment>
 			<provider value="System.Data.SQLite" />
@@ -94,13 +67,6 @@
 			<provider value="System.Data.Odbc" />
 			<additional-preprocess-params value="-z a" />
 		</data-source-client>
-		<data-source-client type="odbc" architecture="x86">
-			<environment>
-			</environment>
-			<provider value="System.Data.Odbc" />
-			<additional-preprocess-params value="-z a" />
-		</data-source-client>
-
 	</data-source-clients>
 
 	<data-sources>
@@ -121,7 +87,7 @@
 			<options>native_cursors=off</options>
 		</data-source>
 		<data-source type="mysql" index="1">
-			<hostname>192.168.1.171</hostname>
+			<hostname>localhost</hostname>
 			<port>3306</port>
 			<dbname>testdb1</dbname>
 			<username>test</username>
@@ -129,7 +95,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="mysql" index="2">
-			<hostname>192.168.1.171</hostname>
+			<hostname>localhost</hostname>
 			<port>3306</port>
 			<dbname>testdb2</dbname>
 			<username>test</username>
@@ -137,7 +103,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="1">
-			<hostname>192.168.56.135</hostname>
+			<hostname>localhost</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test1</username>
@@ -145,7 +111,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="2">
-			<hostname>192.168.56.135</hostname>
+			<hostname>localhost</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test2</username>
@@ -153,7 +119,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="1">
-			<hostname>d:/gix_tmp_test/test_sqlite_1.db</hostname>
+			<hostname>/tmp/gixsql-test/test_sqlite_1.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>
@@ -161,7 +127,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="sqlite" index="2">
-			<hostname>d:/gix_tmp_test/test_sqlite_2.db</hostname>
+			<hostname>/tmp/gixsql-test/test_sqlite_2.db</hostname>
 			<port></port>
 			<dbname></dbname>
 			<username></username>

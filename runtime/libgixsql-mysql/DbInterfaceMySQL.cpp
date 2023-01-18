@@ -24,6 +24,8 @@
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
+#include "varlen_defs.h"
+#include "cobol_var_flags.h"
 
 #define CLIENT_SIDE_CURSOR_STORAGE
 #define MYSQL_OK	0
@@ -35,18 +37,21 @@ DbInterfaceMySQL::DbInterfaceMySQL()
 {
 	connaddr = nullptr;
 	last_rc = 0;
-	owner = nullptr;
 }
 
 
 DbInterfaceMySQL::~DbInterfaceMySQL()
-{}
+{
+	if (connaddr) {
+		mysql_close(connaddr);
+		mysql_library_end();
+	}
+}
 
 int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	connaddr = NULL;
 	//current_resultset.clear();
-	owner = NULL;
 
 	auto lib_sink = _logger->sinks().at(0);
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-mysql", lib_sink);
@@ -56,7 +61,7 @@ int DbInterfaceMySQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
+int DbInterfaceMySQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	int rc = 0;
 	MYSQL* conn;
@@ -64,32 +69,36 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 
 	connaddr = NULL;
 
-	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, conn_string->get(), (int)g_opts->autocommit, g_opts->client_encoding);
+	lib_logger->trace(FMT_FILE_FUNC "connstring: {} - autocommit: {} - encoding: {}", __FILE__, __func__, _conn_info->get(), (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
-	unsigned int port = conn_string->getPort() > 0 ? conn_string->getPort() : 3306;
+	unsigned int port = _conn_info->getPort() > 0 ? _conn_info->getPort() : 3306;
 	conn = mysql_init(NULL);
-	conn = mysql_real_connect(conn, conn_string->getHost().c_str(), conn_string->getUsername().c_str(),
-		conn_string->getPassword().c_str(), conn_string->getDbName().c_str(),
+	conn = mysql_real_connect(conn, _conn_info->getHost().c_str(), _conn_info->getUsername().c_str(),
+		_conn_info->getPassword().c_str(), _conn_info->getDbName().c_str(),
 		port, NULL, 0); // CLIENT_MULTI_STATEMENTS?
 
 	if (conn == NULL) {
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (!g_opts->client_encoding.empty()) {
-		std::string qenc = "SET NAMES " + g_opts->client_encoding;
+	if (!_conn_opts->client_encoding.empty()) {
+		std::string qenc = "SET NAMES " + _conn_opts->client_encoding;
 		rc = mysql_real_query(conn, qenc.c_str(), qenc.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			mysql_close(conn);
+			mysql_library_end();
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
 
-	if (g_opts->autocommit != AutoCommitMode::Native) {
-		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, g_opts->autocommit == AutoCommitMode::On ? "ON" : "OFF");
+	if (_conn_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to {}", __FILE__, __func__, _conn_opts->autocommit == AutoCommitMode::On ? "ON" : "OFF");
 		std::string q("SET AUTOCOMMIT=");
-		q += (g_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
+		q += (_conn_opts->autocommit == AutoCommitMode::On) ? "1" : "0";
 		rc = mysql_real_query(conn, q.c_str(), q.size());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
+			mysql_close(conn);
+			mysql_library_end();
 			return DBERR_CONNECTION_FAILED;
 		}
 	}
@@ -97,7 +106,7 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 		lib_logger->trace(FMT_FILE_FUNC "MYSQL::setting autocommit to native (nothing to do)", __FILE__, __func__);
 	}
 
-	auto opts = conn_string->getOptions();
+	auto opts = _conn_info->getOptions();
 	if (opts.find("updatable_cursors") != opts.end()) {
 		std::string opt_updatable_cursors = opts["updatable_cursors"];
 		if (!opt_updatable_cursors.empty()) {
@@ -119,8 +128,8 @@ int DbInterfaceMySQL::connect(IDataSourceInfo* conn_string, IConnectionOptions* 
 	connaddr = conn;
 	current_statement_data = nullptr;
 
-	if (owner)
-		owner->setOpened(true);
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
 
 	return DBERR_NO_ERROR;
 }
@@ -136,24 +145,11 @@ int DbInterfaceMySQL::reset()
 
 int DbInterfaceMySQL::terminate_connection()
 {
-	for (auto it = _prepared_stmts.begin(); it != _prepared_stmts.end(); ++it) {
-		if (it->second) {
-			delete it->second;
-			it->second = nullptr;
-		}
-	}
-
-	for (auto it = _declared_cursors.begin(); it != _declared_cursors.end(); ++it) {
-		// TODO: what?
-	}
-
-	if (current_statement_data) {
-		delete current_statement_data;
-		current_statement_data = nullptr;
-	}
+	current_statement_data.reset();
 
 	if (connaddr) {
 		mysql_close(connaddr);
+		mysql_library_end();
 		connaddr = nullptr;
 		// Apparently there isn't a way to check if an error 
 		// occurred when attempting to close the connection
@@ -162,14 +158,11 @@ int DbInterfaceMySQL::terminate_connection()
 		// 	return DBERR_DISCONNECT_FAILED;
 	}
 
-	if (owner)
-		owner->setOpened(false);
-
 	return DBERR_NO_ERROR;
 
 }
 
-char* DbInterfaceMySQL::get_error_message()
+const char* DbInterfaceMySQL::get_error_message()
 {
 	return (char*)last_error.c_str();
 }
@@ -184,37 +177,27 @@ std::string DbInterfaceMySQL::get_state()
 	return last_state;
 }
 
-void DbInterfaceMySQL::set_owner(IConnection* conn)
-{
-	owner = conn;
-}
-
-IConnection* DbInterfaceMySQL::get_owner()
-{
-	return owner;
-}
-
-int DbInterfaceMySQL::prepare(std::string stmt_name, std::string sql)
+int DbInterfaceMySQL::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
-	MySQLStatementData* res = new MySQLStatementData();
+	std::shared_ptr<MySQLStatementData> res = std::make_shared<MySQLStatementData>();
 	res->statement = mysql_stmt_init(connaddr);
 
-	stmt_name = to_lower(stmt_name);
+	std::string stmt_name = to_lower(_stmt_name);
 
-	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (this->_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = mysql_fixup_parameters(sql);
+	if (connection_opts->fixup_parameters) {
+		prepared_sql = mysql_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	lib_logger->trace(FMT_FILE_FUNC "MySQL::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -236,12 +219,19 @@ int DbInterfaceMySQL::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
 	int rc = 0;
-	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, stmt_name);
+	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
-	stmt_name = to_lower(stmt_name);
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
+
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Statement not found: {}", stmt_name);
@@ -250,32 +240,28 @@ int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 
 	int nParams = (int)paramValues.size();
 
-	MySQLStatementData* wk_rs = _prepared_stmts[stmt_name];
+	std::shared_ptr<MySQLStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
 	// *********************
 
-	MYSQL_BIND* bound_param_defs = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), nParams);
+	std::unique_ptr<MYSQL_BIND[]> bound_param_defs = std::make_unique<MYSQL_BIND[]>(nParams);
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
-		bound_param->buffer_type = MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).c_str();
-		bound_param->buffer_length = paramValues.at(i).size();
+		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
+		bound_param->buffer = (char*)paramValues.at(i).data();
+		bound_param->buffer_length = paramLengths.at(i);
 	}
 
-	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs);
+	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs.get());
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		delete wk_rs; free(bound_param_defs);
-		lib_logger->error("MySQL: Error while binding paramenter definitions ({}): {}", last_rc, last_error);
+		lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
 		return DBERR_SQL_ERROR;
 	}
 
-	free(bound_param_defs);
-
 	rc = mysql_stmt_execute(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
@@ -284,7 +270,6 @@ int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	rc = mysql_stmt_attr_set(wk_rs->statement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers (1)");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
@@ -292,27 +277,28 @@ int DbInterfaceMySQL::exec_prepared(std::string stmt_name, std::vector<std::stri
 	rc = mysql_stmt_store_result(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while storing resultset ({})", last_rc);
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 #endif
 	rc = wk_rs->resizeColumnData();
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
 	if (wk_rs->column_count) {
-		MYSQL_BIND* bound_res_cols = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), wk_rs->column_count);
+		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
+
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
-		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols);
+		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			lib_logger->error("MySQL: Error while executing query ({} : {}) {}", last_rc, last_error, last_state);
 			return DBERR_FETCH_ROW_FAILED;
@@ -357,29 +343,38 @@ void DbInterfaceMySQL::mysqlSetError(int err_code, std::string sqlstate, std::st
 	last_state = sqlstate;
 }
 
-int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, MySQLStatementData* prep_stmt_data)
+int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags, std::shared_ptr<MySQLStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
 	std::string cursor_name, table_name, update_query;
 	std::vector<std::string> unique_key;
 	MYSQL_STMT* upd_del_statement = nullptr;
-	MYSQL_BIND* key_params = nullptr;
+	MYSQL_BIND *key_params;
 	int key_params_size = 0;
+	std::unique_ptr<MYSQL_BIND[]> key_params_ptr;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
-	MySQLStatementData* wk_rs = nullptr;
+	std::shared_ptr<MySQLStatementData> wk_rs;
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	if (!prep_stmt_data) {
-		wk_rs = (MySQLStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<MySQLStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new MySQLStatementData();
+		wk_rs = std::make_shared<MySQLStatementData>();
+
 		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
 
 			// No cursor was passed, we need to find it
@@ -388,7 +383,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 				return DBERR_SQL_ERROR;
 			}
 
-			ICursor* updatable_crsr = this->_declared_cursors[cursor_name];
+			std::shared_ptr<ICursor> updatable_crsr = this->_declared_cursors[cursor_name];
 
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
@@ -399,6 +394,7 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 				}
 
 				// Parameters are bound later
+				key_params_ptr = std::unique_ptr<MYSQL_BIND[]>(key_params);
 
 				wk_rs->statement = upd_del_statement;
 			}
@@ -413,7 +409,6 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 		}
 
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
-			delete wk_rs;
 			spdlog::error("Prepare error: {} ({}) - {}", last_rc, last_state, last_error);
 			return DBERR_SQL_ERROR;
 		}
@@ -422,39 +417,38 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 		wk_rs = prep_stmt_data;	// Already prepared
 	}
 
+	int nParams = paramValues.size();
+
 	wk_rs->resizeParams(nParams + key_params_size);
 
-	MYSQL_BIND* bound_param_defs = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), nParams + key_params_size);
+	std::unique_ptr<MYSQL_BIND[]> bound_param_defs = std::make_unique<MYSQL_BIND[]>(nParams + key_params_size);
 
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
-		bound_param->buffer_type = MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).c_str();
-		bound_param->buffer_length = paramValues.at(i).size();
+		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
+		bound_param->buffer = (char*)paramValues.at(i).data();
+		bound_param->buffer_length = paramLengths.at(i);
 	}
 
-	// This will only be used if we are performing an update/delete on an aupdatable cursor
+	// This will only be used if we are performing an update/delete on an updatable cursor
 	for (int i = 0; i < key_params_size; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[nParams + i];
 
 		bound_param->buffer_type = MYSQL_TYPE_STRING;
-		bound_param->buffer = key_params[i].buffer;
+		bound_param->buffer = key_params_ptr[i].buffer;
 		bound_param->buffer_length = key_params[i].buffer_length;
 	}
 
-	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs);
-	free(bound_param_defs);
+	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs.get());
 
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		delete wk_rs; 
 		lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
 		return DBERR_SQL_ERROR;
 	}
 
 	rc = mysql_stmt_execute(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-		delete wk_rs;
 		lib_logger->error("MySQL: Error while executing query ({}): {}", last_rc, query);
 		return DBERR_SQL_ERROR;
 	}
@@ -464,7 +458,6 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 	rc = mysql_stmt_attr_set(wk_rs->statement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers (1)");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
@@ -472,27 +465,29 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 	rc = mysql_stmt_store_result(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while storing resultset ({})", last_rc);
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 #endif
 	rc = wk_rs->resizeColumnData();
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
 	if (wk_rs->column_count) {
-		MYSQL_BIND* bound_res_cols = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), wk_rs->column_count);
+		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
+
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
+
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
-		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols);
+		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			lib_logger->error("MySQL: Error while executing query ({} : {}) {}", last_rc, last_error, last_state);
 			return DBERR_FETCH_ROW_FAILED;
@@ -515,9 +510,6 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 	}
 
 	if (crsr) {
-		if (crsr->getPrivateData())
-			delete (MySQLStatementData*)crsr->getPrivateData();
-
 		crsr->setPrivateData(wk_rs);
 	}
 	else
@@ -526,29 +518,28 @@ int DbInterfaceMySQL::_mysql_exec_params(ICursor* crsr, const std::string query,
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLStatementData* prep_stmt_data)
+int DbInterfaceMySQL::_mysql_exec(std::shared_ptr<ICursor> crsr, const std::string& query, std::shared_ptr<MySQLStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	bool is_delete = false;
 	std::string cursor_name, table_name, update_query;
 	std::vector<std::string> unique_key;
 	MYSQL_STMT* upd_del_statement = nullptr;
-	MYSQL_BIND* key_params = nullptr;
+	MYSQL_BIND* key_params;
 	int key_params_size = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, query);
 
-	MySQLStatementData* wk_rs = nullptr;
+	std::shared_ptr<MySQLStatementData> wk_rs;
 
 	if (!prep_stmt_data) {
-		wk_rs = (MySQLStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<MySQLStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new MySQLStatementData();
+		wk_rs = std::make_shared<MySQLStatementData>();
 
 		if (updatable_cursors_emu && is_update_or_delete_where_current_of(query, table_name, cursor_name, &is_delete)) {
 
@@ -558,7 +549,7 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 				return DBERR_SQL_ERROR;
 			}
 
-			ICursor* updatable_crsr = this->_declared_cursors[cursor_name];
+			std::shared_ptr<ICursor> updatable_crsr = this->_declared_cursors[cursor_name];
 
 			if (has_unique_key(table_name, updatable_crsr, unique_key)) {
 				std::string new_query;
@@ -568,8 +559,9 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 					return DBERR_SQL_ERROR;
 				}
 
-				rc = mysql_stmt_bind_param(upd_del_statement, key_params);
-				free(key_params);
+				std::unique_ptr<MYSQL_BIND[]> key_params_ptr = std::unique_ptr<MYSQL_BIND[]>(key_params);
+
+				rc = mysql_stmt_bind_param(upd_del_statement, key_params_ptr.get());
 				if (mysqlRetrieveError(rc) != MYSQL_OK) {
 					lib_logger->error("MySQL: Error while binding parameter definitions ({}): {}", last_rc, last_error);
 					return DBERR_SQL_ERROR;
@@ -588,7 +580,6 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 		}
 
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
-			delete wk_rs;
 			spdlog::error("Prepare error: {} ({}) - {}", last_rc, last_state, last_error);
 			return DBERR_SQL_ERROR;
 		}
@@ -599,7 +590,6 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 
 	wk_rs->resizeParams(0);
 
-
 	/*
 		Prepared statements are restricted to only a few category of statements.
 		The type of queries that they work on is limited to DML (INSERT, REPLACE, UPDATE, and DELETE), CREATE TABLE, and SELECT queries.
@@ -609,7 +599,6 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 	rc = mysql_stmt_execute(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while executing query [{} : {}] - {}", last_rc, get_error_message(), query);
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
@@ -618,7 +607,6 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 	rc = mysql_stmt_attr_set(wk_rs->statement, STMT_ATTR_UPDATE_MAX_LENGTH, &aBool);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers (1)");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
@@ -626,27 +614,29 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 	rc = mysql_stmt_store_result(wk_rs->statement);
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while storing resultset ({})", last_rc);
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 #endif
 	rc = wk_rs->resizeColumnData();
 	if (mysqlRetrieveError(rc) != MYSQL_OK) {
 		lib_logger->error("MySQL: Error while initializing resultset buffers");
-		delete wk_rs;
 		return DBERR_SQL_ERROR;
 	}
 
 	if (wk_rs->column_count) {
-		MYSQL_BIND* bound_res_cols = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), wk_rs->column_count);
+		std::unique_ptr<MYSQL_BIND[]> bound_res_cols = std::make_unique<MYSQL_BIND[]>(wk_rs->column_count);
+		const auto column_types = get_resultset_column_types(wk_rs->statement);
+
 		for (int i = 0; i < wk_rs->column_count; i++) {
 			MYSQL_BIND* bound_res_col = &bound_res_cols[i];
-			bound_res_col->buffer_type = MYSQL_TYPE_STRING;
+			
+			bound_res_col->buffer_type = (column_types[i] == MYSQL_TYPE_BLOB) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
 			bound_res_col->buffer = wk_rs->data_buffers.at(i);
 			bound_res_col->buffer_length = wk_rs->data_buffer_lengths.at(i) + 1;
+			bound_res_col->length = wk_rs->data_lengths.at(i);
 		}
 
-		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols);
+		rc = mysql_stmt_bind_result(wk_rs->statement, bound_res_cols.get());
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			lib_logger->error("MySQL: Error while executing query ({} : {}) {}", last_rc, last_error, last_state);
 			return DBERR_FETCH_ROW_FAILED;
@@ -669,9 +659,6 @@ int DbInterfaceMySQL::_mysql_exec(ICursor* crsr, const std::string query, MySQLS
 	}
 
 	if (crsr) {
-		if (crsr->getPrivateData())
-			delete (MySQLStatementData*)crsr->getPrivateData();
-
 		crsr->setPrivateData(wk_rs);
 	}
 	else
@@ -686,13 +673,13 @@ int DbInterfaceMySQL::exec(std::string query)
 }
 
 
-int DbInterfaceMySQL::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfaceMySQL::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _mysql_exec_params(NULL, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _mysql_exec_params(NULL, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
 
-int DbInterfaceMySQL::close_cursor(ICursor* cursor)
+int DbInterfaceMySQL::cursor_close(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
@@ -701,7 +688,7 @@ int DbInterfaceMySQL::close_cursor(ICursor* cursor)
 
 	// Prepared statements used for cursors will be disposed separately
 	if (!is_cursor_from_prepared_statement(cursor)) {
-		MySQLStatementData* dp = (MySQLStatementData*)cursor->getPrivateData();
+		std::shared_ptr<MySQLStatementData> dp = std::static_pointer_cast<MySQLStatementData>(cursor->getPrivateData());
 
 		if (!dp || !dp->statement)
 			return DBERR_CLOSE_CURSOR_FAILED;
@@ -717,7 +704,6 @@ int DbInterfaceMySQL::close_cursor(ICursor* cursor)
 		if (mysqlRetrieveError(rc) != MYSQL_OK) {
 			return DBERR_CLOSE_CURSOR_FAILED;
 		}
-		delete dp;
 	}
 
 	cursor->setPrivateData(nullptr);
@@ -725,13 +711,13 @@ int DbInterfaceMySQL::close_cursor(ICursor* cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfaceMySQL::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -739,21 +725,7 @@ int DbInterfaceMySQL::cursor_declare(ICursor* cursor, bool with_hold, int res_ty
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceMySQL::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
-{
-	lib_logger->trace(FMT_FILE_FUNC "MySQL: cursor declare invoked", __FILE__, __func__);
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceMySQL::cursor_open(ICursor* cursor)
+int DbInterfaceMySQL::cursor_open(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = 0;
 
@@ -773,10 +745,11 @@ int DbInterfaceMySQL::cursor_open(ICursor* cursor)
 		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
-	MySQLStatementData* prepared_stmt_data = nullptr;
+	std::shared_ptr<MySQLStatementData> prepared_stmt_data;
 	if (starts_with(squery, "@")) {
-		if (!retrieve_prepared_statement(squery.substr(1), &prepared_stmt_data)) {
-			// last_error, etc. set by retrieve_prepared_statement_source
+		prepared_stmt_data = retrieve_prepared_statement(squery.substr(1));
+		if (!prepared_stmt_data) {
+			// last_error, etc. set by retrieve_prepared_statement_source?
 			return DBERR_OPEN_CURSOR_FAILED;
 		}
 	}
@@ -788,10 +761,11 @@ int DbInterfaceMySQL::cursor_open(ICursor* cursor)
 	}
 
 	if (cursor->getNumParams() > 0) {
-		std::vector<std::string> params = cursor->getParameterValues();
-		std::vector<int> param_types = cursor->getParameterTypes();
-		std::vector<int> param_lengths = cursor->getParameterLengths();
-		rc = _mysql_exec_params(cursor, squery, cursor->getNumParams(), param_types, params, param_lengths, param_types, prepared_stmt_data);
+		std::vector<std_binary_data> param_values = cursor->getParameterValues();
+		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
+		std::vector<unsigned long> param_lengths = cursor->getParameterLengths();
+		std::vector<uint32_t> param_flags = cursor->getParameterFlags();
+		rc = _mysql_exec_params(cursor, squery, param_types, param_values, param_lengths, param_flags, prepared_stmt_data);
 	}
 	else {
 		rc = _mysql_exec(cursor, squery, prepared_stmt_data);
@@ -805,23 +779,18 @@ int DbInterfaceMySQL::cursor_open(ICursor* cursor)
 	}
 }
 
-int DbInterfaceMySQL::fetch_one(ICursor* cursor, int fetchmode)
+int DbInterfaceMySQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "MySQL: fetch from cursor invoked", __FILE__, __func__);
-
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
 
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
-	MySQLStatementData* dp = (MySQLStatementData*)cursor->getPrivateData();
+	std::shared_ptr<MySQLStatementData> dp = std::static_pointer_cast<MySQLStatementData>(cursor->getPrivateData());
 
 	if (!dp || !dp->statement)
 		return DBERR_FETCH_ROW_FAILED;
@@ -837,12 +806,12 @@ int DbInterfaceMySQL::fetch_one(ICursor* cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	*value_len = 0;
 
 	int rc = 0;
-	MySQLStatementData* wk_rs = nullptr;
+	std::shared_ptr<MySQLStatementData> wk_rs;
 
 	switch (resultset_context_type) {
 	case ResultSetContextType::CurrentResultSet:
@@ -851,28 +820,27 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 
 	case ResultSetContextType::PreparedStatement:
 	{
-		if (!context)
-			return false;
+		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-		std::string stmt_name = (char*)context;
-		stmt_name = to_lower(stmt_name);
+		std::string stmt_name = to_lower(p.prepared_statement_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			return DBERR_SQL_ERROR;
 		}
 
-		wk_rs = (MySQLStatementData*)_prepared_stmts[stmt_name];
+		wk_rs = _prepared_stmts[stmt_name];
 	}
 	break;
 
 	case ResultSetContextType::Cursor:
 	{
-		ICursor* c = (ICursor*)context;
+		CursorContextData& p = (CursorContextData&)context;
+		std::shared_ptr <ICursor> c = p.cursor;
 		if (!c) {
 			lib_logger->error("Invalid cursor reference");
 			return DBERR_SQL_ERROR;
 		}
-		wk_rs = (MySQLStatementData*)c->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<MySQLStatementData>(c->getPrivateData());
 	}
 	break;
 	}
@@ -882,17 +850,17 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 		return DBERR_SQL_ERROR;
 	}
 
-
 	if (col < wk_rs->data_buffers.size()) {
 		char* data = wk_rs->data_buffers.at(col);
 		unsigned long datalen = *(wk_rs->data_lengths.at(col));
+		
 		if (datalen > bfrlen) {
-			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	// was just a warning
+			lib_logger->error("MySQL: ERROR: data truncated: needed {} bytes, {} allocated", datalen, bfrlen);	
 			return false;
 		}
 
-		strcpy(bfr, wk_rs->data_buffers.at(col));
-		*value_len = strlen(bfr);
+		memcpy(bfr, wk_rs->data_buffers[col], datalen);
+		*value_len = datalen;
 
 		return true;
 	}
@@ -902,11 +870,12 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 	}
 }
 
-bool DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
+bool DbInterfaceMySQL::move_to_first_record(const std::string& _stmt_name)
 {
 	lib_logger->trace(FMT_FILE_FUNC  "MySQL: moving to first row in resultset", __FILE__, __func__);
 
-	MySQLStatementData* dp = nullptr;
+	std::shared_ptr<MySQLStatementData> dp;
+	std::string stmt_name = to_lower(_stmt_name);;
 
 	if (stmt_name.empty()) {
 		if (!current_statement_data) {
@@ -917,7 +886,6 @@ bool DbInterfaceMySQL::move_to_first_record(std::string stmt_name)
 		dp = current_statement_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			mysqlSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;
@@ -951,12 +919,12 @@ uint64_t DbInterfaceMySQL::get_native_features()
 }
 
 
-int DbInterfaceMySQL::get_num_rows(ICursor* crsr)
+int DbInterfaceMySQL::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 {
-	MySQLStatementData* wk_rs = nullptr;
+	std::shared_ptr<MySQLStatementData> wk_rs = nullptr;
 
 	if (crsr) {
-		wk_rs = (MySQLStatementData*)crsr->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<MySQLStatementData>(crsr->getPrivateData());
 	}
 	else {
 		wk_rs = current_statement_data;
@@ -969,12 +937,12 @@ int DbInterfaceMySQL::get_num_rows(ICursor* crsr)
 	return mysql_stmt_num_rows(wk_rs->statement);
 }
 
-int DbInterfaceMySQL::get_num_fields(ICursor* crsr)
+int DbInterfaceMySQL::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
-	MySQLStatementData* wk_rs = nullptr;
+	std::shared_ptr<MySQLStatementData> wk_rs = nullptr;
 
 	if (crsr) {
-		wk_rs = (MySQLStatementData*)crsr->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<MySQLStatementData>(crsr->getPrivateData());
 	}
 	else {
 		wk_rs = current_statement_data;
@@ -1027,7 +995,7 @@ int MySQLStatementData::resizeColumnData()
 		data_buffers.push_back(bfr);
 		data_buffer_lengths.push_back(len);
 
-		unsigned long* dl = (unsigned long*)calloc(1, sizeof(int));
+		unsigned long* dl = (unsigned long*)calloc(1, sizeof(unsigned long*));
 		data_lengths.push_back(dl);
 	}
 
@@ -1041,9 +1009,13 @@ void MySQLStatementData::cleanup()
 	for (int i = 0; i < data_buffers.size(); i++) {
 		if (data_buffers.at(i))
 			free(data_buffers.at(i));
+
+		if (data_lengths.at(i))
+			free(data_lengths.at(i));
 	}
 	data_buffers.clear();
 	data_buffer_lengths.clear();
+	data_lengths.clear();
 }
 
 
@@ -1095,7 +1067,7 @@ static std::string mysql_fixup_parameters(const std::string& sql)
 	return out_sql;
 }
 
-bool DbInterfaceMySQL::is_cursor_from_prepared_statement(ICursor* cursor)
+bool DbInterfaceMySQL::is_cursor_from_prepared_statement(std::shared_ptr<ICursor> cursor)
 {
 	std::string squery = cursor->getQuery();
 	void* src_addr = nullptr;
@@ -1112,14 +1084,13 @@ bool DbInterfaceMySQL::is_cursor_from_prepared_statement(ICursor* cursor)
 	return squery.size() > 1 && starts_with(squery, "@") && _prepared_stmts.find(squery.substr(1)) != _prepared_stmts.end();
 }
 
-bool DbInterfaceMySQL::retrieve_prepared_statement(const std::string& prep_stmt_name, MySQLStatementData** prepared_stmt_data)
+std::shared_ptr<MySQLStatementData> DbInterfaceMySQL::retrieve_prepared_statement(const std::string& prep_stmt_name)
 {
 	std::string stmt_name = to_lower(prep_stmt_name);
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end() || _prepared_stmts[stmt_name] == nullptr || _prepared_stmts[stmt_name]->statement == nullptr)
-		return false;
+		return nullptr;
 
-	*prepared_stmt_data = _prepared_stmts[stmt_name];
-	return true;
+	return _prepared_stmts[stmt_name];
 }
 
 
@@ -1147,38 +1118,6 @@ static std::string __get_trimmed_hostref_or_literal(void* data, int l)
 	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
 	return trim_copy(t);
 }
-//
-//bool DbInterfaceMySQL::get_scalar_list(const std::string& query, std::vector<std::string>& res)
-//{
-//	int rc = mysql_query(connaddr, query.c_str());
-//	if (mysqlRetrieveError(rc) != MYSQL_OK) {
-//		return false;
-//	}
-//
-//	MYSQL_RES* result = mysql_store_result(connaddr);
-//	if (!result) {
-//		return false;
-//	}
-//
-//	int num_fields = mysql_num_fields(result);
-//
-//	mysql_free_result(result);
-//
-//	MYSQL_ROW r = nullptr;
-//	do {
-//		r = mysql_fetch_row(result);
-//		for (int i = 0; i < num_fields; i++) {
-//			if (!r[i])
-//				res.push_back(std::string());
-//			else
-//				res.push_back(r[i]);
-//		}
-//
-//	} while (r != nullptr);
-//
-//	mysql_free_result(result);
-//	return true;
-//}
 
 std::vector<std::string> DbInterfaceMySQL::get_resultset_column_names(MYSQL_STMT* stmt)
 {
@@ -1191,7 +1130,18 @@ std::vector<std::string> DbInterfaceMySQL::get_resultset_column_names(MYSQL_STMT
 	return crsr_cols;
 }
 
-bool DbInterfaceMySQL::has_unique_key(std::string table_name, ICursor* crsr, std::vector<std::string>& unique_key)
+std::vector<enum_field_types> DbInterfaceMySQL::get_resultset_column_types(MYSQL_STMT* stmt)
+{
+	MYSQL_RES* rsdata = mysql_stmt_result_metadata(stmt);
+	std::vector<enum_field_types> crsr_cols;
+	for (int i = 0; i < rsdata->field_count; i++) {
+		crsr_cols.push_back(rsdata->fields[i].type);
+	}
+	mysql_free_result(rsdata);
+	return crsr_cols;
+}
+
+bool DbInterfaceMySQL::has_unique_key(std::string table_name, std::shared_ptr<ICursor> crsr, std::vector<std::string>& unique_key)
 {
 	std::vector<std::string> key;
 	std::vector<std::string> constraints;
@@ -1200,7 +1150,8 @@ bool DbInterfaceMySQL::has_unique_key(std::string table_name, ICursor* crsr, std
 		return false;
 	}
 
-	auto rs = (MySQLStatementData*)crsr->getPrivateData();
+	auto rs = std::dynamic_pointer_cast<MySQLStatementData>(crsr->getPrivateData());
+
 	if (!rs->statement)
 		return false;
 
@@ -1279,14 +1230,15 @@ bool DbInterfaceMySQL::has_unique_key(std::string table_name, ICursor* crsr, std
 	return key_found;
 }
 
-bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, ICursor* crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, MYSQL_BIND** key_params, int *key_params_size)
+bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, std::shared_ptr<ICursor> crsr, const std::vector<std::string>& unique_key, MYSQL_STMT** update_stmt, MYSQL_BIND **key_params, int *key_params_size)
 {
 	*update_stmt = nullptr;
 
 	if (!crsr || !crsr->getQuery().size())
 		return false;
 
-	auto rs = (MySQLStatementData*)crsr->getPrivateData();
+	auto rs = std::dynamic_pointer_cast<MySQLStatementData>(crsr->getPrivateData());
+
 	if (!rs->statement)
 		return false;
 
@@ -1329,13 +1281,15 @@ bool DbInterfaceMySQL::prepare_updatable_cursor_query(const std::string& qry, IC
 	}
 
 	// we pass parameters that need to be bound
-	MYSQL_BIND* bound_param_defs = (MYSQL_BIND*)calloc(sizeof(MYSQL_BIND), unique_key.size());
+
+	MYSQL_BIND *bound_param_defs = new MYSQL_BIND[unique_key.size()]();
 	for (int i = 0; i < unique_key.size(); i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
 
 		std::vector<std::string>::iterator itr = std::find(crsr_cols.begin(), crsr_cols.end(), unique_key.at(i));
 
 		if (itr == crsr_cols.cend()) {
+			lib_logger->error("Could not bind parameters for updatable cursor query ({})/[{}]", crsr->getName(), tqry);
 			return false;
 		}
 

@@ -77,6 +77,7 @@ private:
 
 	bool has_default_driver();
 	std::string get_default_driver();
+	bool is_sqlite(const std::string& ds, bool *uses_default_driver);
 	bool retrieve_gixsql_full_params(const std::smatch& cm);
 	bool retrieve_gixsql_dflt_drvr_params(const std::smatch& cm);
 	bool retrieve_ocesql_params(const std::smatch& cm);

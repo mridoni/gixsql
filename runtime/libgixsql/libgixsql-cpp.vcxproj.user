@@ -1,27 +1,28 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL036A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=pgsql://localhost:5432/testdb1
+DATASRC=sqlite://D:/gix_tmp_test/test_sqlite_1.db
 DATASRC_USR=test
 DATASRC_PWD=test
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-mysql-msvc.log
+GIXSQL_LOG_LEVEL=trace
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL029A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL041A.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC1=odbc://test:test@ODBC_TEST1
-DATASRC_USR1=test
-DATASRC2=odbc://test:test@ODBC_TEST2
-DATASRC_USR2=test
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL035A.log
+    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64
+DATASRC=odbc://ODBC_TEST1/
+DATASRC_USR=test
+DATASRC_PWD=test
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL041A-x64-oracle-msvc.log
 GIXSQL_LOG_LEVEL=trace
-GIXSQL_LOG_TRUNCATE=on
+GIXSQL_FIXUP_PARAMS=on
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
   </PropertyGroup>
 </Project>

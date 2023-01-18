@@ -4,7 +4,7 @@
     <TargetFramework>net6.0</TargetFramework>
     <RootNamespace>gixsql_tests_nunit</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Nullable>enable</Nullable>
+    <Nullable>disable</Nullable>
 
     <IsPackable>false</IsPackable>
 
@@ -88,6 +88,8 @@
     <None Remove="data\TSQL037B-SQLITE.cbl" />
     <None Remove="data\TSQL039A.cbl" />
     <None Remove="data\TSQL040A.cbl" />
+    <None Remove="data\TSQL041A-ORACLE.cbl" />
+    <None Remove="data\TSQL041A.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -114,6 +116,8 @@
     <EmbeddedResource Include="data\TSQL004B.cbl" />
     <EmbeddedResource Include="data\TSQL004A.cbl" />
     <EmbeddedResource Include="data\TSQL005A.cbl" />
+    <EmbeddedResource Include="data\TSQL041A-ORACLE.cbl" />
+    <EmbeddedResource Include="data\TSQL041A.cbl" />
     <EmbeddedResource Include="data\TSQL005B.cbl" />
     <EmbeddedResource Include="data\TSQL005C.cbl" />
     <EmbeddedResource Include="data\TSQL006A.cbl" />
@@ -192,6 +196,15 @@
     <PackageReference Include="System.Data.Odbc" Version="7.0.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.116" />
     <PackageReference Include="System.Data.SQLite.EF6" Version="1.0.116" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="gixsql_test_local_linux.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="gixsql_test_local_windows.xml">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

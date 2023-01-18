@@ -46,6 +46,9 @@ USA.
 
 using namespace popl;
 
+bool is_alias(const std::string& f, std::string& ext);
+std::string get_basename(const std::string& f);
+
 int main(int argc, char** argv)
 {
 	int rc = -1;
@@ -79,6 +82,7 @@ int main(int argc, char** argv)
 	auto opt_keep = options.add<Switch>("k", "keep", "keep temporary files");
 	auto opt_verbose = options.add<Switch>("v", "verbose", "verbose");
 	auto opt_verbose_debug = options.add<Switch>("d", "verbose-debug", "verbose (debug)");
+	auto opt_parser_scanner_debug = options.add<Switch>("D", "parser-scanner-debug", "parser/scanner debug output");
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
 	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
@@ -168,6 +172,7 @@ int main(int argc, char** argv)
 				gp.setOpt("emit_map_file", opt_emit_map_file->is_set());
 				gp.setOpt("emit_cobol85", opt_emit_cobol85->is_set());
 				gp.setOpt("picx_as_varchar", to_lower(opt_picx_as_varchar->value()) == "varchar");
+				gp.setOpt("debug_parser_scanner", opt_parser_scanner_debug->is_set());
 
 				if (opt_esql_copy_exts->is_set())
 					copy_resolver.setExtensions(string_split(opt_esql_copy_exts->value(), ","));
@@ -188,8 +193,21 @@ int main(int argc, char** argv)
 			gp.verbose_debug = opt_verbose_debug->is_set();
 
 
-			gp.setInputFile(opt_infile->value(0));
-			gp.setOutputFile(opt_outfile->value(0));
+			std::string infile = opt_infile->value(0);
+			std::string outfile = opt_outfile->value(0);
+			std::string outext;
+
+			if (is_alias(outfile, outext)) {
+				outfile = get_basename(infile) + "." + outext;
+			}
+
+			if (infile == outfile) {
+				fprintf(stderr, "ERROR: input and output file must be different\n");
+				return 1;
+			}
+
+			gp.setInputFile(infile);
+			gp.setOutputFile(outfile);
 
 			bool b = gp.process();
 			if (!b) {
@@ -208,4 +226,23 @@ int main(int argc, char** argv)
 		return rc;
 	}
 
+}
+
+bool is_alias(const std::string& f, std::string& ext)
+{
+	std::filesystem::path p(f);
+
+	if (p.stem().string() == "@") {
+		ext = p.extension().string();
+		return true;
+	}
+
+	return false;
+}
+
+std::string get_basename(const std::string& f)
+{
+	std::filesystem::path p(f);
+
+	return p.stem().string();
 }

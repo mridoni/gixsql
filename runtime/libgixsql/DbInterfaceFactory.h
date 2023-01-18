@@ -54,6 +54,10 @@ typedef unsigned char byte;
 #endif
 
 #include <map>
+#include <vector>
+#include <memory>
+#include <string>
+
 #include "IDbInterface.h"
 #include "IDbManagerInterface.h"
 
@@ -61,16 +65,18 @@ class DbInterfaceFactory
 {
 public:
 
-	static LIBGIXSQL_API IDbInterface *getInterface(int, const std::shared_ptr<spdlog::logger>& _logger);
-	static LIBGIXSQL_API IDbInterface *getInterface(std::string, const std::shared_ptr<spdlog::logger>& _logger);
+	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(int, const std::shared_ptr<spdlog::logger>& _logger);
+	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(std::string, const std::shared_ptr<spdlog::logger>& _logger);
+
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(int);
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(std::string);
-	static int removeInterface(IDbInterface *);
 
 	static LIBGIXSQL_API std::vector<std::string> getAvailableDrivers();
 
+	static void releaseInterface(std::shared_ptr<IDbInterface> dbi);
+
 private:
 
-	static IDbInterface *load_dblib(const char *);
+	static std::shared_ptr<IDbInterface> load_dblib(const char *);
 };
 

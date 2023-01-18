@@ -31,6 +31,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <memory>
 
 #include "IConnection.h"
 #include "IDbInterface.h"
@@ -39,7 +40,7 @@
 
 class DbInterface;
 
-class Connection : public IConnection
+class Connection : public IConnection 
 {
 	friend class ConnectionManager;
 	friend class IDbInterface;
@@ -48,10 +49,10 @@ public:
 	LIBGIXSQL_API Connection();
 	LIBGIXSQL_API ~Connection();
 
-	LIBGIXSQL_API IDataSourceInfo *getConnectionInfo() override;
-	LIBGIXSQL_API void setConnectionInfo(IDataSourceInfo *) override;
-	LIBGIXSQL_API IDbInterface *getDbInterface() override;
-	LIBGIXSQL_API void setDbInterface(IDbInterface *) override;
+	LIBGIXSQL_API std::shared_ptr<IDataSourceInfo> getConnectionInfo() override;
+	LIBGIXSQL_API void setConnectionInfo(std::shared_ptr<IDataSourceInfo>) override;
+	LIBGIXSQL_API std::shared_ptr<IDbInterface> getDbInterface() override;
+	LIBGIXSQL_API void setDbInterface(std::shared_ptr<IDbInterface>) override;
 
 	LIBGIXSQL_API static bool test(IDataSourceInfo*);
 
@@ -63,17 +64,16 @@ public:
 	
 	std::string getName();
 
-	IConnectionOptions* getConnectionOptions() const override;
-	void setConnectionOptions(IConnectionOptions*) override;
+	std::shared_ptr<IConnectionOptions> getConnectionOptions() const override;
+	void setConnectionOptions(std::shared_ptr<IConnectionOptions>) override;
 
 private:
 
 	int id;
 	std::string name;
-	IDataSourceInfo *conninfo = nullptr;
+	std::shared_ptr<IDataSourceInfo> conninfo;
 	bool is_opened = false;
-	bool ext_conninfo;
-	IConnectionOptions options;
-	IDbInterface *dbi = nullptr;
+	std::shared_ptr<IConnectionOptions> options;
+	std::shared_ptr<IDbInterface> dbi;
 };
 

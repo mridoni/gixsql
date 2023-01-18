@@ -27,16 +27,24 @@ USA.
 
 #include <string>
 #include <vector>
+#include <memory>
 
 #include "DbInterfacePGSQL.h"
 #include "Logger.h"
 
 extern "C" {
 
-	LIBGIXSQL_API IDbInterface *get_dblib()
+	LIBGIXSQL_API IDbInterface * get_dblib()
 	{
-		IDbInterface *dbi = new DbInterfacePGSQL();
-		return dbi;
+		 IDbInterface *dbi = new DbInterfacePGSQL();
+		 return dbi;
 	}
+
+	LIBGIXSQL_API void release_dblib(IDbInterface *dbi)
+	{
+		 if (dbi)
+		 	delete dbi;
+	}
+
 
 }

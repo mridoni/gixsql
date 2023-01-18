@@ -101,6 +101,9 @@
     <ClInclude Include="cobol_var_types.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="varlen_defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gix_esql_parser.yy" />

@@ -18,11 +18,12 @@ namespace gixsql_tests
     public class TestDataProvider : Attribute
     {
         public static string TestTempDir => test_temp_dir;
-        public static string TestGixInstallBase => test_install_base;
-        public static string TestGixDataDir => test_datadir;
+        public static string TestGixSqlInstallBase => test_install_base;
         public static bool TestKeepTemps => test_keep_temps;
         public static bool TestVerbose => test_verbose;
         public static int TestCount => test_count;
+        public static string Shell => shell;
+        public static string MemCheck => mem_check;
         public static List<string> TestFilterList => test_filter_list;
         public static List<string> TestDbTypeFilterList => db_filter_list;
 
@@ -35,10 +36,11 @@ namespace gixsql_tests
 
         private static Dictionary<string, string> global_env = new Dictionary<string, string>();
 
+        private static string shell = null;
         private static string test_temp_dir = null;
         private static bool test_keep_temps = false;
+        private static string mem_check = null;
         private static string test_install_base = null;
-        private static string test_datadir = null;
         private static bool test_verbose = false;
         private static int test_count = 0;
         private static List<string> test_filter_list = new List<string>();
@@ -54,7 +56,7 @@ namespace gixsql_tests
             DbProviderFactories.RegisterFactory("Oracle.ManagedDataAccess.Client", Oracle.ManagedDataAccess.Client.OracleClientFactory.Instance);
 
             // Currently unsupported. Bug?
-            //DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
+            DbProviderFactories.RegisterFactory("System.Data.Odbc", System.Data.Odbc.OdbcFactory.Instance);
         }
 
         private static void ReadLocalConfiguration()
@@ -73,22 +75,13 @@ namespace gixsql_tests
                 doc.Load(local_config);
 
                 // Install base (required)
-                XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-install-base");
+                XmlElement xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gixsql-install-base");
                 if (xg == null || !Directory.Exists(xg.InnerText))
                 {
-                    throw new Exception("Invalid \"gix-install-base\" in " + local_config);
+                    throw new Exception("Invalid \"gixsql-install-base\" in " + local_config + ": " + (xg == null ? "(null)" : xg.InnerText));
                 }
                 test_install_base = xg.InnerText;
                 Console.WriteLine("Install base: " + test_install_base);
-
-                // data dir (required, compiler packages, etc.)
-                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/gix-data-dir");
-                if (xg == null || !Directory.Exists(xg.InnerText))
-                {
-                    throw new Exception("Invalid \"gix-data-dir\" in " + local_config);
-                }
-                test_datadir = xg.InnerText;
-                Console.WriteLine("Data dir: " + test_datadir);
 
                 // Keep temps (optional)
                 xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/keep-temps");
@@ -103,7 +96,7 @@ namespace gixsql_tests
                 xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/temp-dir");
                 if (xg != null && !Directory.Exists(xg.InnerText))
                 {
-                    throw new Exception("Invalid \"temp-dir\" in " + local_config);
+                    throw new Exception("Invalid \"temp-dir\" in " + local_config + ": " + (xg == null ? "(null)" : xg.InnerText));
                 }
                 if (xg != null)
                     test_temp_dir = xg.InnerText;
@@ -123,6 +116,11 @@ namespace gixsql_tests
                     foreach (var f in xg.InnerText.Split(new String[] { ",", ";" }, StringSplitOptions.RemoveEmptyEntries))  {
                         test_filter_list.Add(f);
                     }
+                }
+
+                xg = (XmlElement)doc.DocumentElement.SelectSingleNode("./global/mem-check");
+                if (xg != null && !String.IsNullOrWhiteSpace(xg.InnerText))  {
+                    mem_check = xg.InnerText.ToLower();
                 }
 
                 // db type filter
@@ -156,8 +154,8 @@ namespace gixsql_tests
                     if (!available_compiler_types.Contains(compiler_type))
                         continue;
 
-                    CompilerConfig2 cc = CompilerConfig2.init(compiler_type, compiler_arch, compiler_id);
-                    Tuple<string, string> k = new Tuple<string, string>(xe.Attributes["type"].Value, xe.Attributes["architecture"].Value);
+                    CompilerConfig2 cc = CompilerConfig2.init(xe);
+                    Tuple<string, string> k = new Tuple<string, string>(compiler_type, compiler_arch);
                     available_compilers.Add(k, cc);
                 }
 
@@ -201,7 +199,7 @@ namespace gixsql_tests
                     available_data_sources.Add(k, ds);
                 }
 
-                foreach (var xn in doc.SelectNodes("/test-local-config/environment/variable"))
+                foreach (var xn in doc.SelectNodes("/test-local-config/global/environment/variable"))
                 {
                     XmlElement xe = (XmlElement)xn;
                     global_env[xe.Attributes["key"].Value] = xe.Attributes["value"].Value;
@@ -212,7 +210,7 @@ namespace gixsql_tests
             {
                 Console.Error.WriteLine(ex.Message);
                 Console.Error.WriteLine(ex.StackTrace);
-                throw ex;
+                throw;
             }
 
         }
@@ -466,6 +464,10 @@ namespace gixsql_tests
                                             int min = xps.HasAttribute("min") ? Int32.Parse(xps.Attributes["min"].Value) : 0;
                                             int max = xps.HasAttribute("max") ? Int32.Parse(xps.Attributes["max"].Value) : 255;
                                             byte[] random_data = Utils.RandomBytes(length, min, max);
+                                            // be sure to include a few 0s
+                                            for (int i = 0; i < length; i +=7) {
+                                                random_data[i] = 0;
+                                            }
                                             td.GeneratedPayload[id] = "#" + System.Convert.ToBase64String(random_data);
                                             break;
 
@@ -537,7 +539,7 @@ namespace gixsql_tests
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex.Message + "\n" + ex.StackTrace);
-                throw ex;
+                throw;
             }
         }
 

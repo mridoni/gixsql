@@ -23,14 +23,14 @@
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
-
-#include "cobol_var_types.h"
+#include "varlen_defs.h"
+#include "cobol_var_flags.h"
 
 #include <cstring>
 
 
 SQLHANDLE DbInterfaceODBC::odbc_global_env_context = nullptr;
-int DbInterfaceODBC::odpi_global_env_context_usage_count = 0;
+int DbInterfaceODBC::odbc_global_env_context_usage_count = 0;
 
 static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string odbc_fixup_parameters(const std::string& sql);
@@ -42,8 +42,9 @@ DbInterfaceODBC::DbInterfaceODBC()
 
 DbInterfaceODBC::~DbInterfaceODBC()
 {
-	odpi_global_env_context_usage_count--;
-	if (odbc_global_env_context && odpi_global_env_context_usage_count == 0) {
+	// TODO: use shared_ptr with deleter
+	odbc_global_env_context_usage_count--;
+	if (odbc_global_env_context && odbc_global_env_context_usage_count == 0) {
 		SQLFreeHandle(SQL_HANDLE_ENV, odbc_global_env_context);
 		odbc_global_env_context = nullptr;
 	}
@@ -57,7 +58,6 @@ DbInterfaceODBC::~DbInterfaceODBC()
 int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 {
 	conn_handle = NULL;
-	owner = NULL;
 
 	auto lib_sink = _logger->sinks().at(0);
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-odbc", lib_sink);
@@ -88,7 +88,7 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 		}
 	}
 
-	odpi_global_env_context_usage_count++;
+	odbc_global_env_context_usage_count++;
 
 	int rc = SQLAllocHandle(SQL_HANDLE_DBC, odbc_global_env_context, &conn_handle);
 	if (odbcRetrieveError(rc, ErrorSource::Environmennt) != SQL_SUCCESS) {
@@ -101,13 +101,13 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g_opts)
+int DbInterfaceODBC::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	int rc = 0;
 	char dbms_name[256];
-	std::string host = conn_string->getHost();
-	std::string user = conn_string->getUsername();
-	std::string pwd = conn_string->getPassword();
+	std::string host = _conn_info->getHost();
+	std::string user = _conn_info->getUsername();
+	std::string pwd = _conn_info->getPassword();
 
 	lib_logger->trace(FMT_FILE_FUNC  "ODBC: DB connect to DSN '{}' user = '{}'", __FILE__, __func__, host, user);
 
@@ -123,9 +123,9 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g
 		return DBERR_CONNECTION_FAILED;
 	}
 
-	if (g_opts->autocommit != AutoCommitMode::Native) {
-		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (g_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
-		auto autocommit_state = (g_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
+	if (_conn_opts->autocommit != AutoCommitMode::Native) {
+		lib_logger->trace(FMT_FILE_FUNC "ODBC::setting autocommit to {}", __FILE__, __func__, (_conn_opts->autocommit == AutoCommitMode::On) ? "ON" : "OFF");
+		auto autocommit_state = (_conn_opts->autocommit == AutoCommitMode::On) ? SQL_AUTOCOMMIT_ON : SQL_AUTOCOMMIT_OFF;
 		rc = SQLSetConnectAttr(conn_handle, SQL_ATTR_AUTOCOMMIT, (SQLPOINTER)autocommit_state, 0);
 		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS) {
 			lib_logger->error(FMT_FILE_FUNC  "ODBC: Can't set autocommit. Error = {} ({}): {}", __FILE__, __func__, last_rc, last_state, last_error);
@@ -145,12 +145,13 @@ int DbInterfaceODBC::connect(IDataSourceInfo* conn_string, IConnectionOptions* g
 		lib_logger->debug(FMT_FILE_FUNC "DBMS name is [{}]", __FILE__, __func__, dbms_name);
 	}
 
-	if (owner)
-		owner->setOpened(true);
-
 	lib_logger->debug(FMT_FILE_FUNC  "ODBC: Connection registration successful", __FILE__, __func__);
 
 	odbcClearError();
+
+	this->connection_opts = _conn_opts;
+	this->data_source_info = _conn_info;
+
 	return DBERR_NO_ERROR;
 }
 
@@ -167,70 +168,30 @@ int DbInterfaceODBC::reset()
 
 int DbInterfaceODBC::terminate_connection()
 {
+	// we need to dispose these before closing the connection, 
+	// or we will get a memory leak from the ODBC driver/subsystem
+	// if later on we attempt to free the handle in ODBCStatementData
+	if (current_statement_data) {
+		current_statement_data.reset();
+	}
+
+	// same as above
+	_prepared_stmts.clear();
+	_declared_cursors.clear();
+
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: connection termination invoked", __FILE__, __func__);
 
-	int rc = SQLDisconnect(conn_handle);
+	if (conn_handle) {
+		int rc = SQLDisconnect(conn_handle);
+		conn_handle = NULL;
 
-	if (owner)
-		owner->setOpened(false);
-
-	if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS)
-		return DBERR_DISCONNECT_FAILED;
-
+		if (odbcRetrieveError(rc, ErrorSource::Connection) != SQL_SUCCESS)
+			return DBERR_DISCONNECT_FAILED;
+	}
 	return DBERR_NO_ERROR;
 }
 
-//int DbInterfaceODBC::begin_transaction()
-//{
-//	lib_logger->debug(FMT_FILE_FUNC  "ODBC: begin transaction invoked", __FILE__, __func__);
-//
-//	// Nothing to do for ODBC
-//	return DBERR_NO_ERROR;
-//}
-//
-//int DbInterfaceODBC::end_transaction(std::string completion_type)
-//{
-//	lib_logger->trace(FMT_FILE_FUNC  "ODBC: end transaction invoked", __FILE__, __func__);
-//
-//	if (completion_type != "COMMIT" && completion_type != "ROLLBACK")
-//		return DBERR_END_TX_FAILED;
-//
-//	if (!current_statement_data || !current_statement_data->statement) {
-//		lib_logger->error("ODBC: Invalid statement reference");
-//		return DBERR_END_TX_FAILED;
-//	}
-//
-//	SQLSMALLINT sql_completion_type = (completion_type == "COMMIT") ? SQL_COMMIT : SQL_ROLLBACK;
-//	delete current_statement_data;
-//	current_statement_data = nullptr;
-//
-//	int rc = SQLEndTran(SQL_HANDLE_DBC, conn_handle, sql_completion_type);
-//	if (odbcRetrieveError(rc, ErrorSource::Statement) != SQL_SUCCESS) {
-//		lib_logger->debug(FMT_FILE_FUNC  "ODBC: Error while ending transaction (2)({}): {}", __FILE__, __func__, completion_type, last_rc);
-//		lib_logger->error("ODBC: Error while ending transaction (1)({}): {}", completion_type, last_rc);
-//		return DBERR_END_TX_FAILED;
-//	}
-//
-//	std::map<std::string, ICursor*>::iterator it;
-//	std::vector<ICursor*> cur_to_remove;
-//	std::vector<ICursor*>::iterator it2;
-//
-//	for (it = _declared_cursors.begin(); it != _declared_cursors.end(); it++) {
-//		ICursor* c = (it)->second;
-//		if (!c->isWithHold())
-//			cur_to_remove.push_back(c);
-//	}
-//
-//	for (it2 = cur_to_remove.begin(); it2 != cur_to_remove.end(); it2++) {
-//		ICursor* c = (*it2);
-//		_declared_cursors.erase(c->getName());
-//		close_cursor(c);
-//	}
-//
-//	return DBERR_NO_ERROR;
-//}
-
-char* DbInterfaceODBC::get_error_message()
+const char* DbInterfaceODBC::get_error_message()
 {
 	return (char*)last_error.c_str();
 }
@@ -245,39 +206,26 @@ std::string DbInterfaceODBC::get_state()
 	return last_state;
 }
 
-void DbInterfaceODBC::set_owner(IConnection* conn)
-{
-	owner = conn;
-}
-
-IConnection* DbInterfaceODBC::get_owner()
-{
-	return owner;
-}
-
-int DbInterfaceODBC::prepare(std::string stmt_name, std::string sql)
+int DbInterfaceODBC::prepare(const std::string& _stmt_name, const std::string& query)
 {
 	std::string prepared_sql;
-	ODBCStatementData* res = new ODBCStatementData(conn_handle);
-	if (!res->statement) {
-		delete res;
-		return DBERR_PREPARE_FAILED;
-	}
-	stmt_name = to_lower(stmt_name);
+	std::shared_ptr<ODBCStatementData> res = std::make_shared<ODBCStatementData>(conn_handle);
 
-	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, sql);
+	std::string stmt_name = to_lower(_stmt_name);
+
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL: {}", __FILE__, __func__, stmt_name, query);
 
 	if (this->_prepared_stmts.find(stmt_name) != _prepared_stmts.end()) {
 		return DBERR_PREPARE_FAILED;
 	}
 
-	if (this->owner->getConnectionOptions()->fixup_parameters) {
-		prepared_sql = odbc_fixup_parameters(sql);
+	if (connection_opts->fixup_parameters) {
+		prepared_sql = odbc_fixup_parameters(query);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::fixup parameters is on", __FILE__, __func__);
 		lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
 	}
 	else {
-		prepared_sql = sql;
+		prepared_sql = query;
 	}
 
 	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({}) - SQL(P): {}", __FILE__, __func__, stmt_name, prepared_sql);
@@ -297,11 +245,18 @@ int DbInterfaceODBC::prepare(std::string stmt_name, std::string sql)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::string>& paramValues, std::vector<int> paramLengths, std::vector<int> paramFormats)
+int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, stmt_name);
+	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
-	stmt_name = to_lower(stmt_name);
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
+
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Statement not found: {}", stmt_name);
@@ -310,29 +265,29 @@ int DbInterfaceODBC::exec_prepared(std::string stmt_name, std::vector<std::strin
 
 	int nParams = (int)paramValues.size();
 
-	ODBCStatementData* wk_rs = _prepared_stmts[stmt_name];
+	std::shared_ptr<ODBCStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
-	wk_rs->resizeParams(nParams);
+	std::vector<SQLLEN> lengths(paramLengths.size());
 
 	for (int i = 0; i < nParams; i++) {
-		SQLLEN len;
-		int ptype = cobol2odbctype(paramFormats[i]);
-		int ctype = cobol2ctype(paramFormats[i]);
+		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
+		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
+
+		lengths[i] = paramLengths[i];
 
 		int rc = SQLBindParameter(wk_rs->statement,
 			i + 1,
 			SQL_PARAM_INPUT,
-			SQL_C_CHAR,
-			ptype, // SQL_VARCHAR,
+			c_type,
+			sql_type, // SQL_VARCHAR,
 			10,
 			0,
-			(SQLPOINTER)paramValues.at(i).c_str(),
-			(SQLLEN)paramValues.at(i).size(),
-			NULL);
+			(SQLPOINTER)paramValues.at(i).data(),
+			(SQLLEN)paramLengths.at(i),		
+			&lengths[i]);
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			//free(pvals);
 			last_rc = rc;
 			lib_logger->error("ODBC: Error while binding parameter {} in prepared statement ({}): {}", i + 1, last_rc, stmt_name);
 			return DBERR_SQL_ERROR;
@@ -359,26 +314,25 @@ int DbInterfaceODBC::exec(std::string _query)
 }
 
 
-int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query, ODBCStatementData* prep_stmt_data)
+int DbInterfaceODBC::_odbc_exec(std::shared_ptr<ICursor> crsr, const std::string& query, std::shared_ptr<ODBCStatementData> prep_stmt_data)
 {
 	int rc = 0;
 	uint32_t nquery_cols = 0;
 	std::string q = query;
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
 
 	if (!prep_stmt_data) {
-		wk_rs = (ODBCStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<ODBCStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new ODBCStatementData(conn_handle);
+		wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 		if (!wk_rs->statement) {
-			delete wk_rs;
+			odbcRetrieveError(-1, ErrorSource::Connection, conn_handle);
 			return DBERR_SQL_ERROR;
 		}
 
@@ -410,9 +364,6 @@ int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query, ODBCStat
 
 	if (last_rc == SQL_SUCCESS) {
 		if (crsr) {
-			if (crsr->getPrivateData())
-				delete (ODBCStatementData*)crsr->getPrivateData();
-
 			crsr->setPrivateData(wk_rs);
 		}
 		else
@@ -427,31 +378,36 @@ int DbInterfaceODBC::_odbc_exec(ICursor* crsr, const std::string query, ODBCStat
 
 }
 
-int DbInterfaceODBC::exec_params(std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats)
+int DbInterfaceODBC::exec_params(const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	return _odbc_exec_params(nullptr, query, nParams, paramTypes, paramValues, paramLengths, paramFormats);
+	return _odbc_exec_params(nullptr, query, paramTypes, paramValues, paramLengths, paramFlags);
 }
 
-int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nParams, const std::vector<int>& paramTypes, const std::vector<std::string>& paramValues, const std::vector<int>& paramLengths, const std::vector<int>& paramFormats, ODBCStatementData* prep_stmt_data)
+int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std::string& query, const std::vector<CobolVarType>& paramTypes, const std::vector<std_binary_data>& paramValues, const std::vector<unsigned long>& paramLengths, const std::vector<uint32_t>& paramFlags, std::shared_ptr<ODBCStatementData> prep_stmt_data)
 {
 	std::string q = query;
 	int rc = 0;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
+
+	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
+		lib_logger->error(FMT_FILE_FUNC "Internal error: parameter count mismatch", __FILE__, __func__);
+		last_error = "Internal error: parameter count mismatch";
+		last_rc = DBERR_INTERNAL_ERR;
+		return DBERR_INTERNAL_ERR;
+	}
 
 	if (!prep_stmt_data) {
-		wk_rs = (ODBCStatementData*)((crsr != NULL) ? crsr->getPrivateData() : current_statement_data);
+		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<ODBCStatementData>(crsr->getPrivateData()) : current_statement_data;
 
 		if (wk_rs && wk_rs == current_statement_data) {
-			delete current_statement_data;
-			current_statement_data = nullptr;
+			current_statement_data.reset();
 		}
 
-		wk_rs = new ODBCStatementData(conn_handle);
+		wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 		if (!wk_rs->statement) {
-			delete wk_rs;
 			return DBERR_SQL_ERROR;
 		}
 
@@ -464,23 +420,29 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nPa
 		wk_rs = prep_stmt_data;	// Already prepared
 	}
 
+	int nParams = paramValues.size();
+
 	wk_rs->resizeParams(nParams);
 
-	for (int i = 0; i < nParams; i++) {
-		SQLLEN len;
-		int ptype = cobol2odbctype(paramTypes[i]);
-		int ctype = cobol2ctype(paramTypes[i]);
+	std::vector<SQLLEN> lengths(paramLengths.size());
 
-		rc = SQLBindParameter(wk_rs->statement,
+	for (int i = 0; i < nParams; i++) {
+		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
+		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
+
+		lengths[i] = paramLengths[i];
+
+		rc = SQLBindParameter(
+			wk_rs->statement,
 			i + 1,
 			SQL_PARAM_INPUT,
-			SQL_C_CHAR,
-			ptype, // SQL_VARCHAR,
+			c_type,
+			sql_type, 
 			10,
 			0,
-			(SQLPOINTER)paramValues.at(i).c_str(),
-			(SQLLEN)paramValues.at(i).size(),
-			NULL);
+			(SQLPOINTER)paramValues.at(i).data(),
+			(SQLLEN)paramLengths.at(i),
+			&lengths[i]);
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			//free(pvals);
@@ -510,9 +472,6 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nPa
 
 	if (last_rc == SQL_SUCCESS) {
 		if (crsr) {
-			if (crsr->getPrivateData())
-				delete (ODBCStatementData*)crsr->getPrivateData();
-
 			crsr->setPrivateData(wk_rs);
 		}
 		else
@@ -526,7 +485,7 @@ int DbInterfaceODBC::_odbc_exec_params(ICursor* crsr, std::string query, int nPa
 	}
 }
 
-bool DbInterfaceODBC::is_cursor_from_prepared_statement(ICursor* cursor)
+bool DbInterfaceODBC::is_cursor_from_prepared_statement(const std::shared_ptr<ICursor>& cursor)
 {
 	std::string squery = cursor->getQuery();
 	void* src_addr = nullptr;
@@ -544,7 +503,7 @@ bool DbInterfaceODBC::is_cursor_from_prepared_statement(ICursor* cursor)
 }
 
 
-int DbInterfaceODBC::close_cursor(ICursor* cursor)
+int DbInterfaceODBC::cursor_close(const std::shared_ptr<ICursor>& cursor)
 {
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
@@ -553,7 +512,7 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 
 	// Prepared statements used for cursors will be disposed separately
 	if (!is_cursor_from_prepared_statement(cursor)) {
-		ODBCStatementData* dp = (ODBCStatementData*)cursor->getPrivateData();
+		std::shared_ptr<ODBCStatementData> dp = std::dynamic_pointer_cast<ODBCStatementData>(cursor->getPrivateData());
 
 		if (!dp || !dp->statement)
 			return DBERR_CLOSE_CURSOR_FAILED;
@@ -561,12 +520,12 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 		SQLHANDLE cursor_handle = dp->statement;
 
 		int rc = SQLCloseCursor(cursor_handle);
+		dp->statement = nullptr;
 		if (odbcRetrieveError(rc, ErrorSource::Statement, cursor_handle) != SQL_SUCCESS) {
 			lib_logger->error("ODBC: Error while closing cursor ({}) {}", last_rc, cursor->getName());
 			return DBERR_CLOSE_CURSOR_FAILED;
 		}
 
-		delete (ODBCStatementData*)cursor->getPrivateData();
 		cursor->setPrivateData(nullptr);
 
 		if (rc != SQL_SUCCESS) {
@@ -582,16 +541,15 @@ int DbInterfaceODBC::close_cursor(ICursor* cursor)
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_type)
+int DbInterfaceODBC::cursor_declare(const std::shared_ptr<ICursor>& cursor)
 {
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: cursor declare invoked", __FILE__, __func__);
 
 	if (!cursor)
 		return DBERR_DECLARE_CURSOR_FAILED;
 
-	ODBCStatementData* wk_rs = new ODBCStatementData(conn_handle);
+	std::shared_ptr<ODBCStatementData> wk_rs = std::make_shared<ODBCStatementData>(conn_handle);
 	if (!wk_rs->statement) {
-		delete wk_rs;
 		return DBERR_DECLARE_CURSOR_FAILED;
 	}
 
@@ -604,7 +562,7 @@ int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_typ
 
 	cursor->setPrivateData(wk_rs);
 
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
+	std::map<std::string, std::shared_ptr<ICursor>>::iterator it = _declared_cursors.find(cursor->getName());
 	if (it == _declared_cursors.end()) {
 		_declared_cursors[cursor->getName()] = cursor;
 	}
@@ -612,37 +570,7 @@ int DbInterfaceODBC::cursor_declare(ICursor* cursor, bool with_hold, int res_typ
 	return DBERR_NO_ERROR;
 }
 
-int DbInterfaceODBC::cursor_declare_with_params(ICursor* cursor, char** param_values, bool with_hold, int res_type)
-{
-	lib_logger->trace(FMT_FILE_FUNC "ODBC: cursor declare (with params) invoked", __FILE__, __func__);
-
-	if (!cursor)
-		return DBERR_DECLARE_CURSOR_FAILED;
-
-	ODBCStatementData* wk_rs = new ODBCStatementData(conn_handle);
-	if (!wk_rs->statement) {
-		delete wk_rs;
-		return DBERR_DECLARE_CURSOR_FAILED;
-	}
-
-	int rc = SQLSetCursorName(wk_rs->statement, (SQLCHAR*)cursor->getName().c_str(), SQL_NTS);
-	lib_logger->debug(FMT_FILE_FUNC "ODBC: setting cursor name: [{}]", __FILE__, __func__, cursor->getName());
-	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-		lib_logger->error("ODBC: Error while setting cursor name ({}) {}", last_rc, cursor->getName());
-		return DBERR_DECLARE_CURSOR_FAILED;
-	}
-
-	cursor->setPrivateData(wk_rs);
-
-	std::map<std::string, ICursor*>::iterator it = _declared_cursors.find(cursor->getName());
-	if (it == _declared_cursors.end()) {
-		_declared_cursors[cursor->getName()] = cursor;
-	}
-
-	return DBERR_NO_ERROR;
-}
-
-int DbInterfaceODBC::cursor_open(ICursor* cursor)
+int DbInterfaceODBC::cursor_open(const std::shared_ptr<ICursor>& cursor)
 {
 	int rc = 0;
 
@@ -662,9 +590,10 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
-	ODBCStatementData* prepared_stmt_data = nullptr;
+	std::shared_ptr<ODBCStatementData> prepared_stmt_data;
 	if (starts_with(squery, "@")) {
-		if (!retrieve_prepared_statement(squery.substr(1), &prepared_stmt_data)) {
+		prepared_stmt_data = retrieve_prepared_statement(squery.substr(1));
+		if (!prepared_stmt_data) {
 			// last_error, etc. set by retrieve_prepared_statement_source
 			return DBERR_OPEN_CURSOR_FAILED;
 		}
@@ -677,10 +606,11 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 	}
 
 	if (cursor->getNumParams() > 0) {
-		std::vector<std::string> params = cursor->getParameterValues();
-		std::vector<int> param_types = cursor->getParameterTypes();
-		std::vector<int> param_lengths = cursor->getParameterLengths();
-		rc = _odbc_exec_params(cursor, squery, cursor->getNumParams(), param_types, params, param_lengths, param_types, prepared_stmt_data);
+		std::vector<std_binary_data> param_values = cursor->getParameterValues();
+		std::vector<CobolVarType> param_types = cursor->getParameterTypes();
+		std::vector<unsigned long> param_lengths = cursor->getParameterLengths();
+		std::vector<uint32_t> param_flags = cursor->getParameterFlags();
+		rc = _odbc_exec_params(cursor, squery, param_types, param_values, param_lengths, param_flags, prepared_stmt_data);
 	}
 	else {
 		rc = _odbc_exec(cursor, squery, prepared_stmt_data);
@@ -694,23 +624,18 @@ int DbInterfaceODBC::cursor_open(ICursor* cursor)
 	}
 }
 
-int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
+int DbInterfaceODBC::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, int)
 {
 	lib_logger->trace(FMT_FILE_FUNC "mode: {}", __FILE__, __func__, FETCH_NEXT_ROW);
-
-	if (!owner) {
-		lib_logger->error("Invalid connection reference");
-		return DBERR_CONN_NOT_FOUND;
-	}
 
 	if (!cursor) {
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
 
-	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, owner->getId(), cursor->getName(), FETCH_NEXT_ROW);
+	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
 
-	ODBCStatementData* dp = (ODBCStatementData*)cursor->getPrivateData();
+	std::shared_ptr<ODBCStatementData> dp = std::dynamic_pointer_cast<ODBCStatementData>(cursor->getPrivateData());
 
 	if (!dp || !dp->statement)
 		return DBERR_FETCH_ROW_FAILED;
@@ -726,10 +651,10 @@ int DbInterfaceODBC::fetch_one(ICursor* cursor, int fetchmode)
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, void* context, int row, int col, char* bfr, int bfrlen, int* value_len)
+bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
 {
 	int rc = 0;
-	ODBCStatementData* wk_rs = nullptr;
+	std::shared_ptr<ODBCStatementData> wk_rs;
 
 	switch (resultset_context_type) {
 	case ResultSetContextType::CurrentResultSet:
@@ -738,28 +663,27 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 
 	case ResultSetContextType::PreparedStatement:
 	{
-		if (!context)
-			return false;
+		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
 
-		std::string stmt_name = (char*)context;
-		stmt_name = to_lower(stmt_name);
+		std::string stmt_name = to_lower(p.prepared_statement_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
 			return false;
 		}
 
-		wk_rs = (ODBCStatementData*)_prepared_stmts[stmt_name];
+		wk_rs = _prepared_stmts[stmt_name];
 	}
 	break;
 
 	case ResultSetContextType::Cursor:
 	{
-		ICursor* c = (ICursor*)context;
+		CursorContextData& p = (CursorContextData&)context;
+		std::shared_ptr <ICursor> c = p.cursor;
 		if (!c) {
 			lib_logger->error("Invalid cursor reference");
 			return false;
 		}
-		wk_rs = (ODBCStatementData*)c->getPrivateData();
+		wk_rs = std::dynamic_pointer_cast<ODBCStatementData>(c->getPrivateData());
 	}
 	break;
 	}
@@ -776,47 +700,19 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	if (!column_is_binary(wk_rs->statement, col + 1, &is_binary))
 		return false;
 
-	if (!is_binary) {
-		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, bfr, bfrlen, &reslen);
-		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			return false;
-		}
-		// TODO: fix this, with proper null handling
-		if (reslen != SQL_NULL_DATA)
-			*value_len = reslen;
-		else {
-			bfr[0] = '\0';
-			*value_len = 0;
-		}
-	}
-	else {
-		unsigned char* tmp_bfr = new unsigned char[bfrlen * 2];
-		uint8_t b0, b1;
-		rc = SQLGetData(wk_rs->statement, col + 1, SQL_C_CHAR, tmp_bfr, bfrlen * 2, &reslen);
-		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
-			return false;
-		}
+	short target_type = is_binary ? SQL_C_BINARY : SQL_C_CHAR;
 
-		for (int i = 0; i < bfrlen; i++) {
-			uint8_t b1 = tmp_bfr[i * 2];
-			uint8_t b0 = tmp_bfr[(i * 2) + 1];
-			if (b0 >= '0' && b0 <= '9') b0 -= '0'; else b0 = (b0 - 'a') + 10;
-			if (b1 >= '0' && b1 <= '9') b1 -= '0'; else b1 = (b1 - 'a') + 10;
-			bfr[i] = b0 + (b1 << 4);
-		}
-
-		delete[] tmp_bfr;
-
-		// TODO: fix this, with proper null handling
-		if (reslen != SQL_NULL_DATA)
-			*value_len = reslen / 2;
-		else {
-			bfr[0] = '\0';
-			*value_len = 0;
-		}
-	}
+	rc = SQLGetData(wk_rs->statement, col + 1, target_type, bfr, (SQLLEN) bfrlen, &reslen);
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return false;
+	}
+
+	// TODO: fix this, with proper null handling
+	if (reslen != SQL_NULL_DATA)
+		*value_len = reslen;
+	else {
+		bfr[0] = '\0';
+		*value_len = 0;
 	}
 
 #ifdef VERBOSE
@@ -828,11 +724,13 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	return true;
 }
 
-bool DbInterfaceODBC::move_to_first_record(std::string stmt_name)
+bool DbInterfaceODBC::move_to_first_record(const std::string& _stmt_name)
 {
-	ODBCStatementData* dp = nullptr;
+	std::shared_ptr<ODBCStatementData> dp;
 
 	lib_logger->trace(FMT_FILE_FUNC "ODBC: moving to first row in resultset", __FILE__, __func__);
+
+	std::string stmt_name = to_lower(_stmt_name);
 
 	if (stmt_name.empty()) {
 		if (!current_statement_data) {
@@ -843,7 +741,6 @@ bool DbInterfaceODBC::move_to_first_record(std::string stmt_name)
 		dp = current_statement_data;
 	}
 	else {
-		stmt_name = to_lower(stmt_name);
 		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 			odbcSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;
@@ -877,17 +774,17 @@ uint64_t DbInterfaceODBC::get_native_features()
 }
 
 
-int DbInterfaceODBC::get_num_rows(ICursor* crsr)
+int DbInterfaceODBC::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 {
 	return -1;
 }
 
-int DbInterfaceODBC::get_num_fields(ICursor* crsr)
+int DbInterfaceODBC::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
 	SQLHANDLE wk_rs = nullptr;
 
 	if (crsr) {
-		ODBCStatementData* p = (ODBCStatementData*)crsr->getPrivateData();
+		std::shared_ptr<ODBCStatementData> p = std::dynamic_pointer_cast<ODBCStatementData>(crsr->getPrivateData());
 		wk_rs = p->statement;
 	}
 	else {
@@ -910,46 +807,46 @@ int DbInterfaceODBC::get_num_fields(ICursor* crsr)
 	return -1;
 }
 
-int DbInterfaceODBC::cobol2odbctype(int t)
+SQLSMALLINT DbInterfaceODBC::cobol2odbctype(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
-	case COBOL_TYPE_UNSIGNED_NUMBER:
-	case COBOL_TYPE_SIGNED_NUMBER_TC:
-	case COBOL_TYPE_SIGNED_NUMBER_TS:
-	case COBOL_TYPE_SIGNED_NUMBER_LC:
-	case COBOL_TYPE_SIGNED_NUMBER_LS:
-	case COBOL_TYPE_UNSIGNED_NUMBER_PD:
-	case COBOL_TYPE_SIGNED_NUMBER_PD:
-	case COBOL_TYPE_UNSIGNED_BINARY:
-	case COBOL_TYPE_SIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 		return SQL_NUMERIC;
 
-	case COBOL_TYPE_ALPHANUMERIC:
-	case COBOL_TYPE_JAPANESE:
-		return SQL_VARCHAR;
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
+		return CBL_FIELD_IS_BINARY(flags) ? SQL_BINARY : SQL_VARCHAR;
 
 	default:
 		return SQL_VARCHAR;
 	}
 }
 
-int DbInterfaceODBC::cobol2ctype(int t)
+SQLSMALLINT DbInterfaceODBC::cobol2ctype(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
-	case COBOL_TYPE_UNSIGNED_NUMBER:
-	case COBOL_TYPE_SIGNED_NUMBER_TC:
-	case COBOL_TYPE_SIGNED_NUMBER_TS:
-	case COBOL_TYPE_SIGNED_NUMBER_LC:
-	case COBOL_TYPE_SIGNED_NUMBER_LS:
-	case COBOL_TYPE_UNSIGNED_NUMBER_PD:
-	case COBOL_TYPE_SIGNED_NUMBER_PD:
-	case COBOL_TYPE_UNSIGNED_BINARY:
-	case COBOL_TYPE_SIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
 		return SQL_C_NUMERIC;
 
-	case COBOL_TYPE_ALPHANUMERIC:
-	case COBOL_TYPE_JAPANESE:
-		return SQL_C_CHAR;
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+	case CobolVarType::COBOL_TYPE_JAPANESE:
+		return CBL_FIELD_IS_BINARY(flags) ? SQL_C_BINARY : SQL_C_CHAR;
 
 	default:
 		return SQL_C_CHAR;
@@ -965,8 +862,8 @@ int DbInterfaceODBC::get_data_len(SQLHANDLE hStmt, int cnum)
 	SQLULEN        ColumnDataSize;
 	SQLSMALLINT    ColumnDataDigits;
 	SQLSMALLINT    ColumnDataNullable;
-	SQLCHAR* ColumnData;
-	SQLLEN         ColumnDataLen;
+	//SQLCHAR*	   ColumnData;
+	//SQLLEN         ColumnDataLen;
 
 	rc = SQLDescribeCol(
 		hStmt,                    // Select Statement (Prepared)
@@ -982,14 +879,13 @@ int DbInterfaceODBC::get_data_len(SQLHANDLE hStmt, int cnum)
 	return ColumnDataSize;
 }
 
-bool DbInterfaceODBC::retrieve_prepared_statement(const std::string& prep_stmt_name, ODBCStatementData** prepared_stmt_data)
+std::shared_ptr<ODBCStatementData> DbInterfaceODBC::retrieve_prepared_statement(const std::string& prep_stmt_name)
 {
 	std::string stmt_name = to_lower(prep_stmt_name);
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end() || _prepared_stmts[stmt_name] == nullptr || _prepared_stmts[stmt_name]->statement == nullptr)
-		return false;
+		return nullptr;
 
-	*prepared_stmt_data = _prepared_stmts[stmt_name];
-	return true;
+	return _prepared_stmts[stmt_name];
 }
 
 int DbInterfaceODBC::odbcRetrieveError(int rc, ErrorSource err_src, SQLHANDLE h)
@@ -1050,7 +946,7 @@ int DbInterfaceODBC::odbcRetrieveError(int rc, ErrorSource err_src, SQLHANDLE h)
 				MessageText, sizeof(MessageText), &TextLength);
 
 			if (SQL_SUCCEEDED(ret)) {
-				sprintf(bfr, "%s (%d): %s", SQLState, (long)NativeError, MessageText);
+				sprintf(bfr, "%s (%d): %s", SQLState, NativeError, MessageText);
 				odbc_errors.push_back(std::string(bfr));
 
 #if _DEBUG
@@ -1103,7 +999,7 @@ void DbInterfaceODBC::odbcSetError(int err_code, std::string sqlstate, std::stri
 	last_state = sqlstate;
 }
 
-int DbInterfaceODBC::get_affected_rows(ODBCStatementData* d)
+int DbInterfaceODBC::get_affected_rows(std::shared_ptr<ODBCStatementData> d)
 {
 	if (!d || !d->statement)
 		return DBERR_SQL_ERROR;
@@ -1124,9 +1020,11 @@ int DbInterfaceODBC::get_affected_rows(ODBCStatementData* d)
 
 ODBCStatementData::ODBCStatementData(SQLHANDLE conn_handle)
 {
-	int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
-	if (rc != SQL_SUCCESS) {
-		this->statement = nullptr;
+	if (conn_handle) {
+		int rc = SQLAllocHandle(SQL_HANDLE_STMT, conn_handle, &this->statement);
+		if (rc != SQL_SUCCESS) {
+			this->statement = nullptr;
+		}
 	}
 }
 
@@ -1135,6 +1033,9 @@ ODBCStatementData::~ODBCStatementData()
 	int rc = 0;
 	if (this->statement) {
 		rc = SQLFreeStmt(this->statement, SQL_CLOSE);
+		rc = SQLFreeStmt(this->statement, SQL_UNBIND);  
+   		rc = SQLFreeStmt(this->statement, SQL_RESET_PARAMS); 
+		SQLFreeHandle(SQL_HANDLE_STMT, this->statement);
 		this->statement = nullptr;	// Not actually needed, since we are in a destructor, but...
 	}
 }

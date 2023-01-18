@@ -22,16 +22,15 @@ USA.
 
 #include <string>
 #include <vector>
+#include <memory>
 
-#include "Connection.h"
-#include "SqlVar.h"
-#include "SqlVarList.h"
+#include "IConnection.h"
+#include "cobol_var_types.h"
 
-class IConnection;
+using std_binary_data = std::vector<unsigned char>;
 
 struct IPrivateStatementData {
 
-public:
 	virtual ~IPrivateStatementData() {}
 };
 
@@ -40,14 +39,14 @@ class ICursor
 
 public:
 
-	virtual void setConnection(IConnection *) = 0;
+	virtual void setConnection(std::shared_ptr<IConnection>) = 0;
 	virtual void setConnectionName(std::string) = 0;
 	virtual void setName(std::string) = 0;
 	virtual void setQuery(std::string) = 0;
 	virtual void setQuerySource(void *, int) = 0;
 	virtual void setNumParams(int) = 0;
 
-	virtual IConnection *getConnection() = 0;
+	virtual std::shared_ptr<IConnection> getConnection() = 0;
 	virtual std::string getConnectionName() = 0;
 	virtual std::string getName() = 0;
 	virtual std::string getQuery() = 0;
@@ -56,12 +55,13 @@ public:
 	virtual bool isWithHold() = 0;
 	virtual bool isOpen() = 0;
 
-	virtual std::vector<std::string> getParameterValues() = 0;
-	virtual std::vector<int> getParameterTypes() = 0;
-	virtual std::vector<int> getParameterLengths() = 0;
+	virtual std::vector<CobolVarType> getParameterTypes() = 0;
+	virtual std::vector<std_binary_data> getParameterValues() = 0;
+	virtual std::vector<unsigned long> getParameterLengths() = 0;
+	virtual std::vector<uint32_t> getParameterFlags() = 0;
 
-	virtual void *getPrivateData() = 0;
-	virtual void setPrivateData(IPrivateStatementData *) = 0;
+	virtual std::shared_ptr<IPrivateStatementData> getPrivateData() = 0;
+	virtual void setPrivateData(std::shared_ptr<IPrivateStatementData>) = 0;
 	virtual void clearPrivateData() = 0;
 
 	virtual uint64_t getRowNum() = 0;
