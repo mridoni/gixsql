@@ -39,7 +39,7 @@ jobs:
 
     - name: Prepare test environment
       run: |
-        sudo mkdir -p ${{ env.GIXSQL_TEST_DIR }}
+        mkdir -p ${{ env.GIXSQL_TEST_DIR }}
         sudo apt install -y build-essential valgrind libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
         sudo apt remove 'dotnet*' 'aspnet*' 'netstandard*'
         sudo rm /etc/apt/sources.list.d/microsoft-prod.list
