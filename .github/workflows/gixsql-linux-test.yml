@@ -9,6 +9,7 @@ env:
   GIXSQL_VERSION: 1.0.20dev1
   GIXSQL_BRANCH: v1.0.20dev
   GIXSQL_TEST_DIR: /tmp/gixsql-test
+  USE_DIST_PACKAGE: false
 
 permissions:
   contents: read
@@ -100,24 +101,41 @@ jobs:
         sudo apt update
         sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev bison flex libspdlog-dev libfmt-dev -yq
 
-#    - name: Check and build source package
-#      working-directory: ${{env.GITHUB_WORKSPACE}}
-#      run: |
-#        chmod 755 prepdist.sh && ./prepdist.sh
-#        autoreconf --install --force
-#        ./configure
-#        make distcheck
+    - name: Check and build source package
+      if: ${{ env.USE_DIST_PACKAGE }}
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+        chmod 755 prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure
+        make distcheck
 
-    - name: Build binaries
+    - name: Build binaries from repository
+      if: ${{ !env.USE_DIST_PACKAGE }}
       run: |
         # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
         # :cd gixsql-${{ env.GIXSQL_VERSION }}
-        chmod 755 ./prepbuild.sh && ./prepbuild.sh
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure --prefix=${{ env.INSTALL_DIR }}
         make -j4 
         sudo make install
         ls -lR ${{ env.INSTALL_DIR }}
+        
+    - name: Build binaries from distribution package
+      if: ${{ env.USE_DIST_PACKAGE }}
+      run: |
+        tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
+        cd gixsql-${{ env.GIXSQL_VERSION }}
+        # :chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        # :chmod 755 ./prepdist.sh && ./prepdist.sh
+        # :autoreconf --install --force
+        ./configure --prefix=${{ env.INSTALL_DIR }}
+        make -j4 
+        sudo make install
+        ls -lR ${{ env.INSTALL_DIR }}
+        
 
     - name: Run test suite
       env:
