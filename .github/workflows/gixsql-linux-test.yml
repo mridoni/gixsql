@@ -9,7 +9,7 @@ env:
   GIXSQL_VERSION: 1.0.20dev1
   GIXSQL_BRANCH: v1.0.20dev
   GIXSQL_TEST_DIR: /tmp/gixsql-test
-  USE_DIST_PACKAGE: false
+  USE_SOURCE: repo
 
 permissions:
   contents: read
@@ -102,29 +102,16 @@ jobs:
         sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev bison flex libspdlog-dev libfmt-dev -yq
 
     - name: Build source distribution package
-      if: ${{ env.USE_DIST_PACKAGE == true}}
+      if: ${{ env.USE_SOURCE == 'dist' }}
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         chmod 755 prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure
         make distcheck
-
-    - name: Build binaries from repository
-      if: ${{ env.USE_DIST_PACKAGE == false}}
-      run: |
-        # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
-        # :cd gixsql-${{ env.GIXSQL_VERSION }}
-        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
-        chmod 755 ./prepdist.sh && ./prepdist.sh
-        autoreconf --install --force
-        ./configure --prefix=${{ env.INSTALL_DIR }}
-        make -j4 
-        sudo make install
-        ls -lR ${{ env.INSTALL_DIR }}
-        
+       
     - name: Build binaries from source distribution package
-      if: ${{ env.USE_DIST_PACKAGE == true }}
+      if: ${{ env.USE_SOURCE == 'dist'  }}
       run: |
         tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
         cd gixsql-${{ env.GIXSQL_VERSION }}
@@ -137,6 +124,19 @@ jobs:
         ls -lR ${{ env.INSTALL_DIR }}
         
 
+    - name: Build binaries from repository
+      if: ${{ env.USE_SOURCE == 'repo' }}
+      run: |
+        # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
+        # :cd gixsql-${{ env.GIXSQL_VERSION }}
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=${{ env.INSTALL_DIR }}
+        make -j4 
+        sudo make install
+        ls -lR ${{ env.INSTALL_DIR }}
+ 
     - name: Run test suite
       env:
         GIXTEST_LOCAL_CONFIG: gixsql-tests-nunit/gixsql_test_gh_linux.xml  
