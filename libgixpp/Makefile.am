@@ -7,7 +7,7 @@ libgixpp_a_SOURCES = ESQLCall.cpp  FileData.cpp  GixEsqlLexer.cpp  GixPreProcess
 		GixEsqlLexer.hh gix_esql_parser.hh GixPreProcessor.h ITransformationStep.h libgixpp_global.h libgixpp.h \
 		location.hh MapFileReader.h MapFileWriter.h TPESQLProcessing.h ../build-tools/grammar-tools/FlexLexer.h \
 		TPSourceConsolidation.h ../libcpputils/libcpputils.h ../libcpputils/CopyResolver.h \
-        ../common/cobol_var_types.h ../common/varlen_defs.h ../common/cobol_var_flags.h
+        $(top_srcdir)/common/cobol_var_types.h $(top_srcdir)/common/varlen_defs.h $(top_srcdir)/common/cobol_var_flags.h
 
 libgixpp_a_CXXFLAGS = -std=c++17 -I.. -I$(top_srcdir)/common -I$(top_srcdir)/libcpputils -I$(top_srcdir)/build-tools/grammar-tools -I$(top_srcdir)/common
 
