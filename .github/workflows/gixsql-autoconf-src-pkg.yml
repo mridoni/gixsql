@@ -25,7 +25,8 @@ jobs:
     steps:
 
     - uses: actions/checkout@v3
-      ref: ${{ env.GIXSQL_BRANCH }}
+      with:
+        ref: ${{ env.GIXSQL_BRANCH }}
 
     - name: Set up dependencies
       run: |
