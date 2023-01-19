@@ -33,7 +33,7 @@ jobs:
     - name: Update package list
       run: |
         sudo apt-get update -y    
-        sudo printf '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d        
+        # :sudo printf '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d        
 
     - name: Prepare test environment
       run: |
