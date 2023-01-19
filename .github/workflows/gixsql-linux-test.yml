@@ -112,6 +112,7 @@ jobs:
       run: |
         # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
         # :cd gixsql-${{ env.GIXSQL_VERSION }}
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh
         autoreconf --install --force
         ./configure --prefix=${{ env.INSTALL_DIR }}
         make -j4 
