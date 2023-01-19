@@ -66,6 +66,7 @@ jobs:
       run: |
         # :sudo printf '#!/bin/sh\nexit 0' > /usr/sbin/policy-rc.d
         sudo apt-get install postgresql-14 -yq
+        sudo systemctl status postgresql@14-main.service
         sudo -u postgres createuser --createdb --superuser test
         sudo -u postgres createdb -O test testdb1
         sudo -u postgres createdb -O test testdb2
