@@ -101,8 +101,8 @@ jobs:
         sudo apt update
         sudo apt install libmysqlclient-dev libpq-dev unixodbc-dev bison flex libspdlog-dev libfmt-dev -yq
 
-    - name: Check and build source package
-      if: ${{ env.USE_DIST_PACKAGE }}
+    - name: Build source distribution package
+      if: ${{ env.USE_DIST_PACKAGE == true}}
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         chmod 755 prepdist.sh && ./prepdist.sh
@@ -111,7 +111,7 @@ jobs:
         make distcheck
 
     - name: Build binaries from repository
-      if: ${{ !env.USE_DIST_PACKAGE }}
+      if: ${{ env.USE_DIST_PACKAGE == false}}
       run: |
         # :tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
         # :cd gixsql-${{ env.GIXSQL_VERSION }}
@@ -123,8 +123,8 @@ jobs:
         sudo make install
         ls -lR ${{ env.INSTALL_DIR }}
         
-    - name: Build binaries from distribution package
-      if: ${{ env.USE_DIST_PACKAGE }}
+    - name: Build binaries from source distribution package
+      if: ${{ env.USE_DIST_PACKAGE == true }}
       run: |
         tar -xzvf gixsql-${{ env.GIXSQL_VERSION }}.tar.gz
         cd gixsql-${{ env.GIXSQL_VERSION }}
