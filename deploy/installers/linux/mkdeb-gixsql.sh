@@ -4,7 +4,7 @@ export PKGDEBDIR=$WORKSPACE/pkg
 export PKGNAME=gixsql-${DIST}-${HOST_PLATFORM}-${GIXSQLMAJ}.${GIXSQLMIN}.${GIXSQLREL}-${GIX_REVISION}
 export PKGFILE=${PKGNAME}.deb
 
-sudo rm -fr $PKGDEBDIR
+rm -fr $PKGDEBDIR
 
 if [ ! -f "$WORKSPACE/deploy/installers/linux/control-${DIST}.tpl" ] ; then
 	echo "ERROR: invalid distribution id (DIST: $DIST)"
