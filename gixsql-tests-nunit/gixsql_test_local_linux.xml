@@ -5,8 +5,8 @@
 		<gixsql-install-base>/home/marchetto/gixsql/dist</gixsql-install-base>
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
-		<test-filter>TSQL001A</test-filter>
-		<dbtype-filter>sqlite</dbtype-filter>
+		<test-filter></test-filter>
+		<dbtype-filter></dbtype-filter>
 		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
@@ -27,8 +27,6 @@
 			<lib_dir_path>/usr/lib</lib_dir_path>
 			<config_dir_path>/etc/gnucobol</config_dir_path>
 			<environment>
-				<!--<variable key="PATH" value="/opt/gnucobol=3.1.2/bin" />
-				<variable key="COB_CONFIG_DIR" value="/opt/gnucobol=3.1.2/share/config" />-->
 			</environment>
 		</compiler>
 	</compilers>
@@ -86,6 +84,7 @@
 			<password>test</password>
 			<options>native_cursors=off</options>
 		</data-source>
+        
 		<data-source type="mysql" index="1">
 			<hostname>192.168.1.171</hostname>
 			<port>3306</port>
@@ -102,6 +101,7 @@
 			<password>test</password>
 			<options></options>
 		</data-source>
+        
 		<data-source type="oracle" index="1">
 			<hostname>localhost</hostname>
 			<port>1521</port>
@@ -118,6 +118,7 @@
 			<password>test2</password>
 			<options></options>
 		</data-source>
+        
 		<data-source type="sqlite" index="1">
 			<hostname>/tmp/gixsql-test/test_sqlite_1.db</hostname>
 			<port></port>
@@ -134,6 +135,7 @@
 			<password></password>
 			<options></options>
 		</data-source>
+        
 		<data-source type="odbc" index="1">
 			<hostname>ODBC_TEST1</hostname>
 			<port></port>
