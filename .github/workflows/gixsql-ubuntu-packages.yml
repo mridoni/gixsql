@@ -47,7 +47,7 @@ jobs:
         chmod 755 prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
-        make && sudo make install
+        make -j$(nproc) && make install-strip
     
     - name: Build .deb package
       shell: bash
@@ -93,7 +93,7 @@ jobs:
         chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
-        make && sudo make install-strip
+        make -j$(nproc) && make install-strip
     
     - name: Build .deb package
       shell: bash
