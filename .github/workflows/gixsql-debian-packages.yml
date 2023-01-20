@@ -1,0 +1,111 @@
+name: gixsql-debian-packages
+
+on:
+  workflow_dispatch
+  
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+env:
+  GIXSQLMAJ: 1
+  GIXSQLMIN: 0
+  GIXSQLREL: 20dev1
+  GIX_REVISION: ${{ github.run_attempt }}
+  GIXSQL_BRANCH: ${{ github.ref_name }}
+  INSTALL_PREFIX: usr
+
+permissions:
+  contents: read
+
+jobs:
+
+  debian-10-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:10
+
+    steps:
+    
+    - name: Build
+      env:
+        DIST: debian-10
+      run: |
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        apt update
+        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }}
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
+        dpkg -i bison_3.7.5+dfsg-1_amd64.deb
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
+        make && sudo make install-strip
+    
+    - name: Build package
+      env:
+          DIST: debian-10
+      shell: bash
+      run: |
+        export WORKSPACE=$(pwd)
+        echo "WORKSPACE: $WORKSPACE"
+        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+        
+    - name: Archive production artifacts
+      env:
+          DIST: debian-10 
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
+        path: |
+          ./gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
+
+
+  debian-11-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:11
+
+    steps:
+    
+    - name: Build
+      env:
+        DIST: debian-11
+      run: |
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        apt update
+        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake bison
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }}
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
+        dpkg -i bison_3.7.5+dfsg-1_amd64.deb
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
+        make && sudo make install-strip
+    
+    - name: Build package
+      env:
+          DIST: debian-11
+      shell: bash
+      run: |
+        export WORKSPACE=$(pwd)
+        echo "WORKSPACE: $WORKSPACE"
+        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+        
+    - name: Archive production artifacts
+      env:
+          DIST: debian-11
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
+        path: |
+          ./gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
+
+
