@@ -42,6 +42,9 @@ namespace gixsql_tests_nunit
                 }
             }
 
+            int num_results_ok = results.Count(a => a.Value == "KO");
+            int num_results_ko = results.Count(a => a.Value == "KO");
+
             int mlen = results.Select(a => a.Key.Length).Max();
             var orig_color = Console.ForegroundColor;
             foreach (var de in results)
@@ -52,7 +55,7 @@ namespace gixsql_tests_nunit
             }
 
 
-            if (results.Count(a => a.Value == "KO") > 0)
+            if (num_results_ko > 0)
             {
                 orig_color = Console.ForegroundColor;
                 Console.ForegroundColor = ConsoleColor.Red;
@@ -68,19 +71,15 @@ namespace gixsql_tests_nunit
                 Console.ForegroundColor = orig_color;
             }
 
-            Console.WriteLine("Run: {0} - Success: {1} - Failed: {2}",
-                results.Count(),
-                results.Where(a => a.Value == "OK").Count(),
-                results.Where(a => a.Value == "KO").Count());
+            Console.WriteLine("Run: {0} - Success: {1} - Failed: {2}", results.Count(), num_results_ok, num_results_ko);
 
 
             DateTime end_time = DateTime.Now;
-
             var elapsed = end_time - start_time;
 
             Console.WriteLine("Elapsed:" + elapsed.ToString("c"));
 
-            return 0;
+            return num_results_ko;
         }
     }
 }

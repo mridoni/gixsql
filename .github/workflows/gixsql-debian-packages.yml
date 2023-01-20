@@ -34,8 +34,8 @@ jobs:
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
-        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake
-        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }}
+        apt install -y build-essential automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
         echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
         echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
         wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
@@ -44,7 +44,7 @@ jobs:
         chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
-        make && sudo make install-strip
+        make -j$(nproc) && make install-strip
     
     - name: Build package
       env:
@@ -78,8 +78,8 @@ jobs:
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
-        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake bison
-        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }}
+        apt install -y build-essential bison automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
         echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
         echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
         wget http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
@@ -88,7 +88,7 @@ jobs:
         chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
         ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
-        make && sudo make install-strip
+        make -j$(nproc) && make install-strip
     
     - name: Build package
       env:

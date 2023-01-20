@@ -7,6 +7,7 @@
 
 using std_binary_data = std::vector<unsigned char>;
 
+#if FMT_VERSION >= 60000
 template <> struct fmt::formatter<CobolVarType> {
 
 	constexpr auto parse(format_parse_context& ctx) -> decltype(ctx.begin()) {
@@ -19,6 +20,27 @@ template <> struct fmt::formatter<CobolVarType> {
 	}
 
 };
+
+#else
+
+template<>
+struct fmt::formatter<CobolVarType>
+{
+  template<typename ParseContext>
+  constexpr auto parse(ParseContext& ctx)
+  {
+	return ctx.begin();
+  }
+
+  template<typename FormatContext>
+  auto format(CobolVarType const& t, FormatContext& ctx)
+  {
+	return fmt::format_to(ctx.out(), "{0}", (int)t);
+  }
+};
+
+
+#endif
 
 #if 0
 template <> struct fmt::formatter<std_binary_data> {
