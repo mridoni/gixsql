@@ -34,7 +34,7 @@ jobs:
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
-        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake
+        apt install -y build-essential automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
         git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
         echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
         echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
@@ -78,7 +78,7 @@ jobs:
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
-        apt install -y build-essential libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget cmake bison
+        apt install -y build-essential bison automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
         git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
         echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
         echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
