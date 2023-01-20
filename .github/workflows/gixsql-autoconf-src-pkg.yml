@@ -1,4 +1,4 @@
-name: autoconf-src-pkg
+name: gixsql-autoconf-src-pkg
 
 on:
   workflow_dispatch
