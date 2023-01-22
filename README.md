@@ -620,3 +620,9 @@ The connection string for SQLite databases directly encodes the filename, e.g.:
 - `sqlite:///home/user/mydb.db` 
 - `sqlite://c:/Users/myuser/mydb.db`
 As usual with SQLite, if the SQLite file does not exist, it will be created. Currently no options are available for the SQLite driver.
+
+## The GixSQL test suite
+
+GixSQL includes a self-contained test runner with an extendable test suite. The test runner is written in C# and runs under .Net 6.0, both under Windows and Linux. Each test case in the test suite is written to validate the correct implementation of a particular feature, at a syntactic or functional level.
+
+For more information on the test suite and on how to run it, [look here](TESTING.md)
