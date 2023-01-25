@@ -7,7 +7,7 @@ env:
   WORKSPACE: ${{ github.workspace }}
   INSTALL_DIR: /opt/gixsql
   GIXSQL_VERSION: 1.0.20dev1
-  GIXSQL_BRANCH: v1.0.20dev
+  GIXSQL_BRANCH: ${{ github.ref_name }}
   GIXSQL_TEST_DIR: /tmp/gixsql-test
   USE_SOURCE: repo
 
