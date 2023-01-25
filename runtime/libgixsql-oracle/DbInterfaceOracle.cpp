@@ -144,6 +144,7 @@ int DbInterfaceOracle::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std:
 
 int DbInterfaceOracle::reset()
 {
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::reset", __FILE__, __func__);
 	int rc = terminate_connection();
 	if (rc == DBERR_NO_ERROR)
 		return DBERR_NO_ERROR;
@@ -153,8 +154,9 @@ int DbInterfaceOracle::reset()
 
 int DbInterfaceOracle::terminate_connection()
 {
+	lib_logger->trace(FMT_FILE_FUNC "ODPI::terminate_connection", __FILE__, __func__);
 	if (connaddr) {
-		dpiConn_close(connaddr, DPI_MODE_CONN_CLOSE_DEFAULT, nullptr, 0);
+		dpiConn_close(connaddr, DPI_MODE_CONN_CLOSE_DROP, nullptr, 0);
 		dpiConn_release(connaddr);
 		connaddr = NULL;
 	}
@@ -1021,7 +1023,6 @@ void OdpiStatementData::cleanup()
 	if (params) {
 		for (int i = 0; i < params_count; i++) {
 			dpiVar_release(params[i]);
-			delete params[i];
 			params[i] = nullptr;
 		}
 		delete[] params;
@@ -1031,7 +1032,6 @@ void OdpiStatementData::cleanup()
 	if (coldata) {
 		for (int i = 0; i < coldata_count; i++) {
 			dpiVar_release(coldata[i]);
-			delete coldata[i];
 			coldata[i] = nullptr;
 		}
 		delete[] coldata;
@@ -1040,7 +1040,6 @@ void OdpiStatementData::cleanup()
 
 	if (params_bfrs) {
 		for (int i = 0; i < params_count; i++) {
-			delete params_bfrs[i];
 			params_bfrs[i] = nullptr;
 		}
 		delete[] params_bfrs;
@@ -1049,7 +1048,6 @@ void OdpiStatementData::cleanup()
 
 	if (coldata_bfrs) {
 		for (int i = 0; i < coldata_count; i++) {
-			delete coldata_bfrs[i];
 			coldata_bfrs[i] = nullptr;
 		}
 		delete[] coldata_bfrs;
