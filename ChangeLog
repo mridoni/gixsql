@@ -1,3 +1,19 @@
+=== v1.0.20dev1 ==================================================
+- Fixed "re-align COBOL_TYPE_UNSIGNED_BINARY code to use switch ready" (#136)
+- Fixed "SIGSEGV on cursor close" (#135)
+- Fixed "change SqlVar::type to enum enhancement New feature or request" (#124)
+- Fixed "testsuite adjustments - running with analyzers / code instrumentation" (#122)
+- Fixed "FR for USAGE VARRAW alias to VARYING" (#120)
+- Fixed "leak in dbi->fetch_one and potentially other places" (#111)
+- Fixed "Return more details on the actual error instead of "invalid column data"" (#109)
+- Fixed "FR gixpp option handling: add alias for source basename" (#53)
+- Modified scanner/parser to improve handling of subqueries
+- Added Debian 10/11 binary packages
+- Added GitHub Actions workflow for easier testing
+- The test suite is now documented
+- SQLCA is now set on success (PR #137 by Simon Sobisch)
+- The gixsql wrapper now uses the correct directory for SQLCA (PR #134 by Simon Sobisch)
+
 === v1.0.19 ======================================================
 - Re-implemented autocommit and updatable cursor support (also affects #14)
 - Docs and examples are now included in the autoconf tarball (fixes #50)
