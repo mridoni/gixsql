@@ -41,10 +41,22 @@ DbInterfaceOracle::DbInterfaceOracle()
 
 DbInterfaceOracle::~DbInterfaceOracle()
 {
+	if (connaddr) {
+		int is_healthy = 0;
+		int rc = dpiConn_getIsHealthy(connaddr, &is_healthy);
+		if (rc == DPI_SUCCESS && is_healthy) {
+			dpiConn_close(connaddr, DPI_MODE_CONN_CLOSE_DROP, nullptr, 0);
+		}
+
+		dpiConn_release(connaddr);
+	}
+
 	// TODO: use shared_ptr with deleter
 	odpi_global_context_usage_count--;
+	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void *)odpi_global_context);
 	if (odpi_global_context && odpi_global_context_usage_count == 0) {
 		dpiContext_destroy(odpi_global_context);
+		lib_logger->trace("dpiContext destroyed ({})", (void *)odpi_global_context);
 		odpi_global_context = nullptr;
 	}
 }
@@ -73,11 +85,16 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 			last_error = bfr;
 			last_rc = info.code;
 			last_state = info.sqlState;
+			lib_logger->error(FMT_FILE_FUNC "ODPI::init - dpiContext_createWithParams ({}:{}) - {}", __FILE__, __func__, last_rc, last_state, last_error);
 			return DBERR_CONN_INIT_ERROR;
 		}
+		else {
+			lib_logger->trace("dpiContext created ({})", (void *)odpi_global_context);
+		}
 	}
-	
+
 	odpi_global_context_usage_count++;
+	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void *)odpi_global_context);
 
 	return DBERR_NO_ERROR;
 }
@@ -138,6 +155,7 @@ int DbInterfaceOracle::terminate_connection()
 {
 	if (connaddr) {
 		dpiConn_close(connaddr, DPI_MODE_CONN_CLOSE_DEFAULT, nullptr, 0);
+		dpiConn_release(connaddr);
 		connaddr = NULL;
 	}
 
@@ -1003,6 +1021,7 @@ void OdpiStatementData::cleanup()
 	if (params) {
 		for (int i = 0; i < params_count; i++) {
 			dpiVar_release(params[i]);
+			delete params[i];
 			params[i] = nullptr;
 		}
 		delete[] params;
@@ -1012,10 +1031,29 @@ void OdpiStatementData::cleanup()
 	if (coldata) {
 		for (int i = 0; i < coldata_count; i++) {
 			dpiVar_release(coldata[i]);
+			delete coldata[i];
 			coldata[i] = nullptr;
 		}
 		delete[] coldata;
 		coldata = nullptr;
+	}
+
+	if (params_bfrs) {
+		for (int i = 0; i < params_count; i++) {
+			delete params_bfrs[i];
+			params_bfrs[i] = nullptr;
+		}
+		delete[] params_bfrs;
+		params_bfrs = nullptr;		
+	}
+
+	if (coldata_bfrs) {
+		for (int i = 0; i < coldata_count; i++) {
+			delete coldata_bfrs[i];
+			coldata_bfrs[i] = nullptr;
+		}
+		delete[] coldata_bfrs;
+		coldata_bfrs = nullptr;		
 	}
 
 	params_count = 0;
