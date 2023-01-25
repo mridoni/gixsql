@@ -483,8 +483,16 @@ namespace gixsql_tests
 
                 if (!isWindows)
                 {
-                    env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
+                    if (!env.ContainsKey("LD_LIBRARY_PATH")) {
+                        env["LD_LIBRARY_PATH"] = cc.gixsql_link_lib_dir_path;
+                    }
+                    else
+                    {
+                        env["LD_LIBRARY_PATH"] = env["LD_LIBRARY_PATH"] + Path.PathSeparator + cc.gixsql_link_lib_dir_path;
+                    }
                 }
+
+                
 
                 if (TestDataProvider.TestVerbose)
                 {
