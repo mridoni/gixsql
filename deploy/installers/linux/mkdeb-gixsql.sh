@@ -4,6 +4,12 @@ export PKGDEBDIR=$WORKSPACE/pkg
 export PKGNAME=gixsql-${DIST}-${HOST_PLATFORM}-${GIXSQLMAJ}.${GIXSQLMIN}.${GIXSQLREL}-${GIX_REVISION}
 export PKGFILE=${PKGNAME}.deb
 
+echo "WORKSPACE: $WORKSPACE"
+echo "PKGDEBDIR: $PKGDEBDIR"
+echo "PKGNAME  : $PKGNAME"
+echo "PKGFILE  : $PKGFILE"
+echo "DIST     : $DIST"
+
 rm -fr $PKGDEBDIR
 
 if [ ! -f "$WORKSPACE/deploy/installers/linux/control-${DIST}.tpl" ] ; then
@@ -34,6 +40,7 @@ cd $WORKSPACE
 find $PKGDEBDIR -type d | xargs chmod 755 
 chmod 755 $PKGDEBDIR/DEBIAN/postinst
 
+echo "dpkg-deb --build $PKGDEBDIR $PKGFILE"
 dpkg-deb --build $PKGDEBDIR $PKGFILE
 if [ "$?" -ne "0" ] ; then
 	echo "Error while building .deb package"
