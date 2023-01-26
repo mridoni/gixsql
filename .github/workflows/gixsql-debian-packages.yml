@@ -54,6 +54,7 @@ jobs:
       shell: bash
       run: |
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+        ls -l
         
     - name: Archive production artifacts
       env:
@@ -97,6 +98,7 @@ jobs:
       shell: bash
       run: |
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+        ls -l
         
     - name: Archive production artifacts
       env:
