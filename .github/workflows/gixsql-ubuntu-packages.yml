@@ -15,7 +15,8 @@ env:
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   INSTALL_PREFIX: usr
-
+  HOST_PLATFORM: x64   
+  
 permissions:
   contents: read
 
@@ -24,7 +25,6 @@ jobs:
     name: ubuntu-20.04-x64
     env:
       DIST: ubuntu-20.04-lts
-      HOST_PLATFORM: x64    
       
     runs-on: ubuntu-20.04
     
@@ -50,11 +50,11 @@ jobs:
         make -j$(nproc) && make install-strip
     
     - name: Build .deb package
+      env:
+          WORKSPACE: ${{ github.workspace }}    
       shell: bash
       working-directory: ${{ github.workspace }}
       run: |
-        export WORKSPACE=$(pwd)
-        echo "WORKSPACE: $WORKSPACE"
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts
@@ -71,7 +71,6 @@ jobs:
     name: ubuntu-22.04-x64
     env:
       DIST: ubuntu-22.04-lts
-      HOST_PLATFORM: x64   
       
     runs-on: ubuntu-22.04
     
@@ -96,11 +95,11 @@ jobs:
         make -j$(nproc) && make install-strip
     
     - name: Build .deb package
+      env:
+          WORKSPACE: ${{ github.workspace }}      
       shell: bash
       working-directory: ${{ github.workspace }}
       run: |
-        export WORKSPACE=$(pwd)
-        echo "WORKSPACE: $WORKSPACE"
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
     
     - name: Archive production artifacts

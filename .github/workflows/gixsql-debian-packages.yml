@@ -15,6 +15,7 @@ env:
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   INSTALL_PREFIX: usr
+  HOST_PLATFORM: x64
 
 permissions:
   contents: read
@@ -31,7 +32,6 @@ jobs:
     - name: Build
       env:
         DIST: debian-10
-        HOST_PLATFORM: x64
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
@@ -50,7 +50,6 @@ jobs:
     - name: Build package
       env:
           DIST: debian-10
-          HOST_PLATFORM: x64
           WORKSPACE: ${{ github.workspace }}
       shell: bash
       run: |
@@ -76,7 +75,6 @@ jobs:
     - name: Build
       env:
         DIST: debian-11
-        HOST_PLATFORM: x64
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
@@ -95,7 +93,6 @@ jobs:
     - name: Build package
       env:
           DIST: debian-11
-          HOST_PLATFORM: x64
           WORKSPACE: ${{ github.workspace }}
       shell: bash
       run: |
