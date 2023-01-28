@@ -17,8 +17,8 @@ if [ ! -f "$WORKSPACE/deploy/installers/linux/control-${DIST}.tpl" ] ; then
 	exit 1
 fi
 
-#mkdir -p $PKGDEBDIR/DEBIAN
-#if [ "$?" != "0" ] ; then echo "Cannot create package directory" ; exit 1 ; fi
+mkdir -p $PKGDEBDIR/DEBIAN
+if [ "$?" != "0" ] ; then echo "Cannot create package directory" ; exit 1 ; fi
 
 # debian-binary
 echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
