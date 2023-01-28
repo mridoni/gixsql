@@ -10,15 +10,15 @@ echo "PKGNAME  : $PKGNAME"
 echo "PKGFILE  : $PKGFILE"
 echo "DIST     : $DIST"
 
-rm -fr $PKGDEBDIR
+#rm -fr $PKGDEBDIR
 
 if [ ! -f "$WORKSPACE/deploy/installers/linux/control-${DIST}.tpl" ] ; then
 	echo "ERROR: invalid distribution id (DIST: $DIST)"
 	exit 1
 fi
 
-mkdir -p $PKGDEBDIR/DEBIAN
-if [ "$?" != "0" ] ; then echo "Cannot create package directory" ; exit 1 ; fi
+#mkdir -p $PKGDEBDIR/DEBIAN
+#if [ "$?" != "0" ] ; then echo "Cannot create package directory" ; exit 1 ; fi
 
 # debian-binary
 echo "2.0" > $PKGDEBDIR/DEBIAN/debian-binary
