@@ -39,6 +39,7 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
         chmod 755 prepdist.sh && ./prepdist.sh
+        ls -l
         autoreconf --install --force
         ./configure
         make distcheck
