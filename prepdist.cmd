@@ -8,6 +8,7 @@ set SCRIPT_DIR=%MYPATH:~0,-1%
 mkdir %SCRIPT_DIR%\doc
 mkdir %SCRIPT_DIR%\examples
 
+copy README.md README
 copy README.md %SCRIPT_DIR%\doc
 copy TESTING.md %SCRIPT_DIR%\doc
 copy %SCRIPT_DIR%\gixsql-tests-nunit\data\*.cbl %SCRIPT_DIR%\examples
