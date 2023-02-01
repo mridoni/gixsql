@@ -33,6 +33,7 @@ jobs:
       env:
         DIST: debian-10
       run: |
+        export WORKSPACE=$(pwd)
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
         apt update
         apt install -y build-essential automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
@@ -44,18 +45,20 @@ jobs:
         chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
         chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
+        ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
         make -j$(nproc) && make install-strip
+        chmod 755 ./deploy/installers/linux/mkdeb-gixsql.sh && ./deploy/installers/linux/mkdeb-gixsql.sh
+        ls -lR $WORKSPACE
     
-    - name: Build package
-      env:
-          DIST: debian-10
-          WORKSPACE: ${{ github.workspace }}
-      shell: bash
-      run: |
-        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
-        ls -l
-        ls -lR $WORKSPACE/pkg
+#    - name: Build package
+#      env:
+#          DIST: debian-10
+#
+#      shell: bash
+#      run: |
+#        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+#        ls -l
+#        ls -lR $WORKSPACE/pkg
         
     - name: Archive production artifacts
       env:
@@ -64,7 +67,7 @@ jobs:
       with:
         name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
         path: |
-          ./gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
+          gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
 
 
   debian-11-x64:
@@ -79,6 +82,7 @@ jobs:
         DIST: debian-11
       run: |
         export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        export WORKSPACE=$(pwd)
         apt update
         apt install -y build-essential bison automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
         git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
@@ -89,18 +93,21 @@ jobs:
         chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
         chmod 755 ./prepdist.sh && ./prepdist.sh
         autoreconf --install --force
-        ./configure --prefix=${{ github.workspace }}/pkg/${{ env.INSTALL_PREFIX }}
+        ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
         make -j$(nproc) && make install-strip
-    
-    - name: Build package
-      env:
-          DIST: debian-11
-          WORKSPACE: ${{ github.workspace }}
-      shell: bash
-      run: |
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
         ls -l
         ls -lR $WORKSPACE/pkg
+    
+#    - name: Build package
+#      env:
+#          DIST: debian-11
+#          WORKSPACE: ${{ github.workspace }}
+#      shell: bash
+#      run: |
+#        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+#        ls -l
+#        ls -lR $WORKSPACE/pkg
         
     - name: Archive production artifacts
       env:
@@ -109,6 +116,6 @@ jobs:
       with:
         name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
         path: |
-          ./gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
+          gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
 
 
