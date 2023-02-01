@@ -80,7 +80,6 @@ jobs:
         echo JOB                : ${{ github.job }}
         echo Preparing build (${{ github.workspace }}\prepbuild.cmd)
         call ${{ github.workspace }}\prepbuild.cmd /E
-        call ${{ github.workspace }}\prepdist.cmd /E
         echo Initializing vcpkg
         %VCPKG_ROOT%\vcpkg integrate install
         echo Running MSBuild

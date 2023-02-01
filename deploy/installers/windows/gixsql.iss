@@ -42,7 +42,8 @@ Source: "{#WORKSPACE}\copy\SQLCA.cpy"; DestDir: "{app}\lib\copy"; Flags: ignorev
 Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.cbl"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
 Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.cpy"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
 Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.sql"; DestDir: "{userdocs}\GixSQL\Examples"; Flags: ignoreversion createallsubdirs recursesubdirs onlyifdoesntexist
-Source: "{#WORKSPACE}\README"; DestDir: "{userdocs}\GixSQL\Documentation"; Flags: ignoreversion
+Source: "{#WORKSPACE}\README.md"; DestDir: "{userdocs}\GixSQL\Documentation"; DestName: "README"; Flags: ignoreversion
+Source: "{#WORKSPACE}\TESTING.md"; DestDir: "{userdocs}\GixSQL\Documentation"; TESTING: "README"; Flags: ignoreversion
 
 ; dependencies for DB runtime libraries
 #if "x64" == HOST_PLATFORM
