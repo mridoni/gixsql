@@ -9,8 +9,14 @@ mkdir %SCRIPT_DIR%\doc
 mkdir %SCRIPT_DIR%\examples
 
 copy README.md README
-copy README.md %SCRIPT_DIR%\doc
-copy TESTING.md %SCRIPT_DIR%\doc
+
+copy README.md %SCRIPT_DIR%/doc
+copy README.md %SCRIPT_DIR%/doc/README
+
+copy TESTING.md %SCRIPT_DIR%/doc
+copy TESTING.md %SCRIPT_DIR%/doc/TESTING
+
+
 copy %SCRIPT_DIR%\gixsql-tests-nunit\data\*.cbl %SCRIPT_DIR%\examples
 copy %SCRIPT_DIR%\gixsql-tests-nunit\data\*.cpy %SCRIPT_DIR%\examples
 copy %SCRIPT_DIR%\gixsql-tests-nunit\data\*.sql %SCRIPT_DIR%\examples
