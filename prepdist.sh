@@ -6,8 +6,13 @@ mkdir -p $SCRIPT_DIR/doc
 mkdir -p $SCRIPT_DIR/examples
 
 cp README.md README
+
 cp README.md $SCRIPT_DIR/doc
+cp README.md $SCRIPT_DIR/doc/README
+
 cp TESTING.md $SCRIPT_DIR/doc
+cp TESTING.md $SCRIPT_DIR/doc/TESTING
+
 cp $SCRIPT_DIR/gixsql-tests-nunit/data/*.cbl $SCRIPT_DIR/examples
 cp $SCRIPT_DIR/gixsql-tests-nunit/data/*.cpy $SCRIPT_DIR/examples
 cp $SCRIPT_DIR/gixsql-tests-nunit/data/*.sql $SCRIPT_DIR/examples
