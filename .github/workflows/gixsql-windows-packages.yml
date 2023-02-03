@@ -215,6 +215,11 @@ jobs:
 
     - shell: msys2 {0}
       name: Build
+      env:
+          HOST_PLATFORM: x64
+          MSYS2_SYSTEM: mingw64      
+          MSYS2_PLATFORM_ID: x86_64        
+          
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
          echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
@@ -288,6 +293,10 @@ jobs:
  
      - shell: msys2 {0}
        name: Build
+       env:
+           HOST_PLATFORM: x86      
+           MSYS2_SYSTEM: mingw32      
+           MSYS2_PLATFORM_ID: i686         
        if: ${{ !inputs.test_mode }}
        working-directory: ${{env.GITHUB_WORKSPACE}}
        run: |
