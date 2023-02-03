@@ -1,19 +1,17 @@
+#define HOST_PLATFORM GetEnv('HOST_PLATFORM')
 #define WORKSPACE GetEnv('WORKSPACE')
 #define GIX_REVISION GetEnv('GIX_REVISION')
 #define VER_GIXSQLMAJ GetEnv('GIXSQLMAJ')
 #define VER_GIXSQLMIN GetEnv('GIXSQLMIN')
 #define VER_GIXSQLREL GetEnv('GIXSQLREL')
-
-#define REDIST_DIR GetEnv('REDIST_DIR')
-
 #define DIST_DIR GetEnv('DIST_DIR')
-
-#define INCLUDE_VS GetEnv('INCLUDE_VS')
-
-#define CONFIG "Release"
-#define HOST_PLATFORM GetEnv('HOST_PLATFORM')
+#define MSVC_BUILD_TOOLS GetEnv('MSVC_BUILD_TOOLS')
 #define MSVC_RUNTIME_X86 GetEnv('MSVC_RUNTIME_X86')
 #define MSVC_RUNTIME_X64 GetEnv('MSVC_RUNTIME_X64')
+
+#define INCLUDES_MSVC_LIBS GetEnv('INCLUDES_MSVC_LIBS')
+
+#define CONFIG "Release"
 
 #define P7ZIP "https://www.7-zip.org/a/7zr.exe"
 
@@ -34,6 +32,13 @@ DisableWelcomePage=False
 ; main binaries
 Source: "{#DIST_DIR}\bin\gixpp.exe"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs
 Source: "{#DIST_DIR}\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion createallsubdirs recursesubdirs
+#if "x64" == HOST_PLATFORM
+Source: "{#WORKSPACE}\redist\msvcrt\x64\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
+Source: "{#WORKSPACE}\redist\msvcrt\x64\*"; DestDir: "{app}\lib\x64\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
+#else
+Source: "{#WORKSPACE}\redist\msvcrt\x86\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
+#endif
+Source: "{#WORKSPACE}\redist\msvcrt\x86\*"; DestDir: "{app}\lib\x86\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
 
 ; COPY files
 Source: "{#WORKSPACE}\copy\SQLCA.cpy"; DestDir: "{app}\lib\copy"; Flags: ignoreversion createallsubdirs recursesubdirs
@@ -62,9 +67,9 @@ Source: "{#WORKSPACE}\gixsql\deploy\redist\mysql\x86\gcc\*"; DestDir: "{app}\lib
 
 [Run]
 #if "x64" == HOST_PLATFORM
-Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /passive /norestart"; WorkingDir: "{tmp}"; Flags: waituntilterminated skipifdoesntexist; Description: "Visual C++ 2022 redistributable package (x64)"
+Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /passive /norestart"; WorkingDir: "{tmp}"; Flags: waituntilterminated runascurrentuser shellexec skipifdoesntexist; Description: "Visual C++ 2022 redistributable package (x64)"; Verb: "runas"; Check: UseDownloadedMSVCRT
 #endif
-Filename: "{tmp}\vc_redist.x86.exe"; Parameters: "/install /passive /norestart"; WorkingDir: "{tmp}"; Flags: waituntilterminated skipifdoesntexist; Description: "Visual C++ 2022 redistributable package (x86)"
+Filename: "{tmp}\vc_redist.x86.exe"; Parameters: "/install /passive /norestart"; WorkingDir: "{tmp}"; Flags: waituntilterminated runascurrentuser shellexec skipifdoesntexist; Description: "Visual C++ 2022 redistributable package (x86)"; Verb: "runas"; Check: UseDownloadedMSVCRT
 
 [Registry]
 Root: "HKLM"; Subkey: "Software\MediumGray\gixsql"; ValueType: string; ValueName: "version"; ValueData: "{#VER_GIXSQLMAJ}.{#VER_GIXSQLMIN}.{#VER_GIXSQLREL}-{#GIX_REVISION}"; Flags: createvalueifdoesntexist deletevalue uninsdeletekey
@@ -85,16 +90,16 @@ Name: "{userdocs}\GixSQL\Examples"
 [Code]
 
 #include "7zip.iss.inc"
-
+const
+  MSVCRT_LOCAL = 0;
+  MSVCRT_DOWNLOAD = 1;
+  MSVCRT_NOINSTALL = 2;
+  
 var
   DownloadPage: TDownloadWizardPage;
-  AvailableCompilers: TArrayOfString;
-  SelectedCompilers: TArrayOfString;
-  
-  CompilerListInitialized : Boolean;
-  ChooseCompilersPage: TWizardPage;
-  DefaultCompilerPage: TInputOptionWizardPage;
-  DefaultCompilerId: String;
+  MsvcRtOptPage: TInputOptionWizardPage;
+  MsvcRtOptCheckListBox: TNewCheckListBox;
+  optMsvcRuntime : Integer;
   CheckListBox: TNewCheckListBox;
   cbGCC, cbMSVC : Integer;
 
@@ -109,6 +114,17 @@ procedure InitializeWizard;
 begin
   DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), @OnDownloadProgress);
   
+  optMsvcRuntime := MSVCRT_NOINSTALL;
+  
+  MsvcRtOptPage := CreateInputOptionPage(wpLicense, 
+    'VC++ runtime', 'Choose how you want to install the Microsoft VC++ runtime', 
+    'The Microsoft VC++ runtime is needed for Gix-IDE and for the runtime libraries of GixSQL. You can choose how you want to perform the install.',
+    True, True);
+
+  MsvcRtOptPage.Add('Use the embedded version and install for Gix-IDE/GixSQL only');
+  MsvcRtOptPage.Add('Download and install for all applications (requires administrative rights)');
+  MsvcRtOptPage.Add('Do not install');
+  MsvcRtOptPage.Values[0] := True;  
 end;
 
 procedure CurPageChanged(CurPageID: Integer);
@@ -119,50 +135,24 @@ var
   is_checked : Boolean;
 	release_tag, id, version, host, target, linker, description : String;
 begin
-//  if (CurPageID = wpFinished) and (IsMSVCCompilerSelected) and (WizardForm.RunList.Items.Count > 0) then
-//  begin
-//    WizardForm.RunList.ItemEnabled[0] := False;
-//  end;
-//
-//  if CurPageID = DefaultCompilerPage.ID then
-//  begin
-//    DefaultCompilerPage.CheckListBox.Items.Clear;
-//    for i := 0 to GetArrayLength(SelectedCompilers) -1 do
-//    begin
-//      if not ParseCompilerEntry(SelectedCompilers[i], release_tag, id, version, host, target, linker, description) then continue;
-//
-//      DefaultCompilerPage.Add(description);
-//    end;
-//  end;
-//  
-//  if CurPageID = ChooseCompilersPage.ID then
-//    begin
-//    
-//    CheckListBox.Items.Clear;
-//    cbMSVC := CheckListBox.AddCheckBox('GnuCOBOL - Linker type: MSVC', '', 0, False, True, False, True, nil);
-//    for i := 0 to GetArrayLength(AvailableCompilers) - 1 do 
-//    begin
-//      crow := AvailableCompilers[i];
-//      if not ParseCompilerEntry(crow, release_tag, id, version, host, target, linker, description) then continue;
-//      if linker <> 'msvc' then continue;
-//      
-//      is_checked := IsCompilerSelected(crow);
-//      cbtmp := CheckListBox.AddCheckBox(description, '', 1, is_checked, True, False, True, TObject(i));
-//      Log('Adding compiler: ' + description);
-//    end;  
-//        
-//    cbGCC := CheckListBox.AddCheckBox('GnuCOBOL - Linker type: GCC/MinGW', '', 0, False, True, False, True, nil);    
-//    for i := 0 to GetArrayLength(AvailableCompilers) - 1 do 
-//    begin
-//      crow := AvailableCompilers[i];
-//      if not ParseCompilerEntry(crow, release_tag, id, version, host, target, linker, description) then continue;
-//      if linker <> 'gcc' then continue;
-//
-//      is_checked := IsCompilerSelected(crow);      
-//      cbtmp := CheckListBox.AddCheckBox(description, '', 1, is_checked, True, False, True, TObject(i));
-//      Log('Adding compiler: ' + description);
-//    end;  
-//  end;
+
+end;
+
+function ShouldSkipPage(PageID: Integer): Boolean;
+var
+  release_tag, id, version, host, target, linker, description : String;
+begin
+  if (PageID = MsvcRtOptPage.ID) then
+  begin
+    if '{#INCLUDES_MSVC_LIBS}' = '0' then
+    begin
+      Log('No MSVC libraries will be included, so non MSVC runtime needed');
+      Result:= True;
+      Exit;
+    end;
+    
+    Result := False;
+  end;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -199,7 +189,27 @@ begin
     finally
       DownloadPage.Hide;
     end;
-  end else
+  end 
+  else
+  begin
     Result := True;
+  end;
+  
+  if CurPageID = MsvcRtOptPage.ID then
+  begin
+    optMsvcRuntime := MsvcRtOptPage.SelectedValueIndex;
+    Log('MSVCRT install option: ' + IntToStr(optMsvcRuntime));
+  end;    
 	
+end;
+
+function UseDownloadedMSVCRT : Boolean;
+begin
+  Result := optMsvcRuntime = MSVCRT_DOWNLOAD;
+end;
+
+function UseLocalMSVCRT : Boolean;
+begin
+  // Visual Studio Build Tools will install the VC++ runtime anyway
+  Result := (optMsvcRuntime = MSVCRT_LOCAL);
 end;
