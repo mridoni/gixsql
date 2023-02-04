@@ -18,7 +18,7 @@ env:
   MSVC_RUNTIME_x64: https://aka.ms/vs/17/release/vc_redist.x64.exe
   WORKSPACE: ${{ github.workspace }}
   DIST_DIR: ${{ github.workspace }}\DIST
-  MSYS2_BASE: D:\
+  MSYS2_BASE: D:/
 
 permissions:
   contents: read
@@ -294,15 +294,15 @@ jobs:
              mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
              mingw-w64-${{env.PLATFORM_ID}}-spdlog 
              
-    - shell: msys2 {0}
-      name: Copy dependencies
-      env:
+     - shell: msys2 {0}
+       name: Copy dependencies
+       env:
            HOST_PLATFORM: x86      
            MSYS2_SYSTEM: mingw32      
            MSYS2_PLATFORM_ID: i686     
-          
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
+
+       working-directory: ${{env.GITHUB_WORKSPACE}}
+       run: |
          export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
          mkdir $DEPS_DIR
