@@ -24,6 +24,7 @@ env:
   MSVC_RUNTIME_x64: https://aka.ms/vs/17/release/vc_redist.x64.exe
   WORKSPACE: ${{ github.workspace }}
   DIST_DIR: ${{ github.workspace }}\DIST
+  MSYS2_BASE: D:\
 
 permissions:
   contents: read
@@ -199,6 +200,7 @@ jobs:
       uses: msys2/setup-msys2@v2
       with:
         msystem: ${{env.HOST_PLATFORM}}
+        location: ${{ env.MSYS2_BASE }}
         install: >-
             mingw-w64-${{env.PLATFORM_ID}}-pkg-config
             autoconf
@@ -232,6 +234,7 @@ jobs:
          make install-strip
          export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
          mkdir $DEPS_DIR
+         ls -l /
          cp /${{ env.MSYS2_SYSTEM }}/bin/libcrypto-1_1-x64.dll $DEPS_DIR
          cp /${{ env.MSYS2_SYSTEM }}/bin/libfmt.dll $DEPS_DIR
          cp /${{ env.MSYS2_SYSTEM }}/bin/libgcc_s_seh-1.dll $DEPS_DIR
@@ -277,6 +280,7 @@ jobs:
        if: ${{ !inputs.test_mode }}
        with:
          msystem: ${{env.HOST_PLATFORM}}
+         location: ${{ env.MSYS2_BASE }}
          install: >-
              mingw-w64-${{env.PLATFORM_ID}}-pkg-config
              autoconf
