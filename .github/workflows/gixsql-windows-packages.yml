@@ -1,13 +1,7 @@
 name: gixsql-windows-packages
 
 on:
-  workflow_dispatch:
-    inputs:
-      test_mode:
-        description: Do not build, instead download a test package
-        type: boolean
-        required: false
-        default: false  
+  workflow_dispatch
 
 env:
   GIXSQLMAJ: 1
@@ -209,11 +203,31 @@ jobs:
             libtool
             bison
             flex
+            awk
             mingw-w64-${{env.PLATFORM_ID}}-gcc
             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
             mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+            
+    - shell: msys2 {0}
+      name: Copy dependencies
+      env:
+          HOST_PLATFORM: x64
+          MSYS2_SYSTEM: mingw64      
+          MSYS2_PLATFORM_ID: x86_64        
+          
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
+         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
+         mkdir $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
+         for LIB in $(ldd $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
+         for LIB in $(ldd $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
 
     - shell: msys2 {0}
       name: Build
@@ -231,20 +245,7 @@ jobs:
          autoreconf --install --force
          ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
          make
-         make install-strip
-         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
-         mkdir $DEPS_DIR
-         ls -l /
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libcrypto-1_1-x64.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libfmt.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libgcc_s_seh-1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libintl-8.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libmariadb.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libpq.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libssl-1_1-x64.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libstdc++-6.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libwinpthread-1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/zlib1.dll $DEPS_DIR         
+         make install-strip  
  
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -271,13 +272,11 @@ jobs:
      runs-on: windows-latest
      steps:
      - uses: actions/checkout@v3
-       if: ${{ !inputs.test_mode }}
        with:
            repository: 'mridoni/gixsql'      
  
      - name: Set up MinGW
        uses: msys2/setup-msys2@v2
-       if: ${{ !inputs.test_mode }}
        with:
          msystem: ${{env.HOST_PLATFORM}}
          location: ${{ env.MSYS2_BASE }}
@@ -294,6 +293,25 @@ jobs:
              mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
              mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
              mingw-w64-${{env.PLATFORM_ID}}-spdlog 
+             
+    - shell: msys2 {0}
+      name: Copy dependencies
+      env:
+           HOST_PLATFORM: x86      
+           MSYS2_SYSTEM: mingw32      
+           MSYS2_PLATFORM_ID: i686     
+          
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
+         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
+         mkdir $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
+         for LIB in $(ldd $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
+         for LIB in $(ldd $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done             
  
      - shell: msys2 {0}
        name: Build
@@ -301,7 +319,6 @@ jobs:
            HOST_PLATFORM: x86      
            MSYS2_SYSTEM: mingw32      
            MSYS2_PLATFORM_ID: i686         
-       if: ${{ !inputs.test_mode }}
        working-directory: ${{env.GITHUB_WORKSPACE}}
        run: |
          echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
@@ -310,23 +327,9 @@ jobs:
          autoreconf --install --force
          ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
          make
-         make install-strip
-         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
-         mkdir $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libcrypto-1_1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libfmt.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libgcc_s_dw2-1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libintl-8.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libmariadb.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libpq.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libssl-1_1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libstdc++-6.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libwinpthread-1.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/libxml2-2.dll $DEPS_DIR
-         cp /${{ env.MSYS2_SYSTEM }}/bin/zlib1.dll $DEPS_DIR          
+         make install-strip    
  
      - name: Archive production artifacts
-       if: ${{ !inputs.test_mode }}
        uses: actions/upload-artifact@v3
        with:
          name: ${{ github.job }}-artifacts
@@ -667,19 +670,9 @@ jobs:
 
     - name: Download GixSQL x86 (MinGW)
       uses: actions/download-artifact@v3
-      if: ${{ !inputs.test_mode }}
       with:
         name: gixsql-windows-x86-mingw-artifacts
         path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts      
-        
-    - name: Download GixSQL x86 (MinGW/TEST)
-      if: ${{ inputs.test_mode }}
-      shell: cmd
-      working-directory: ${{ github.workspace }}
-      run: |                   
-          curl -O https://www.mediumgray.info/download/${{ env.GIXSQL_MINGW_X86_BIN_DIR }}.zip
-          mkdir ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}
-          7z x -o${{ env.GIXSQL_MINGW_X86_BIN_DIR }} ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}.zip
         
     - name: Prepare distribution directory
       shell: cmd
@@ -815,19 +808,9 @@ jobs:
 
     - name: Download GixSQL x86 (MinGW)
       uses: actions/download-artifact@v3
-      if: ${{ !inputs.test_mode }}
       with:
         name: gixsql-windows-x86-mingw-artifacts
         path: ${{ github.workspace }}/gixsql-windows-x86-mingw-artifacts      
-        
-    - name: Download GixSQL x86 (MinGW/TEST)
-      if: ${{ inputs.test_mode }}
-      shell: cmd
-      working-directory: ${{ github.workspace }}
-      run: |                   
-          curl -O https://www.mediumgray.info/download/${{ env.GIXSQL_MINGW_X86_BIN_DIR }}.zip
-          mkdir ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}
-          7z x -o${{ env.GIXSQL_MINGW_X86_BIN_DIR }} ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}.zip
         
     - name: Prepare distribution directory
       shell: cmd
