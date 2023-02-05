@@ -9,7 +9,7 @@
 #define MSVC_RUNTIME_X86 GetEnv('MSVC_RUNTIME_X86')
 #define MSVC_RUNTIME_X64 GetEnv('MSVC_RUNTIME_X64')
 
-#define INCLUDES_MSVC_LIBS GetEnv('INCLUDES_MSVC_LIBS')
+#define INCLUDE_MSVC_LIBS GetEnv('INCLUDE_MSVC_LIBS')
 
 #define CONFIG "Release"
 
@@ -144,7 +144,7 @@ var
 begin
   if (PageID = MsvcRtOptPage.ID) then
   begin
-    if '{#INCLUDES_MSVC_LIBS}' = '0' then
+    if '{#INCLUDE_MSVC_LIBS}' = '0' then
     begin
       Log('No MSVC libraries will be included, so non MSVC runtime needed');
       Result:= True;
@@ -210,6 +210,5 @@ end;
 
 function UseLocalMSVCRT : Boolean;
 begin
-  // Visual Studio Build Tools will install the VC++ runtime anyway
-  Result := (optMsvcRuntime = MSVCRT_LOCAL);
+  Result := (optMsvcRuntime = MSVCRT_LOCAL) and ('{#INCLUDE_MSVC_LIBS}' = '1');
 end;
