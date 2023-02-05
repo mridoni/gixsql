@@ -582,7 +582,6 @@ jobs:
       HOST_PLATFORM: x64   
       RUNTIME: mingw
       INCLUDE_MSVC_LIBS: 0
-      INCLUDE_MSVC_LIBS: 0
 
     runs-on: windows-latest
     steps:
