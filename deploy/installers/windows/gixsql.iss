@@ -36,7 +36,7 @@ Source: "{#DIST_DIR}\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion createal
 Source: "{#WORKSPACE}\redist\msvcrt\x64\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
 Source: "{#WORKSPACE}\redist\msvcrt\x64\*"; DestDir: "{app}\lib\x64\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist; Check: UseLocalMSVCRT
 #else
-Source: "{#WORKSPACE}\redist\msvcrt\x86\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs; Check: UseLocalMSVCRT
+Source: "{#WORKSPACE}\redist\msvcrt\x86\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist; Check: UseLocalMSVCRT
 #endif
 Source: "{#WORKSPACE}\redist\msvcrt\x86\*"; DestDir: "{app}\lib\x86\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist; Check: UseLocalMSVCRT
 
