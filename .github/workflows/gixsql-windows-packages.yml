@@ -763,6 +763,13 @@ jobs:
           mkdir ${{ env.DIST_DIR }}\lib\x64\gcc
           mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
           mkdir ${{ env.DIST_DIR }}\lib\copy    
+          mkdir ${{ env.DIST_DIR }}\doc
+          mkdir ${{ env.DIST_DIR }}\examples
+          copy README.md ${{ env.DIST_DIR }}\doc
+          copy TESTING.md ${{ env.DIST_DIR }}\doc
+          copy gixsql-tests-nunit\data\*.cbl ${{ env.DIST_DIR }}\examples
+          copy gixsql-tests-nunit\data\*.cpy ${{ env.DIST_DIR }}\examples
+          copy gixsql-tests-nunit\data\*.sql ${{ env.DIST_DIR }}\examples
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\gixpp.exe ${{ env.DIST_DIR }}\bin      
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\lib\libgixsql.a ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
