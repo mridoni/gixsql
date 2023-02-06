@@ -765,6 +765,7 @@ jobs:
           mkdir ${{ env.DIST_DIR }}\lib\copy    
           mkdir ${{ env.DIST_DIR }}\doc
           mkdir ${{ env.DIST_DIR }}\examples
+          copy LICENSE ${{ env.DIST_DIR }}\doc
           copy README.md ${{ env.DIST_DIR }}\doc
           copy TESTING.md ${{ env.DIST_DIR }}\doc
           copy gixsql-tests-nunit\data\*.cbl ${{ env.DIST_DIR }}\examples
@@ -796,12 +797,13 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
-         echo "Copying $MSYS_BIN_DIR/libpq.dll to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libpq.dll ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libmariadb.dll ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
+         export MDIST_DIR=$(cygpath "${{ env.DIST_DIR }}")
+         echo "Copying $MSYS_BIN_DIR/libpq.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         cp $MSYS_BIN_DIR/libpq.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         cp $MSYS_BIN_DIR/libmariadb.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
 
     - shell: msys2 {0}
       name: Copy dependencies (x86)
@@ -813,12 +815,13 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
-         echo "Copying $MSYS_BIN_DIR/libpq.dll to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libpq.dll ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libmariadb.dll ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB ${{ env.DIST_DIR }}/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
+         export MDIST_DIR=$(cygpath "${{ env.DIST_DIR }}")
+         echo "Copying $MSYS_BIN_DIR/libpq.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         cp $MSYS_BIN_DIR/libpq.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         cp $MSYS_BIN_DIR/libmariadb.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
 
     - name: Build archive package
       shell: cmd
