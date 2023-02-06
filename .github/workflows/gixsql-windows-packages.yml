@@ -845,7 +845,7 @@ jobs:
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc     
-          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc
           
     - name: Build archive package
       shell: cmd
