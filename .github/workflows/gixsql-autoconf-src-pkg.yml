@@ -9,7 +9,7 @@ on:
 #    branches: [ "main" ]
 
 env:
-  GIXSQL_VERSION: 1.0.20dev1
+  GIXSQL_VERSION: 1.0.20
   BISON_URL: http://ftp.debian.org/debian/pool/main/b/bison/bison_3.7.5+dfsg-1_amd64.deb
   BISON_PKG: bison_3.7.5+dfsg-1_amd64.deb
   GIXSQL_BRANCH: ${{ github.ref_name }}

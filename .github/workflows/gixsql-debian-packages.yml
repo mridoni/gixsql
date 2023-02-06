@@ -11,7 +11,7 @@ on:
 env:
   GIXSQLMAJ: 1
   GIXSQLMIN: 0
-  GIXSQLREL: 20dev1
+  GIXSQLREL: 20
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   INSTALL_PREFIX: usr

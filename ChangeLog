@@ -1,3 +1,6 @@
+=== v1.0.20 ======================================================
+- The Windows installer now correctly install the VC++ runtime and the client libraries, including their dependencies
+
 === v1.0.20dev1 ==================================================
 - Fixed "re-align COBOL_TYPE_UNSIGNED_BINARY code to use switch ready" (#136)
 - Fixed "SIGSEGV on cursor close" (#135)
