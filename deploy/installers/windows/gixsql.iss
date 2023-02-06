@@ -50,21 +50,6 @@ Source: "{#WORKSPACE}\gixsql-tests-nunit\data\*.sql"; DestDir: "{userdocs}\GixSQ
 Source: "{#WORKSPACE}\README.md"; DestDir: "{userdocs}\GixSQL\Documentation"; DestName: "README"; Flags: ignoreversion
 Source: "{#WORKSPACE}\TESTING.md"; DestDir: "{userdocs}\GixSQL\Documentation"; DestName: "TESTING"; Flags: ignoreversion
 
-; dependencies for DB runtime libraries
-#if "x64" == HOST_PLATFORM
-Source: "{#WORKSPACE}\gixsql\deploy\redist\pgsql\x64\msvc\*"; DestDir: "{app}\lib\x64\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-Source: "{#WORKSPACE}\gixsql\deploy\redist\pgsql\x64\gcc\*"; DestDir: "{app}\lib\x64\gcc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-
-Source: "{#WORKSPACE}\gixsql\deploy\redist\mysql\x64\msvc\*"; DestDir: "{app}\lib\x64\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-Source: "{#WORKSPACE}\gixsql\deploy\redist\mysql\x64\gcc\*"; DestDir: "{app}\lib\x64\gcc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-#endif
-
-Source: "{#WORKSPACE}\gixsql\deploy\redist\pgsql\x86\msvc\*"; DestDir: "{app}\lib\x86\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-Source: "{#WORKSPACE}\gixsql\deploy\redist\pgsql\x86\gcc\*"; DestDir: "{app}\lib\x86\gcc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-
-Source: "{#WORKSPACE}\gixsql\deploy\redist\mysql\x86\msvc\*"; DestDir: "{app}\lib\x86\msvc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-Source: "{#WORKSPACE}\gixsql\deploy\redist\mysql\x86\gcc\*"; DestDir: "{app}\lib\x86\gcc"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist
-
 [Run]
 #if "x64" == HOST_PLATFORM
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /passive /norestart"; WorkingDir: "{tmp}"; Flags: waituntilterminated runascurrentuser shellexec skipifdoesntexist; Description: "Visual C++ 2022 redistributable package (x64)"; Verb: "runas"; Check: UseDownloadedMSVCRT
@@ -118,10 +103,10 @@ begin
   
   MsvcRtOptPage := CreateInputOptionPage(wpLicense, 
     'VC++ runtime', 'Choose how you want to install the Microsoft VC++ runtime', 
-    'The Microsoft VC++ runtime is needed for Gix-IDE and for the runtime libraries of GixSQL. You can choose how you want to perform the install.',
+    'The Microsoft VC++ runtime is needed for some of the runtime libraries of GixSQL. You can choose how you want to perform the install.',
     True, True);
 
-  MsvcRtOptPage.Add('Use the embedded version and install for Gix-IDE/GixSQL only');
+  MsvcRtOptPage.Add('Use the embedded version and install for GixSQL only');
   MsvcRtOptPage.Add('Download and install for all applications (requires administrative rights)');
   MsvcRtOptPage.Add('Do not install');
   MsvcRtOptPage.Values[0] := True;  
@@ -166,10 +151,14 @@ begin
     DownloadPage.Clear;
     
     DownloadPage.Add('{#P7ZIP}', '7zr.exe', '');
-    DownloadPage.Add('{#MSVC_RUNTIME_X86}', 'vc_redist.x86.exe', '');
-    if '{#HOST_PLATFORM}' = 'x64' then
+    
+    if UseDownloadedMSVCRT then
     begin
-      DownloadPage.Add('{#MSVC_RUNTIME_X64}', 'vc_redist.x64.exe', '');
+        DownloadPage.Add('{#MSVC_RUNTIME_X86}', 'vc_redist.x86.exe', '');
+        if '{#HOST_PLATFORM}' = 'x64' then
+        begin
+          DownloadPage.Add('{#MSVC_RUNTIME_X64}', 'vc_redist.x64.exe', '');
+        end;
     end;
     
     DownloadPage.Show;
