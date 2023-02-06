@@ -786,42 +786,7 @@ jobs:
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x64\gcc
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x64\gcc
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x64\gcc    
-          
-    - shell: msys2 {0}
-      name: Copy dependencies (x64)
-      env:
-          HOST_PLATFORM: x64
-          MSYS2_SYSTEM: mingw64      
-          MSYS2_PLATFORM_ID: x86_64        
-          
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
-         export MDIST_DIR=$(cygpath "${{ env.DIST_DIR }}")
-         echo "Copying $MSYS_BIN_DIR/libpq.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libpq.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libmariadb.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
-
-    - shell: msys2 {0}
-      name: Copy dependencies (x86)
-      env:
-          HOST_PLATFORM: x86
-          MSYS2_SYSTEM: mingw32      
-          MSYS2_PLATFORM_ID: i686    
-
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
-         export MDIST_DIR=$(cygpath "${{ env.DIST_DIR }}")
-         echo "Copying $MSYS_BIN_DIR/libpq.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libpq.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         cp $MSYS_BIN_DIR/libmariadb.dll $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc" ; cp $MSYS_BIN_DIR/$LIB $MDIST_DIR/lib/${{ env.HOST_PLATFORM }}/gcc ; done                 
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc
 
     - name: Build archive package
       shell: cmd
@@ -880,6 +845,7 @@ jobs:
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-pgsql.dll ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc     
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc
           
     - name: Build archive package
       shell: cmd
