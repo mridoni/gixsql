@@ -33,13 +33,20 @@ jobs:
 
     - name: Update package list
       run: |
+        # use apt-spy2 to select closest apt mirror,
+        # which helps avoid connectivity issues in Azure;
+        # see https://github.com/actions/virtual-environments/issues/675
+        sudo gem install apt-spy2
+        sudo apt-spy2 check
+        sudo apt-spy2 fix --commit
+        # end of apt-spy2 workaround      
         sudo apt-get update -y    
         sudo printf '#!/bin/sh\nexit 0' > /tmp/policy-rc.d        
         sudo cp /tmp/policy-rc.d /usr/sbin/policy-rc.d 
 
     - name: Prepare test environment
       run: |
-        mkdir -p ${{ env.GIXSQL_TEST_DIR }}
+        mkdir -p ${{ env.GIXSQL_TEST_DIR }}        
         sudo apt install -y build-essential valgrind libtool pkg-config libspdlog-dev gnucobol3 unixodbc unixodbc-dev libmariadb-dev-compat libpq-dev odbc-postgresql
         sudo apt remove 'dotnet*' 'aspnet*' 'netstandard*'
         sudo rm /etc/apt/sources.list.d/microsoft-prod.list
