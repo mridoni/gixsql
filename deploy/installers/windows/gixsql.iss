@@ -87,6 +87,8 @@ var
   optMsvcRuntime : Integer;
   CheckListBox: TNewCheckListBox;
   cbGCC, cbMSVC : Integer;
+  
+function UseDownloadedMSVCRT : Boolean; forward;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
 begin
