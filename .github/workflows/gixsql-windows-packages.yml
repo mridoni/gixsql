@@ -31,8 +31,9 @@ jobs:
     env:
       BUILD_CONFIGURATION: Release
       HOST_PLATFORM: x64      
-      PLATFORM_ID: x64    
+      BUILD_PLATFORM_ID: x64    
       SOLUTION_FILE_PATH: gixsql.sln
+      
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
@@ -52,16 +53,16 @@ jobs:
       uses: mridoni/my-vcpkg-action@v1
       with:
           pkgs: libpq libmariadb nng
-          triplet: ${{env.PLATFORM_ID}}-windows
-          cache-key: '${{env.PLATFORM_ID}}-rdynamic'
+          triplet: ${{env.HOST_PLATFORM}}-windows
+          cache-key: '${{env.HOST_PLATFORM}}-rdynamic'
           disable-cache: false
           
     - name: Install vcpkg packages (2)
       uses: mridoni/my-vcpkg-action@v1
       with:
           pkgs: spdlog
-          triplet: ${{env.PLATFORM_ID}}-windows-static-md
-          cache-key: '${{env.PLATFORM_ID}}-rstatic'
+          triplet: ${{env.HOST_PLATFORM}}-windows-static-md
+          cache-key: '${{env.HOST_PLATFORM}}-rstatic'
           disable-cache: false
           
     - name: Build
@@ -80,7 +81,7 @@ jobs:
         echo Initializing vcpkg
         %VCPKG_ROOT%\vcpkg integrate install
         echo Running MSBuild
-        msbuild /p:Platform=${{env.HOST_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}  
+        msbuild /p:Platform=${{env.BUILD_PLATFORM_ID}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}  
         mkdir ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
         copy "%VCPKG_ROOT%\installed\x64-windows\bin\libcrypto-3-x64.dll" ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
         copy "%VCPKG_ROOT%\installed\x64-windows\bin\libmariadb.dll" ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
@@ -93,9 +94,9 @@ jobs:
       with:
         name: ${{ github.job }}-artifacts
         path: |
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/*.exe
           
     - name: Archive dependencies
       uses: actions/upload-artifact@v3
@@ -108,9 +109,10 @@ jobs:
     name: gixsql-windows-x86-msvc
     env:
       BUILD_CONFIGURATION: Release
-      HOST_PLATFORM: Win32      
-      PLATFORM_ID: x86    
+      HOST_PLATFORM: x86      
+      BUILD_PLATFORM_ID: Win32    
       SOLUTION_FILE_PATH: gixsql.sln
+      
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
@@ -130,16 +132,16 @@ jobs:
       uses: mridoni/my-vcpkg-action@v1
       with:
           pkgs: libpq libmariadb nng
-          triplet: ${{env.PLATFORM_ID}}-windows
-          cache-key: '${{env.PLATFORM_ID}}-rdynamic'
+          triplet: ${{env.HOST_PLATFORM}}-windows
+          cache-key: '${{env.HOST_PLATFORM}}-rdynamic'
           disable-cache: false
           
     - name: Install vcpkg packages (2)
       uses: mridoni/my-vcpkg-action@v1
       with:
           pkgs: spdlog
-          triplet: ${{env.PLATFORM_ID}}-windows-static-md
-          cache-key: '${{env.PLATFORM_ID}}-rstatic'
+          triplet: ${{env.HOST_PLATFORM}}-windows-static-md
+          cache-key: '${{env.HOST_PLATFORM}}-rstatic'
           disable-cache: false
 
     - name: Build
@@ -156,7 +158,7 @@ jobs:
         echo Preparing build (${{ github.workspace }}\prepbuild.cmd)
         call ${{ github.workspace }}\prepbuild.cmd /E
         %VCPKG_ROOT%\vcpkg integrate install
-        msbuild /p:Platform=${{env.HOST_PLATFORM}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
+        msbuild /p:Platform=${{env.BUILD_PLATFORM_ID}} /p:Configuration=${{env.BUILD_CONFIGURATION}} ${{env.SOLUTION_FILE_PATH}}
         mkdir ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
         copy "%VCPKG_ROOT%\installed\x86-windows\bin\libcrypto-3.dll" ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
         copy "%VCPKG_ROOT%\installed\x86-windows\bin\libmariadb.dll" ${{ github.workspace }}\deps-${{env.HOST_PLATFORM}}-msvc
@@ -169,9 +171,9 @@ jobs:
       with:
         name: ${{ github.job }}-artifacts
         path: |
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.dll
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
-          ${{ github.workspace }}/${{env.HOST_PLATFORM}}/${{env.BUILD_CONFIGURATION}}/*.exe   
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/*.dll
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/libgixsql.lib
+          ${{ github.workspace }}/${{env.BUILD_PLATFORM_ID}}/${{env.BUILD_CONFIGURATION}}/*.exe   
 
     - name: Archive dependencies
       uses: actions/upload-artifact@v3
@@ -183,10 +185,10 @@ jobs:
   gixsql-windows-x64-mingw:
     name: gixsql-windows-x64-mingw
     env:
-      BUILD_CONFIGURATION: Release
       HOST_PLATFORM: x64
       MSYS2_SYSTEM: mingw64      
-      PLATFORM_ID: x86_64    
+      MSYS2_PLATFORM_ID: x86_64   
+      
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@v3
@@ -199,7 +201,7 @@ jobs:
         msystem: ${{env.MSYS2_SYSTEM}}
         location: ${{ env.MSYS2_BASE }}
         install: >-
-            mingw-w64-${{env.PLATFORM_ID}}-pkg-config
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-pkg-config
             autoconf
             make
             automake
@@ -207,39 +209,15 @@ jobs:
             bison
             flex
             awk
-            mingw-w64-${{env.PLATFORM_ID}}-gcc
-            mingw-w64-${{env.PLATFORM_ID}}-postgresql 
-            mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
-            mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
-            mingw-w64-${{env.PLATFORM_ID}}-spdlog 
-            mingw-w64-${{env.PLATFORM_ID}}-ntldd
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-gcc
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-postgresql 
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-libmariadbclient 
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-unixodbc 
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-spdlog 
+            mingw-w64-${{env.MSYS2_PLATFORM_ID}}-ntldd
             
     - shell: msys2 {0}
-      name: Copy dependencies
-      env:
-          HOST_PLATFORM: x64
-          MSYS2_SYSTEM: mingw64      
-          MSYS2_PLATFORM_ID: x86_64        
-          
-      working-directory: ${{env.GITHUB_WORKSPACE}}
-      run: |
-         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
-         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
-         mkdir $DEPS_DIR
-         echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
-         cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
-         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
-         cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
-
-    - shell: msys2 {0}
-      name: Build
-      env:
-          HOST_PLATFORM: x64
-          MSYS2_SYSTEM: mingw64      
-          MSYS2_PLATFORM_ID: x86_64        
-          
+      name: Build    
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
          echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
@@ -247,17 +225,33 @@ jobs:
          chmod 755 prepbuild.sh && ./prepbuild.sh
          chmod 755 prepdist.sh && ./prepdist.sh
          autoreconf --install --force
-         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
+         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
          make
          make install-strip  
+         
+    - shell: msys2 {0}
+      name: Copy dependencies
+      working-directory: ${{env.GITHUB_WORKSPACE}}
+      run: |
+         export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
+         export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
+         export GIXSQL_BUILD_DIR=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
+         mkdir $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
+         echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
+         cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
+         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
  
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
       with:
          name: ${{ github.job }}-artifacts
          path: |
-           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
-           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/*.*
+           ${{ github.workspace }}/build-${{env.HOST_PLATFORM}}/bin/*.*
+           ${{ github.workspace }}/build-${{env.HOST_PLATFORM}}/lib/*.*
            
     - name: Archive dependencies
       uses: actions/upload-artifact@v3
@@ -266,16 +260,16 @@ jobs:
         path: |
           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-*/             
            
- 
   gixsql-windows-x86-mingw:
      name: gixsql-windows-x86-mingw
      env:
-       BUILD_CONFIGURATION: Release
        HOST_PLATFORM: x86   
        MSYS2_SYSTEM: mingw32      
-       PLATFORM_ID: i686    
+       MSYS2_PLATFORM_ID: i686   
+       
      runs-on: windows-latest
      steps:
+     
      - uses: actions/checkout@v3
        with:
            repository: 'mridoni/gixsql'      
@@ -286,62 +280,56 @@ jobs:
          msystem: ${{env.MSYS2_SYSTEM}}
          location: ${{ env.MSYS2_BASE }}
          install: >-
-             mingw-w64-${{env.PLATFORM_ID}}-pkg-config
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-pkg-config
              autoconf
              make
              automake
              libtool
              bison
              flex
-             mingw-w64-${{env.PLATFORM_ID}}-gcc
-             mingw-w64-${{env.PLATFORM_ID}}-postgresql 
-             mingw-w64-${{env.PLATFORM_ID}}-libmariadbclient 
-             mingw-w64-${{env.PLATFORM_ID}}-unixodbc 
-             mingw-w64-${{env.PLATFORM_ID}}-spdlog 
-             mingw-w64-${{env.PLATFORM_ID}}-ntldd
-             
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-gcc
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-postgresql 
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-libmariadbclient 
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-unixodbc 
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-spdlog 
+             mingw-w64-${{env.MSYS2_PLATFORM_ID}}-ntldd
+                     
+     - shell: msys2 {0}
+       name: Build
+       working-directory: ${{env.GITHUB_WORKSPACE}}
+       run: |
+         echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
+         ls -l
+         chmod 755 prepbuild.sh && ./prepbuild.sh
+         chmod 755 prepdist.sh && ./prepdist.sh
+         autoreconf --install --force
+         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
+         make
+         make install-strip  
+         
      - shell: msys2 {0}
        name: Copy dependencies
-       env:
-           HOST_PLATFORM: x86      
-           MSYS2_SYSTEM: mingw32      
-           MSYS2_PLATFORM_ID: i686     
-
        working-directory: ${{env.GITHUB_WORKSPACE}}
        run: |
          export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
+         export GIXSQL_BUILD_DIR=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
          mkdir $DEPS_DIR
          echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
          echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
-         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done             
- 
-     - shell: msys2 {0}
-       name: Build
-       env:
-           HOST_PLATFORM: x86      
-           MSYS2_SYSTEM: mingw32      
-           MSYS2_PLATFORM_ID: i686         
-       working-directory: ${{env.GITHUB_WORKSPACE}}
-       run: |
-         echo lt_cv_deplibs_check_method='pass_all' >> /etc/config.site
-         chmod 755 prepbuild.sh && ./prepbuild.sh
-         chmod 755 prepdist.sh && ./prepdist.sh
-         autoreconf --install --force
-         ./configure --prefix=$(cygpath "${{ github.workspace }}/build-${{env.PLATFORM_ID}}")
-         make
-         make install-strip    
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
+         for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
+         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
  
      - name: Archive production artifacts
        uses: actions/upload-artifact@v3
        with:
          name: ${{ github.job }}-artifacts
          path: |
-           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/bin/*.*
-           ${{ github.workspace }}/build-${{env.PLATFORM_ID}}/lib/*.*
+           ${{ github.workspace }}/build-${{env.HOST_PLATFORM}}/bin/*.*
+           ${{ github.workspace }}/build-${{env.HOST_PLATFORM}}/lib/*.*
            
      - name: Archive dependencies
        uses: actions/upload-artifact@v3
