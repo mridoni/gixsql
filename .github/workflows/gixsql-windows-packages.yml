@@ -234,16 +234,18 @@ jobs:
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
          export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
+         export DEPS_DIR_BIN=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc-bin")
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
          export GIXSQL_BUILD_DIR=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
          mkdir $DEPS_DIR
+         mkdir $DEPS_DIR_BIN
          echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
          echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
          for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
          for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
-         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
+         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR_BIN ; done            
  
     - name: Archive production artifacts
       uses: actions/upload-artifact@v3
@@ -312,16 +314,18 @@ jobs:
        working-directory: ${{env.GITHUB_WORKSPACE}}
        run: |
          export DEPS_DIR=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc")
+         export DEPS_DIR_BIN=$(cygpath "${{ github.workspace }}/deps-${{ env.HOST_PLATFORM }}-gcc-bin")
          export MSYS_BIN_DIR=$(cygpath "${{ env.MSYS2_BASE }}")msys64/${{ env.MSYS2_SYSTEM }}/bin
          export GIXSQL_BUILD_DIR=$(cygpath "${{ github.workspace }}/build-${{env.HOST_PLATFORM}}")
          mkdir $DEPS_DIR
+         mkdir $DEPS_DIR_BIN
          echo "Copying $MSYS_BIN_DIR/libpq.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libpq.dll $DEPS_DIR
          echo "Copying $MSYS_BIN_DIR/libmariadb.dll to $DEPS_DIR"
          cp $MSYS_BIN_DIR/libmariadb.dll $DEPS_DIR
          for LIB in $(ntldd -R $MSYS_BIN_DIR/libpq.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done
          for LIB in $(ntldd -R $MSYS_BIN_DIR/libmariadb.dll | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
-         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR ; done            
+         for LIB in $(ntldd -R $GIXSQL_BUILD_DIR/bin/gixpp.exe | grep $MSYS2_SYSTEM | awk '{printf("%s\n", $1);}') ; do echo "Copying $MSYS_BIN_DIR/$LIB to $DEPS_DIR" ; cp -f $MSYS_BIN_DIR/$LIB $DEPS_DIR_BIN ; done                
  
      - name: Archive production artifacts
        uses: actions/upload-artifact@v3
@@ -427,12 +431,12 @@ jobs:
       run: |
           mkdir ${{ github.workspace }}\redist\deps\x64\msvc
           mkdir ${{ github.workspace }}\redist\deps\x64\gcc
-          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\deps-x64-msvc\*.* ${{ github.workspace }}\redist\deps\x64\msvc          
-          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ github.workspace }}\redist\deps\x64\gcc   
+          copy ${{ env.GIXSQL_MSVC_X64_BIN_DIR }}\deps-x64-msvc\*.* ${{ env.DIST_DIR }}\lib\x64\msvc          
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc   
           mkdir ${{ github.workspace }}\redist\deps\x86\msvc
           mkdir ${{ github.workspace }}\redist\deps\x86\gcc
-          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ github.workspace }}\redist\deps\x86\msvc          
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ github.workspace }}\redist\deps\x86\gcc          
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ env.DIST_DIR }}\lib\x86\msvc          
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\gcc          
           
     - name: Add VC++ runtime
       shell: cmd
@@ -527,12 +531,10 @@ jobs:
       shell: cmd
       working-directory: ${{ github.workspace }}
       run: |
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ github.workspace }}\redist\deps\x86\msvc          
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ github.workspace }}\redist\deps\x86\gcc          
+          mkdir ${{ github.workspace }}\redist\deps\x86\msvc
+          mkdir ${{ github.workspace }}\redist\deps\x86\gcc
+          copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ env.DIST_DIR }}\lib\x86\msvc          
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\gcc             
           
     - name: Add VC++ runtime
       shell: cmd
@@ -621,12 +623,11 @@ jobs:
       shell: cmd
       working-directory: ${{ github.workspace }}
       run: |
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ github.workspace }}\redist\deps\x64\gcc      
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ github.workspace }}\redist\deps\x86\gcc          
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
+          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc  
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc   
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc         
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc                 
           
     - name: Build installer package
       shell: cmd
@@ -691,11 +692,9 @@ jobs:
       shell: cmd
       working-directory: ${{ github.workspace }}
       run: |
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          mkdir ${{ github.workspace }}\redist\deps\x86\gcc        
-          mkdir ${{ github.workspace }}\redist\deps\x64\msvc        
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ github.workspace }}\redist\deps\x86\gcc             
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc      
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc               
 
     - name: Build installer package
       shell: cmd
