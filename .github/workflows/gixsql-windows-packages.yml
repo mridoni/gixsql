@@ -439,7 +439,7 @@ jobs:
           mkdir ${{ github.workspace }}\redist\deps\x86\msvc
           mkdir ${{ github.workspace }}\redist\deps\x86\gcc
           copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ env.DIST_DIR }}\lib\x86\msvc          
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\gcc          
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc          
           
     - name: Add VC++ runtime
       shell: cmd
@@ -537,7 +537,7 @@ jobs:
           mkdir ${{ github.workspace }}\redist\deps\x86\msvc
           mkdir ${{ github.workspace }}\redist\deps\x86\gcc
           copy ${{ env.GIXSQL_MSVC_X86_BIN_DIR }}\deps-x86-msvc\*.* ${{ env.DIST_DIR }}\lib\x86\msvc          
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\gcc             
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc             
           
     - name: Add VC++ runtime
       shell: cmd
@@ -777,6 +777,16 @@ jobs:
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x64\gcc
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x64\gcc    
           copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc
+          
+    - name: Add GixSQL dependencies
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
+          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc  
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc   
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc         
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc                 
 
     - name: Build archive package
       shell: cmd
@@ -836,6 +846,16 @@ jobs:
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-oracle.dll ${{ env.DIST_DIR }}\lib\x86\gcc
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\libgixsql-sqlite.dll ${{ env.DIST_DIR }}\lib\x86\gcc     
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc
+          
+    - name: Add GixSQL dependencies
+      shell: cmd
+      working-directory: ${{ github.workspace }}
+      run: |
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
+          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc  
+          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc   
+          mkdir ${{ env.DIST_DIR }}\lib\x86\gcc         
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc              
           
     - name: Build archive package
       shell: cmd
