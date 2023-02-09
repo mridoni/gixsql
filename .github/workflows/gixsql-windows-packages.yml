@@ -260,7 +260,8 @@ jobs:
       with:
         name: ${{ github.job }}-artifacts
         path: |
-          ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-*/             
+           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-gcc/
+           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-gcc-bin/       
            
   gixsql-windows-x86-mingw:
      name: gixsql-windows-x86-mingw
@@ -340,7 +341,8 @@ jobs:
        with:
          name: ${{ github.job }}-artifacts
          path: |
-           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-*/
+           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-gcc/
+           ${{ github.workspace }}/deps-${{env.HOST_PLATFORM}}-gcc-bin/
 
     
   gixsql-installer-windows-x64-msvc-mingw:
