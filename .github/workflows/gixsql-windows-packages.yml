@@ -290,6 +290,7 @@ jobs:
              libtool
              bison
              flex
+             awk
              mingw-w64-${{env.MSYS2_PLATFORM_ID}}-gcc
              mingw-w64-${{env.MSYS2_PLATFORM_ID}}-postgresql 
              mingw-w64-${{env.MSYS2_PLATFORM_ID}}-libmariadbclient 
