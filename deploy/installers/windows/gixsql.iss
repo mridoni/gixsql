@@ -30,8 +30,8 @@ DisableWelcomePage=False
 
 [Files]
 ; main binaries
-Source: "{#DIST_DIR}\bin\*.exe"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs
-Source: "{#DIST_DIR}\bin\*.dll"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs
+Source: "{#DIST_DIR}\bin\*.exe"; DestDir: "{app}\bin"; Flags: skipifsourcedoesntexist ignoreversion createallsubdirs recursesubdirs
+Source: "{#DIST_DIR}\bin\*.dll"; DestDir: "{app}\bin"; Flags: skipifsourcedoesntexist ignoreversion createallsubdirs recursesubdirs
 Source: "{#DIST_DIR}\lib\*"; DestDir: "{app}\lib"; Flags: ignoreversion createallsubdirs recursesubdirs
 #if "x64" == HOST_PLATFORM
 Source: "{#WORKSPACE}\redist\msvcrt\x64\*"; DestDir: "{app}\bin"; Flags: ignoreversion createallsubdirs recursesubdirs skipifsourcedoesntexist; Check: UseLocalMSVCRT
