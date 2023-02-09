@@ -834,7 +834,6 @@ jobs:
       run: |
           mkdir ${{ env.DIST_DIR }}\bin
           mkdir ${{ env.DIST_DIR }}\lib
-          mkdir ${{ env.DIST_DIR }}\lib\x86\msvc
           mkdir ${{ env.DIST_DIR }}\lib\x86\gcc        
           mkdir ${{ env.DIST_DIR }}\lib\copy    
           copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\bin\gixpp.exe ${{ env.DIST_DIR }}\bin  
@@ -851,11 +850,9 @@ jobs:
       shell: cmd
       working-directory: ${{ github.workspace }}
       run: |
-          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
-          mkdir ${{ env.DIST_DIR }}\lib\x64\gcc  
-          copy ${{ env.GIXSQL_MINGW_X64_BIN_DIR }}\deps-x64-gcc\*.* ${{ env.DIST_DIR }}\lib\x64\gcc   
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc-bin\*.* ${{ env.DIST_DIR }}\bin   
           mkdir ${{ env.DIST_DIR }}\lib\x86\gcc         
-          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc              
+          copy ${{ env.GIXSQL_MINGW_X86_BIN_DIR }}\deps-x86-gcc\*.* ${{ env.DIST_DIR }}\lib\x86\gcc                   
           
     - name: Build archive package
       shell: cmd
