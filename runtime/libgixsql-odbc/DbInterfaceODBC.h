@@ -82,7 +82,7 @@ public:
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_fetch_one(const std::shared_ptr<ICursor>& crsr, int) override;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len) override;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool *is_db_null) override;
 	virtual bool move_to_first_record(const std::string& stmt_name = "") override;
 	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) override;

@@ -67,12 +67,13 @@ const char SqlVar::_decimal_point = [] {
 //void rtrim(char* const s);
 int get_trimmed_length(char* const s, int l);
 
-SqlVar::SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr)
+SqlVar::SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr, void* _ind_addr)
 {
 	type = _type;
 	length = _length;
 	power = _power;
 	addr = _addr;
+	ind_addr = _ind_addr;
 	flags = _flags;
 	is_variable_length = (_flags & CBL_FIELD_FLAG_VARLEN);
 	is_binary = (_flags & CBL_FIELD_FLAG_BINARY);
@@ -89,7 +90,7 @@ SqlVar::~SqlVar()
 
 SqlVar* SqlVar::copy()
 {
-	SqlVar* v = new SqlVar(type, length, power, 0, addr);
+	SqlVar* v = new SqlVar(type, length, power, 0, addr, ind_addr);
 
 	v->is_variable_length = is_variable_length;
 	v->is_binary = is_binary;
@@ -110,6 +111,14 @@ void SqlVar::createRealData()
 	int length = this->length;
 	int power = this->power;
 	void* addr = this->addr;
+
+	if (ind_addr) {
+		int16_t ind_val =  *((int16_t*)ind_addr);
+		if (ind_val == -1) {
+			db_data_len = -1;
+			return;
+		}
+	}
 
 	memset(db_data_buffer.data(), 0, db_data_buffer_len);
 	db_data_len = db_data_buffer_len;
@@ -391,10 +400,27 @@ void* SqlVar::getAddr()
 	return addr;
 }
 
+void* SqlVar::getIndAddr()
+{
+	return ind_addr;
+}
+
 
 void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 {
 	*sqlcode = 0;
+
+	if (!retstr && !datalen && ind_addr)
+	{
+		// value is NULL
+		*((int16_t*)ind_addr) = -1;
+		return;
+	}
+	else
+	{
+		*((int16_t*)ind_addr) = 0;
+	}
+	// TODO: handle truncation-specific values (-2, etc.)?
 
 	void* addr = this->addr;
 
@@ -772,6 +798,11 @@ bool SqlVar::isBinary()
 bool SqlVar::isAutoTrim()
 {
 	return is_autotrim;
+}
+
+bool SqlVar::isDbNull()
+{
+	return (db_data_len == -1);
 }
 
 void SqlVar::display_to_comp3(const char *data, int _datalen, bool has_sign) // , int total_len, int scale, int has_sign, uint8_t *addr

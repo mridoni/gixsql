@@ -240,12 +240,20 @@ int DbInterfaceSQLite::exec_prepared(const std::string& _stmt_name, std::vector<
 	for (int i = 0; i < nParams; i++) {
 
 		int rc = 0;
-		if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
-			rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+
+		if (paramLengths.at(i) != DB_NULL) {
+			if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
+				rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+			}
+			else {
+				rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+			}
 		}
-		else {
-			rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const char*>(paramValues.at(i).data()), paramValues.at(i).size(), SQLITE_TRANSIENT);
+		else
+		{
+			rc = sqlite3_bind_null(wk_rs->statement, i + 1);
 		}
+
 		if (sqliteRetrieveError(rc) != SQLITE_OK)
 			return DBERR_SQL_ERROR;
 	}
@@ -482,12 +490,19 @@ int DbInterfaceSQLite::_sqlite_exec_params(const std::shared_ptr<ICursor>& crsr,
 
 		int rc = 0;
 
-		if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
-			rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+		if (paramLengths.at(i) != DB_NULL) {
+			if (CBL_FIELD_IS_BINARY(paramFlags[i])) {
+				rc = sqlite3_bind_blob64(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+			}
+			else {
+				rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+			}
 		}
-		else {
-			rc = sqlite3_bind_text(wk_rs->statement, i + 1, reinterpret_cast<const  char*>(paramValues.at(i).data()), paramLengths.at(i), SQLITE_TRANSIENT);
+		else
+		{
+			rc = sqlite3_bind_null(wk_rs->statement, i + 1);
 		}
+
 		if (sqliteRetrieveError(rc))
 			return DBERR_SQL_ERROR;
 	}
@@ -830,7 +845,8 @@ int DbInterfaceSQLite::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, 
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
+bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+                                            * is_db_null)
 {
 	int rc = 0;
 	std::shared_ptr<SQLiteStatementData> wk_rs;
@@ -873,7 +889,15 @@ bool DbInterfaceSQLite::get_resultset_value(ResultSetContextType resultset_conte
 		return false;
 	}
 
-	bool is_binary = sqlite3_column_type(wk_rs->statement, col) == SQLITE_BLOB;
+	int column_type = sqlite3_column_type(wk_rs->statement, col);
+	if (column_type == SQLITE_NULL) {
+		*is_db_null = true;
+		*value_len = 0;
+		bfr[0] = 0;
+		return true;
+	}
+
+	bool is_binary = (column_type == SQLITE_BLOB);
 	int datalen = sqlite3_column_bytes(wk_rs->statement, col);
 
 	if (datalen > bfrlen) {

@@ -37,9 +37,9 @@ SqlVarList::~SqlVarList()
 	}
 }
 
-SqlVar *SqlVarList::AddVar(CobolVarType type, int length, int power, uint32_t flags, void *addr)
+SqlVar *SqlVarList::AddVar(CobolVarType type, int length, int power, uint32_t flags, void *var_addr, void* ind_addr)
 {
-	SqlVar * v = new SqlVar(type, length, power, flags, addr);
+	SqlVar * v = new SqlVar(type, length, power, flags, var_addr, ind_addr);
 
 	v->createRealData();
 

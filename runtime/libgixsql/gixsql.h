@@ -149,8 +149,8 @@ extern "C" {
 	LIBGIXSQL_API int GIXSQLExecPreparedInto(struct sqlca_t *st, void *d_connection_id, int connection_id_tl, char *stmt_name, int nParams, int nResParams);
 
 	LIBGIXSQL_API int GIXSQLStartSQL(void);
-	LIBGIXSQL_API int GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr);
-	LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_t flags, void* addr);
+	LIBGIXSQL_API int GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr, void* ind_addr);
+	LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_t flags, void* var_addr, void* ind_addr);
 	LIBGIXSQL_API int GIXSQLEndSQL(void);
 
 }

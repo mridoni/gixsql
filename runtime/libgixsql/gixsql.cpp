@@ -365,10 +365,11 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 
 	// set parameters
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
-		param_values.push_back((*it)->getDbData());
-		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getDbDataLength());
-		param_flags.push_back((*it)->getFlags());
+		SqlVar* v = *it;
+		param_types.push_back(v->getType());
+		param_values.push_back(v->getDbData());
+		param_lengths.push_back(!v->isDbNull() ? v->getDbDataLength() : DB_NULL);
+		param_flags.push_back(v->getFlags());
 	}
 
 	std::string query = _query;
@@ -510,7 +511,8 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, PreparedStatementContextData(stmt_name), 0, i, buffer.get(), bsize, &datalen)) {
+		bool is_null = false;
+		if (!dbi->get_resultset_value(ResultSetContextType::PreparedStatement, PreparedStatementContextData(stmt_name), 0, i, buffer.get(), bsize, &datalen, &is_null)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
@@ -809,7 +811,8 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	uint64_t datalen = 0;
 	int sqlcode = 0;
 	for (it = _res_sql_var_list.begin(); it != _res_sql_var_list.end(); it++) {
-		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, CursorContextData(cursor), 0, i++, buffer.get(), bsize, &datalen)) {
+		bool is_null = false;
+		if (!dbi->get_resultset_value(ResultSetContextType::Cursor, CursorContextData(cursor), 0, i++, buffer.get(), bsize, &datalen, &is_null)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
@@ -988,14 +991,17 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
-		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, CurrentResultSetContextData(), 0, i, buffer.get(), bsize, &datalen)) {
+		bool is_null = false;
+		if (!dbi->get_resultset_value(ResultSetContextType::CurrentResultSet, CurrentResultSetContextData(), 0, i, buffer.get(), bsize, &datalen, &is_null)) {
 			setStatus(st, dbi, DBERR_INVALID_COLUMN_DATA);
 			sqlcode = DBERR_INVALID_COLUMN_DATA;
 			continue;
 		}
 
 		int sql_code_local = DBERR_NO_ERROR;
-		v->createCobolData(buffer.get(), datalen, &sql_code_local);
+		char* _data_bfr = is_null ? nullptr : buffer.get();
+		uint64_t _data_len = is_null ? 0 : datalen;
+		v->createCobolData(_data_bfr, _data_len, &sql_code_local);
 		if (sql_code_local) {
 			setStatus(st, dbi, sql_code_local);
 			sqlcode = sql_code_local;
@@ -1051,7 +1057,7 @@ GIXSQLStartSQL(void)
 }
 
 LIBGIXSQL_API int
-GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
+GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* var_addr, void* ind_addr)
 {
 	CHECK_LIB_INIT();
 
@@ -1065,12 +1071,12 @@ GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
 		return RESULT_FAILED;
 	}
 
-	if (!addr) {
+	if (!var_addr) {
 		spdlog::error("invalid argument addr is NULL");
 		return RESULT_FAILED;
 	}
 
-	if (_current_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, addr) == NULL) {
+	if (_current_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, var_addr, ind_addr) == NULL) {
 		spdlog::error("fail to add SQLVARLIST");
 		return RESULT_FAILED;
 	}
@@ -1078,12 +1084,12 @@ GIXSQLSetSQLParams(int type, int length, int scale, uint32_t flags, void* addr)
 	return RESULT_SUCCESS;
 }
 
-LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_t flags, void* addr)
+LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_t flags, void* var_addr, void* ind_addr)
 {
 	CHECK_LIB_INIT();
 
 	if (type < COBOL_TYPE_MIN || type > COBOL_TYPE_MAX) {
-		spdlog::error("invalid arugument 'type' for variable: {}", type);
+		spdlog::error("invalid argument 'type' for variable: {}", type);
 		return RESULT_FAILED;
 	}
 
@@ -1092,12 +1098,12 @@ LIBGIXSQL_API int GIXSQLSetResultParams(int type, int length, int scale, uint32_
 		return RESULT_FAILED;
 	}
 
-	if (!addr) {
+	if (!var_addr) {
 		spdlog::error("invalid argument addr: NULL");
 		return RESULT_FAILED;
 	}
 
-	if (_res_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, addr) == NULL) {
+	if (_res_sql_var_list.AddVar(static_cast<CobolVarType>(type), length, scale, flags, var_addr, ind_addr) == NULL) {
 		spdlog::error("fail to add SQLVARLIST");
 		return RESULT_FAILED;
 	}

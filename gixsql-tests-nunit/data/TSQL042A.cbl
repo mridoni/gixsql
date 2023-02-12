@@ -1,6 +1,6 @@
 ﻿       IDENTIFICATION DIVISION.
        
-       PROGRAM-ID. TEST001. 
+       PROGRAM-ID. TSQL042A. 
        
        
        ENVIRONMENT DIVISION. 
@@ -55,13 +55,14 @@
                     MISCDATA
                  FROM EMPTABLE
                ORDER BY LNAME
-           END-EXEC              
+           END-EXEC.
+           
        PROCEDURE DIVISION. 
  
        000-CONNECT.
-         DISPLAY "DBNAME" UPON ENVIRONMENT-NAME.
+         DISPLAY "DATASRC" UPON ENVIRONMENT-NAME.
          ACCEPT DBNAME FROM ENVIRONMENT-VALUE.
-         DISPLAY "DBAUTH" UPON ENVIRONMENT-NAME.
+         DISPLAY "DATASRC_USR" UPON ENVIRONMENT-NAME.
          ACCEPT DBAUTH FROM ENVIRONMENT-VALUE.
          
       *   DISPLAY '***************************************'.
@@ -125,22 +126,18 @@
            DISPLAY 'misc (len): [' MISCDATA-LEN ']'
            
            IF COM-NULL-IND < 0 
-               DISPLAY 'commission is null' 
+               DISPLAY LNAME ': commission is null' 
            ELSE 
-               DISPLAY 'commission ' DISP-COM 
+               DISPLAY LNAME ': commission ' DISP-COM 
            END-IF 
-      *     DISPLAY 'Do you want to see the next record? (y/n)' 
-      *     ACCEPT ANSS 
-      *     IF ANSS = 'Y' OR 'y' 
-               EXEC SQL 
-                 FETCH EMPTBL INTO 
-                   :ENO,:LNAME,:FNAME,:STREET,:CITY, 
-                   :ST,:ZIP,:DEPT,:PAYRATE, 
-                   :COM,:MISCDATA
-               END-EXEC 
-      *     ELSE 
-      *         GO TO CLOSE-LOOP 
-      *     END-IF 
+
+           EXEC SQL 
+             FETCH EMPTBL INTO 
+               :ENO,:LNAME,:FNAME,:STREET,:CITY, 
+               :ST,:ZIP,:DEPT,:PAYRATE, 
+               :COM:COM-NULL-IND,:MISCDATA
+           END-EXEC 
+
            MOVE SQLCODE TO DISP-CODE 
            DISPLAY 'fetch ' DISP-CODE 
            DISPLAY 'fetch ' SQLCODE 
@@ -153,6 +150,67 @@
            EXEC SQL 
                CLOSE EMPTBL 
            END-EXEC. 
+
+      * this should insert a NULL
+           MOVE -1 TO COM-NULL-IND.
+           MOVE 1.3 TO COM.
+           EXEC SQL
+               INSERT INTO EMPTABLE 
+                    (LNAME, FNAME, PAYRATE, COM)
+                    VALUES 
+                    ('XYZ1', 'ABC1', 94.00, :COM:COM-NULL-IND)
+           END-EXEC.
+           DISPLAY 'INSERT 1 - SQLCODE     : ' SQLCODE.
+           DISPLAY 'INSERT 1 - SQLERRM     : ' SQLERRMC(1:SQLERRML).
+
+      * this should insert the actual value (1.8)
+           MOVE 0 TO COM-NULL-IND.
+           MOVE 1.8 TO COM.
+           EXEC SQL
+               INSERT INTO EMPTABLE 
+                    (LNAME, FNAME, PAYRATE, COM)
+                    VALUES 
+                    ('XYZ2', 'ABC2', 95.00, :COM:COM-NULL-IND)
+           END-EXEC.
+           DISPLAY 'INSERT 2 - SQLCODE     : ' SQLCODE.
+           DISPLAY 'INSERT 2 - SQLERRM     : ' SQLERRMC(1:SQLERRML).
+
+           MOVE 0 TO PAYRATE.
+           MOVE 0 TO COM.
+
+      * we read them back
+           EXEC SQL
+               SELECT PAYRATE, COM
+                INTO :PAYRATE, :COM:COM-NULL-IND
+                FROM EMPTABLE 
+                    WHERE LNAME = 'XYZ1' AND 
+                        FNAME = 'ABC1' AND 
+                        COM IS NULL
+           END-EXEC.
+           DISPLAY 'READBACK 1 - SQLCODE     : ' SQLCODE.
+           DISPLAY 'READBACK 1 - SQLERRM     : ' SQLERRMC(1:SQLERRML).
+           DISPLAY 'READBACK 1 - PAYRATE     : ' PAYRATE.
+           DISPLAY 'READBACK 1 - COM         : ' COM.
+           DISPLAY 'READBACK 1 - COM-NULL-IND: ' COM-NULL-IND.
+
+           EXEC SQL
+               SELECT PAYRATE, COM
+                INTO :PAYRATE, :COM:COM-NULL-IND
+                FROM EMPTABLE 
+                    WHERE LNAME = 'XYZ2' AND 
+                        FNAME = 'ABC2' AND 
+                            COM = 1.8
+           END-EXEC.
+           DISPLAY 'READBACK 2 - SQLCODE     : ' SQLCODE.
+           DISPLAY 'READBACK 2 - SQLERRM     : ' SQLERRMC(1:SQLERRML).
+           DISPLAY 'READBACK 2 - PAYRATE     : ' PAYRATE.
+           DISPLAY 'READBACK 2 - COM         : ' COM.
+           DISPLAY 'READBACK 2 - COM-NULL-IND: ' COM-NULL-IND.
+
+           EXEC SQL COMMIT END-EXEC.
+
+           EXEC SQL CONNECT RESET END-EXEC.
        
        100-EXIT. 
              STOP RUN.
+

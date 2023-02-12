@@ -52,7 +52,7 @@ class pgsqlParamArray {
 public:
 
 	pgsqlParamArray(int sz) {
-		_data = new char* [sz];
+		_data = new char* [sz]();
 		nitems = sz;
 	}
 
@@ -69,9 +69,11 @@ public:
 
 	void assign(int i, char* d, int l)
 	{
-		_data[i] = new char[l + 1];
-		memcpy(_data[i], d, l);
-		_data[i][l] = '\0';
+		if (d) {
+			_data[i] = new char[l + 1];
+			memcpy(_data[i], d, l);
+			_data[i][l] = '\0';
+		}
 	}
 
 	char** data() const
@@ -319,9 +321,16 @@ int DbInterfacePGSQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());
 
 	for (int i = 0; i < paramValues.size(); i++) {
-		param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
+		if (paramLengths.at(i) != DB_NULL) {
+			param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
+			param_lengths[i] = paramLengths.at(i);
+		}
+		else {
+			param_vals->assign(i, nullptr, 0);
+			param_lengths[i] = 0;
+
+		}
 		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
-		param_lengths[i] = paramLengths.at(i);
 		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
 	}
 
@@ -444,9 +453,16 @@ int DbInterfacePGSQL::_pgsql_exec_params(const std::shared_ptr<ICursor>& crsr, c
 	std::unique_ptr<int[]> param_formats = std::make_unique<int[]>(paramFlags.size());	
 
 	for (int i = 0; i < paramValues.size(); i++) {
-		param_vals->assign(i, (char *)paramValues[i].data(), paramLengths[i]);
+		if (paramLengths.at(i) != DB_NULL) {
+			param_vals->assign(i, (char*)paramValues[i].data(), paramLengths[i]);
+			param_lengths[i] = paramLengths.at(i);
+		}
+		else {
+			param_vals->assign(i, nullptr, 0);
+			param_lengths[i] = 0;
+			
+		}
 		param_types[i] = get_pgsql_type(paramTypes.at(i), paramFlags[i]);
-		param_lengths[i] = paramLengths.at(i);
 		param_formats[i] = CBL_FIELD_IS_BINARY(paramFlags[i]) ? 1 : 0;
 	} 
 
@@ -632,7 +648,8 @@ int DbInterfacePGSQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, i
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
+bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+                                           * is_db_null)
 {
 	size_t to_length = 0;
 	*value_len = 0;
@@ -687,6 +704,15 @@ bool DbInterfacePGSQL::get_resultset_value(ResultSetContextType resultset_contex
 	if (!res) {
 		lib_logger->error("Cannot retrieve return statement value for row {} col {}", row, col);
 		return false;	// FIXME: this means "caller error", not a problem with the resultset value!
+	}
+
+	if (!strlen(res)) {
+		if (PQgetisnull(wk_rs->resultset, row, col)) {
+			*is_db_null = true;
+			*value_len = 0;
+			bfr[0] = 0;
+			return true;
+		}
 	}
 
 	auto type = PQftype(wk_rs->resultset, col);

@@ -58,6 +58,7 @@ USA.
 #define ERR_FILE_NOT_FOUND      19107
 #define ERR_QUERY_TOO_LONG      19108
 #define ERR_INVALID_DATA        19109
+#define ERR_INVALID_NULLIND_REF 19110
 
 // This is used to keep the error code from nested function
 #define ERR_ALREADY_SET         -9999

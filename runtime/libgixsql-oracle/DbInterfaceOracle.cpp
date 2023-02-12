@@ -53,10 +53,10 @@ DbInterfaceOracle::~DbInterfaceOracle()
 
 	// TODO: use shared_ptr with deleter
 	odpi_global_context_usage_count--;
-	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void *)odpi_global_context);
+	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void*)odpi_global_context);
 	if (odpi_global_context && odpi_global_context_usage_count == 0) {
 		dpiContext_destroy(odpi_global_context);
-		lib_logger->trace("dpiContext destroyed ({})", (void *)odpi_global_context);
+		lib_logger->trace("dpiContext destroyed ({})", (void*)odpi_global_context);
 		odpi_global_context = nullptr;
 	}
 }
@@ -89,12 +89,12 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 			return DBERR_CONN_INIT_ERROR;
 		}
 		else {
-			lib_logger->trace("dpiContext created ({})", (void *)odpi_global_context);
+			lib_logger->trace("dpiContext created ({})", (void*)odpi_global_context);
 		}
 	}
 
 	odpi_global_context_usage_count++;
-	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void *)odpi_global_context);
+	lib_logger->trace("dpiContext usage count is now {} ({})", odpi_global_context_usage_count, (void*)odpi_global_context);
 
 	return DBERR_NO_ERROR;
 }
@@ -166,7 +166,7 @@ int DbInterfaceOracle::terminate_connection()
 
 const char* DbInterfaceOracle::get_error_message()
 {
-	return (char *)last_error.c_str();
+	return (char*)last_error.c_str();
 }
 
 int DbInterfaceOracle::get_error_code()
@@ -221,7 +221,7 @@ int DbInterfaceOracle::prepare(const std::string& _stmt_name, const std::string&
 		lib_logger->error(FMT_FILE_FUNC "ODPI::prepare ({} - res: ({}) {}", __FILE__, __func__, stmt_name, last_rc, last_error);
 		return DBERR_PREPARE_FAILED;
 	}
-	
+
 	dpiClearError();
 
 	lib_logger->trace(FMT_FILE_FUNC "ODPI::prepare ({} - res: ({}) {}", __FILE__, __func__, stmt_name, last_rc, last_error);
@@ -234,27 +234,31 @@ int DbInterfaceOracle::prepare(const std::string& _stmt_name, const std::string&
 int get_oracle_type(CobolVarType t, uint32_t flags)
 {
 	switch (t) {
-		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
-		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
-		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
-		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
-		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
-		case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
-		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
-			return DPI_ORACLE_TYPE_NUMBER;
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
+	case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
+	case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
+		return DPI_ORACLE_TYPE_NUMBER;
 
-		case CobolVarType::COBOL_TYPE_JAPANESE:
-		case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
-			return CBL_FIELD_IS_BINARY(flags) ? DPI_ORACLE_TYPE_BLOB: DPI_ORACLE_TYPE_VARCHAR;
+	case CobolVarType::COBOL_TYPE_JAPANESE:
+	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
+		return CBL_FIELD_IS_BINARY(flags) ? DPI_ORACLE_TYPE_BLOB : DPI_ORACLE_TYPE_VARCHAR;
 
-		default:
-			return DPI_ORACLE_TYPE_VARCHAR;
+	default:
+		return DPI_ORACLE_TYPE_VARCHAR;
 	}
 }
 
 int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
-	
+	int rc = 0;
+	std::unique_ptr<dpiData> null_data = std::make_unique<dpiData>();
+
+	null_data->isNull = 1;
+
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
 	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
@@ -263,16 +267,16 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 		last_rc = DBERR_INTERNAL_ERR;
 		return DBERR_INTERNAL_ERR;
 	}
-	
+
 	std::string stmt_name = to_lower(_stmt_name);
-	
+
 	if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
 		lib_logger->error("Statement not found: {}", stmt_name);
 		return DBERR_SQL_ERROR;
 	}
-	
+
 	int nParams = (int)paramValues.size();
-	
+
 	std::shared_ptr<OdpiStatementData> wk_rs = _prepared_stmts[stmt_name];
 	wk_rs->resizeParams(nParams);
 
@@ -281,44 +285,57 @@ int DbInterfaceOracle::exec_prepared(const std::string& _stmt_name, std::vector<
 		dpiOracleTypeNum oracle_type = get_oracle_type(paramTypes.at(i), paramFlags[i]);
 		dpiNativeTypeNum native_type = (oracle_type == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
 
-		int rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
-		}
-
-		if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
-			// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
-			// We handle this here instead of patching ODPI so we can update it in the future
-			if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
-				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
-			}
-			else {
-				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+		if (paramLengths.at(i) != DB_NULL) {
+			rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+			if (dpiRetrieveError(rc) < 0) {
+				return DBERR_SQL_ERROR;
 			}
 
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+			if (paramLengths.at(i) != DB_NULL) {
+
+				if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
+					// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
+					// We handle this here instead of patching ODPI so we can update it in the future
+					if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
+						rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
+					}
+					else {
+						rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+					}
+
+					if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+				}
+				else
+				{
+					dpiLob* lob = nullptr;
+					rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
+					if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+					rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
+					if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+					rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
+					if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+				}
+			}
+			else
+			{
+				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, nullptr, 0);
+			}
+
+			rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
+			if (dpiRetrieveError(rc) < 0) {
+				return DBERR_SQL_ERROR;
+			}
 		}
 		else
 		{
-			dpiLob* lob = nullptr;
-			rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
-
-			rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
-
-			rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
-		}
-
-		rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
+			rc = dpiStmt_bindValueByPos(wk_rs->statement, i + 1, native_type, null_data.get());
 		}
 	}
 
 	uint32_t nquery_cols;
-	int rc = dpiStmt_execute(wk_rs->statement, DPI_MODE_EXEC_DEFAULT, &nquery_cols);
+	rc = dpiStmt_execute(wk_rs->statement, DPI_MODE_EXEC_DEFAULT, &nquery_cols);
 	if (dpiRetrieveError(rc) < 0) {
 		return DBERR_SQL_ERROR;
 	}
@@ -363,7 +380,7 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, const std::stri
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
 	std::shared_ptr<OdpiStatementData> wk_rs;
-	
+
 	if (!prep_stmt_data) {
 		wk_rs = (crsr != nullptr) ? std::static_pointer_cast<OdpiStatementData>(crsr->getPrivateData()) : current_statement_data;
 
@@ -395,10 +412,10 @@ int DbInterfaceOracle::_odpi_exec(std::shared_ptr<ICursor> crsr, const std::stri
 
 		dpiNativeTypeNum native_type = (info.typeInfo.oracleTypeNum == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
 
-		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, native_type, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i-1], &wk_rs->coldata_bfrs[i-1]);
+		rc = dpiConn_newVar(connaddr, info.typeInfo.oracleTypeNum, native_type, DEFAULT_CURSOR_ARRAYSIZE, info.typeInfo.clientSizeInBytes, 1, 0, NULL, &wk_rs->coldata[i - 1], &wk_rs->coldata_bfrs[i - 1]);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 
-		rc = dpiStmt_define(wk_rs->statement, i, wk_rs->coldata[i-1]);
+		rc = dpiStmt_define(wk_rs->statement, i, wk_rs->coldata[i - 1]);
 		if (dpiRetrieveError(rc) != DPI_SUCCESS) { return DBERR_SQL_ERROR; }
 	}
 
@@ -463,6 +480,9 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 {
 	std::string q = query;
 	int rc = 0;
+	std::unique_ptr<dpiData> null_data = std::make_unique<dpiData>();
+
+	null_data->isNull = 1;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
@@ -503,40 +523,47 @@ int DbInterfaceOracle::_odpi_exec_params(std::shared_ptr<ICursor> crsr, const st
 		dpiOracleTypeNum oracle_type = get_oracle_type(paramTypes.at(i), paramFlags[i]);
 		dpiNativeTypeNum native_type = (oracle_type == DPI_ORACLE_TYPE_BLOB) ? DPI_NATIVE_TYPE_LOB : DPI_NATIVE_TYPE_BYTES;
 
-		rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
-		}
+		if (paramLengths.at(i) != DB_NULL) {
+			rc = dpiConn_newVar(connaddr, oracle_type, native_type, 1, paramLengths.at(i), 1, 0, NULL, &wk_rs->params[i], &wk_rs->params_bfrs[i]);
+			if (dpiRetrieveError(rc) < 0) {
+				return DBERR_SQL_ERROR;
+			}
 
-		if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
-			// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
-			// We handle this here instead of patching ODPI so we can update it in the future
-			if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
-				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
+			if (oracle_type != DPI_ORACLE_TYPE_BLOB) {
+				// Some ODPI weirdness: numbers cannot have a '+' sign if positive, only '-' is accepted for negative numbers
+				// We handle this here instead of patching ODPI so we can update it in the future
+				if (COBOL_TYPE_IS_NUMERIC(paramTypes.at(i)) && paramLengths.at(i) > 0 && paramValues.at(i).at(0) == '+') {
+					rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data() + 1), paramLengths.at(i) - 1);
+				}
+				else {
+					rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+				}
+
+				if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
 			}
-			else {
-				rc = dpiVar_setFromBytes(wk_rs->params[i], 0, reinterpret_cast<const char*>(paramValues.at(i).data()), paramLengths.at(i));
+			else
+			{
+				dpiLob* lob = nullptr;
+				rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
+				if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+				rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
+				if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+				rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
+				if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
 			}
-		
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+
+			rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
+			if (dpiRetrieveError(rc) < 0) {
+				return DBERR_SQL_ERROR;
+			}
 		}
 		else
 		{
-			dpiLob* lob = nullptr;
-			rc = dpiConn_newTempLob(connaddr, oracle_type, &lob);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
-
-			rc = dpiLob_setFromBytes(lob, reinterpret_cast<const char*>(paramValues[i].data()), paramLengths[i]);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
-
-			rc = dpiVar_setFromLob(wk_rs->params[i], 0, lob);
-			if (dpiRetrieveError(rc) < 0) { return DBERR_SQL_ERROR; }
+			rc = dpiStmt_bindValueByPos(wk_rs->statement, i + 1, native_type, null_data.get());
 		}
 
-		rc = dpiStmt_bindByPos(wk_rs->statement, i + 1, wk_rs->params[i]);
-		if (dpiRetrieveError(rc) < 0) {
-			return DBERR_SQL_ERROR;
-		}
 	}
 
 	uint32_t nquery_cols = 0;
@@ -703,9 +730,9 @@ int DbInterfaceOracle::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, 
 		lib_logger->error("Invalid cursor reference");
 		return DBERR_FETCH_ROW_FAILED;
 	}
-	
+
 	lib_logger->trace(FMT_FILE_FUNC "owner id: {}, cursor name: {}, mode: {}", __FILE__, __func__, cursor->getConnectionName(), cursor->getName(), FETCH_NEXT_ROW);
-	
+
 	std::shared_ptr<OdpiStatementData> dp = (cursor != nullptr) ? std::static_pointer_cast<OdpiStatementData>(cursor->getPrivateData()) : current_statement_data;
 
 	if (!dp || !dp->statement)
@@ -724,42 +751,43 @@ int DbInterfaceOracle::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, 
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
+bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+	* is_db_null)
 {
 	int rc = 0;
 	std::shared_ptr<OdpiStatementData> wk_rs;
 
 	switch (resultset_context_type) {
-		case ResultSetContextType::CurrentResultSet:
-			wk_rs = current_statement_data;
-			break;
-
-		case ResultSetContextType::PreparedStatement:
-		{
-			PreparedStatementContextData& p = (PreparedStatementContextData&)context;
-
-			std::string stmt_name = p.prepared_statement_name;
-			stmt_name = to_lower(stmt_name);
-			if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
-				lib_logger->error("Invalid prepared statement name: {}", stmt_name);
-				return false;
-			}
-
-			wk_rs = _prepared_stmts[stmt_name];
-		}
+	case ResultSetContextType::CurrentResultSet:
+		wk_rs = current_statement_data;
 		break;
 
-		case ResultSetContextType::Cursor:
-		{
-			CursorContextData& p = (CursorContextData&)context;
-			std::shared_ptr <ICursor> c = p.cursor;
-			if (!c) {
-				lib_logger->error("Invalid cursor reference");
-				return false;
-			}
-			wk_rs = std::dynamic_pointer_cast<OdpiStatementData>(c->getPrivateData());
+	case ResultSetContextType::PreparedStatement:
+	{
+		PreparedStatementContextData& p = (PreparedStatementContextData&)context;
+
+		std::string stmt_name = p.prepared_statement_name;
+		stmt_name = to_lower(stmt_name);
+		if (_prepared_stmts.find(stmt_name) == _prepared_stmts.end()) {
+			lib_logger->error("Invalid prepared statement name: {}", stmt_name);
+			return false;
 		}
-		break;
+
+		wk_rs = _prepared_stmts[stmt_name];
+	}
+	break;
+
+	case ResultSetContextType::Cursor:
+	{
+		CursorContextData& p = (CursorContextData&)context;
+		std::shared_ptr <ICursor> c = p.cursor;
+		if (!c) {
+			lib_logger->error("Invalid cursor reference");
+			return false;
+		}
+		wk_rs = std::dynamic_pointer_cast<OdpiStatementData>(c->getPrivateData());
+	}
+	break;
 	}
 
 	if (!wk_rs) {
@@ -771,16 +799,23 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 	dpiQueryInfo col_info;
 	dpiNativeTypeNum nativeTypeNum;
 
+	rc = dpiStmt_getQueryInfo(wk_rs->statement, (col + 1), &col_info);
+	if (dpiRetrieveError(rc) < 0) {
+		lib_logger->error("Invalid column metadata");
+		return false;
+	}
+
 	rc = dpiStmt_getQueryValue(wk_rs->statement, (col + 1), &nativeTypeNum, &col_data);
 	if (dpiRetrieveError(rc) < 0) {
 		lib_logger->error("Invalid column data");
 		return false;
 	}
 
-	rc = dpiStmt_getQueryInfo(wk_rs->statement, (col + 1), &col_info);
-	if (dpiRetrieveError(rc) < 0) {
-		lib_logger->error("Invalid column data");
-		return false;
+	if (col_data->isNull) {
+		*is_db_null = true;
+		*value_len = 0;
+		bfr[0] = 0;
+		return true;
 	}
 
 	char* c = nullptr;
@@ -813,7 +848,7 @@ bool DbInterfaceOracle::get_resultset_value(ResultSetContextType resultset_conte
 			return false;
 		}
 
-		rc = dpiLob_readBytes(lob, 1, lobsize, bfr , &bfrlen);
+		rc = dpiLob_readBytes(lob, 1, lobsize, bfr, &bfrlen);
 		if (dpiRetrieveError(rc) < 0) {
 			lib_logger->error("Invalid column data");
 			return false;
@@ -845,7 +880,7 @@ bool DbInterfaceOracle::move_to_first_record(const std::string& _stmt_name)
 			dpiSetError(DBERR_MOVE_TO_FIRST_FAILED, "HY000", "Invalid statement reference");
 			return false;
 		}
-		
+
 		dp = current_statement_data;
 	}
 	else {
@@ -865,7 +900,7 @@ bool DbInterfaceOracle::move_to_first_record(const std::string& _stmt_name)
 	uint32_t bfr_row_index;
 	int rc = dpiStmt_fetch(dp->statement, &found, &bfr_row_index);
 
-	if (dpiRetrieveError(rc) != DPI_SUCCESS) 
+	if (dpiRetrieveError(rc) != DPI_SUCCESS)
 		return false;
 
 	if (!found) {
@@ -878,7 +913,7 @@ bool DbInterfaceOracle::move_to_first_record(const std::string& _stmt_name)
 
 uint64_t DbInterfaceOracle::get_native_features()
 {
-	return (uint64_t) DbNativeFeature::ResultSetRowCount;
+	return (uint64_t)DbNativeFeature::ResultSetRowCount;
 }
 
 int DbInterfaceOracle::get_num_rows(const std::shared_ptr<ICursor>& crsr)
@@ -904,8 +939,8 @@ int DbInterfaceOracle::get_num_rows(const std::shared_ptr<ICursor>& crsr)
 
 int DbInterfaceOracle::get_num_fields(const std::shared_ptr<ICursor>& crsr)
 {
-	dpiStmt *wk_rs = nullptr;
-	
+	dpiStmt* wk_rs = nullptr;
+
 	if (crsr) {
 		std::shared_ptr<OdpiStatementData> dp = std::dynamic_pointer_cast<OdpiStatementData>(crsr->getPrivateData());;
 		wk_rs = dp->statement;
@@ -1006,24 +1041,26 @@ void OdpiStatementData::resizeParams(int n)
 	cleanup();
 
 	params_count = n;
-	this->params = new dpiVar * [n];
-	this->params_bfrs = new dpiData * [n];
+	this->params = new dpiVar * [n]();
+	this->params_bfrs = new dpiData * [n]();
 
 }
 
 void OdpiStatementData::resizeColumnData(int n)
 {
 	coldata_count = n;
-	this->coldata = new dpiVar * [n];
-	this->coldata_bfrs = new dpiData * [n];
+	this->coldata = new dpiVar * [n]();
+	this->coldata_bfrs = new dpiData * [n]();
 }
 
 void OdpiStatementData::cleanup()
 {
 	if (params) {
 		for (int i = 0; i < params_count; i++) {
-			dpiVar_release(params[i]);
-			params[i] = nullptr;
+			if (params[i]) {
+				dpiVar_release(params[i]);
+				params[i] = nullptr;
+			}
 		}
 		delete[] params;
 		params = nullptr;
@@ -1031,8 +1068,10 @@ void OdpiStatementData::cleanup()
 
 	if (coldata) {
 		for (int i = 0; i < coldata_count; i++) {
-			dpiVar_release(coldata[i]);
-			coldata[i] = nullptr;
+			if (coldata[i]) {
+				dpiVar_release(coldata[i]);
+				coldata[i] = nullptr;
+			}
 		}
 		delete[] coldata;
 		coldata = nullptr;
@@ -1043,7 +1082,7 @@ void OdpiStatementData::cleanup()
 			params_bfrs[i] = nullptr;
 		}
 		delete[] params_bfrs;
-		params_bfrs = nullptr;		
+		params_bfrs = nullptr;
 	}
 
 	if (coldata_bfrs) {
@@ -1051,7 +1090,7 @@ void OdpiStatementData::cleanup()
 			coldata_bfrs[i] = nullptr;
 		}
 		delete[] coldata_bfrs;
-		coldata_bfrs = nullptr;		
+		coldata_bfrs = nullptr;
 	}
 
 	params_count = 0;

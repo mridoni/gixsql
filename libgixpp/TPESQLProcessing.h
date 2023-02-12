@@ -146,6 +146,7 @@ private:
 	bool put_host_parameters(const cb_exec_sql_stmt_ptr stmt);
 
 	void add_preprocessed_blocks();
+	bool decode_indicator(const std::string& orig_name, std::string& var_name, std::string& ind_name);
 
 	std::stack<std::string> input_file_stack;
 	int working_begin_line;

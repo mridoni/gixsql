@@ -84,7 +84,8 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token<std::string> SELECT
 //%token<std::string> SELECTFROM	"SELECT FROM"
 %token<std::string> TOKEN
-%token<std::string> HOSTTOKEN	"host-variable"
+%token<std::string> HOSTTOKEN	            "host-variable"
+%token<std::string> HOSTTOKEN_WITH_NULL_IND	"host-variable-with-null-indicator"
 %token<std::string> WORD
 %token<std::string> PICTURE
 %token<std::string> INSERT
@@ -545,15 +546,8 @@ execsql_with_opt_at OTHERFUNC opt_othersql_tokens END_EXEC {
 opt_othersql_tokens:
 %empty { $$ = nullptr; }
 | othersql_token opt_othersql_tokens {
-#if 0
-	$$ = driver.cb_text_list_add (NULL, $1);
-	if ($2)
-		$$ = driver.cb_concat_text_list ($$, $2);
-#else
-	// This is faster
 	$$ = ($2 != nullptr) ? $2 : new std::vector<cb_sql_token_t>();
 	$$->insert($$->begin(), $1);
-#endif
 }
 ;
 
@@ -758,7 +752,15 @@ whenever_action:
 CONTINUE			{ $$ = "";			 }
 | PERFORM WORD		{ $$ = "@@" + $2;	 }
 | GOTO WORD			{ $$ = $2;			 }
-| GOTO HOSTTOKEN	{ $$ = $2.substr(1); }	/* Not actually a host token (variable), we just "borrow" its syntax in the lexer */
+| GOTO HOSTTOKEN	{	/* Not actually a host token (variable), we just "borrow" its syntax in the lexer */
+
+	if ($$.find(":") != std::string::npos) {
+		yy::location loc;
+		error(loc, "Invalid reference");
+	}
+	else
+		$$ = $2.substr(1); 
+}	
 ;
 
 
@@ -774,7 +776,14 @@ expr				{      $$ = driver.cb_text_list_add (NULL, $1);}
 }
 
 host_reference:
-HOSTTOKEN { $$ = $1; }
+HOSTTOKEN { 
+	$$ = $1; 
+}
+| HOSTTOKEN_WITH_NULL_IND { 
+	$$ = $1; 
+}
+;
+
 
 expr: TOKEN { $$ = $1; }
 |SELECT{}

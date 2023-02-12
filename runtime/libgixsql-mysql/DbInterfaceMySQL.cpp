@@ -248,10 +248,15 @@ int DbInterfaceMySQL::exec_prepared(const std::string& _stmt_name, std::vector<C
 	std::unique_ptr<MYSQL_BIND[]> bound_param_defs = std::make_unique<MYSQL_BIND[]>(nParams);
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
-
-		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).data();
-		bound_param->buffer_length = paramLengths.at(i);
+		if (paramLengths.at(i) != DB_NULL) {
+			bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
+			bound_param->buffer = (char*)paramValues.at(i).data();
+			bound_param->buffer_length = paramLengths.at(i);
+		}
+		else
+		{
+			bound_param->buffer_type = MYSQL_TYPE_NULL;
+		}
 	}
 
 	rc = mysql_stmt_bind_param(wk_rs->statement, bound_param_defs.get());
@@ -425,10 +430,15 @@ int DbInterfaceMySQL::_mysql_exec_params(std::shared_ptr<ICursor> crsr, const st
 
 	for (int i = 0; i < nParams; i++) {
 		MYSQL_BIND* bound_param = &bound_param_defs[i];
-
-		bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
-		bound_param->buffer = (char*)paramValues.at(i).data();
-		bound_param->buffer_length = paramLengths.at(i);
+		if (paramLengths.at(i) != DB_NULL) {
+			bound_param->buffer_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? MYSQL_TYPE_BLOB : MYSQL_TYPE_STRING;
+			bound_param->buffer = (char*)paramValues.at(i).data();
+			bound_param->buffer_length = paramLengths.at(i);
+		}
+		else
+		{
+			bound_param->buffer_type = MYSQL_TYPE_NULL;
+		}
 	}
 
 	// This will only be used if we are performing an update/delete on an updatable cursor
@@ -806,7 +816,8 @@ int DbInterfaceMySQL::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, i
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
+bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+                                           * is_db_null)
 {
 	*value_len = 0;
 
@@ -851,6 +862,14 @@ bool DbInterfaceMySQL::get_resultset_value(ResultSetContextType resultset_contex
 	}
 
 	if (col < wk_rs->data_buffers.size()) {
+
+		if (*(wk_rs->statement->bind[col].is_null)) {
+			*is_db_null = true;
+			*value_len = 0;
+			bfr[0] = 0;
+			return true;
+		}
+
 		char* data = wk_rs->data_buffers.at(col);
 		unsigned long datalen = *(wk_rs->data_lengths.at(col));
 		

@@ -55,7 +55,7 @@ struct MySQLStatementData : public IPrivateStatementData
 	int column_count = 0;
 	std::vector<char*> data_buffers;
 	std::vector<int> data_buffer_lengths;
-	std::vector<unsigned long *> data_lengths;
+	std::vector<unsigned long*> data_lengths;
 
 	MYSQL_STMT* statement = nullptr;
 
@@ -81,7 +81,7 @@ public:
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) override;
 	virtual int cursor_fetch_one(const std::shared_ptr<ICursor>& crsr, int) override;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len) override;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool *is_db_null) override;
 	virtual bool move_to_first_record(const std::string& stmt_name = "") override;
 	virtual uint64_t get_native_features() override;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) override;
@@ -93,17 +93,17 @@ public:
 	virtual int exec_prepared(const std::string& stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags) override;
 	virtual DbPropertySetResult set_property(DbProperty p, std::variant<bool, int, std::string> v) override;
 
-	virtual bool getSchemas(std::vector<SchemaInfo *>& res) override;
+	virtual bool getSchemas(std::vector<SchemaInfo*>& res) override;
 	virtual bool getTables(std::string table, std::vector<TableInfo*>& res) override;
 	virtual bool getColumns(std::string schema, std::string table, std::vector<ColumnInfo*>& columns) override;
-	virtual bool getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*> &idxs) override;
+	virtual bool getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*>& idxs) override;
 
 private:
-	MYSQL *connaddr = nullptr;
+	MYSQL* connaddr = nullptr;
 
 	std::shared_ptr<IDataSourceInfo> data_source_info;
 	std::shared_ptr<IConnectionOptions> connection_opts;
-	
+
 	std::shared_ptr<MySQLStatementData> current_statement_data;
 
 	int last_rc;

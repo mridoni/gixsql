@@ -96,6 +96,12 @@ USA.
 
 #define DEFAULT_NO_REC_CODE	100
 
+#define HAS_INDICATOR(_V) (_V.find(":") != std::string::npos && _V.find(":") == std::string::npos)
+#define ASSERT_NO_INDICATOR(_V,_F,_L) 		if (HAS_INDICATOR(_V)) { \
+										main_module_driver.error("Invalid null indicator reference: " + _V, ERR_INVALID_NULLIND_REF, _F, _L); \
+										return false; \
+									}
+
 enum class ESQL_Command
 {
 	Connect,
@@ -682,6 +688,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 			}
 			else {
 				std::string var_name = sql_content.substr(2);
+				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
 				if (!main_module_driver.field_exists(var_name)) {
 					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 					return false;
@@ -715,6 +722,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 			}
 			else {
 				std::string var_name = sql_content.substr(2);
+				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
 				if (!main_module_driver.field_exists(var_name)) {
 					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 					return false;
@@ -1043,17 +1051,24 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 
 		for (cb_res_hostreference_ptr rp : *stmt->res_host_list) {
 
-			if (!main_module_driver.field_exists(rp->hostreference.substr(1))) {
-				main_module_driver.error("Cannot find host variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+			std::string var_name, ind_name;
+			bool has_indicator = decode_indicator(rp->hostreference.substr(1), var_name, ind_name);
+			if (!main_module_driver.field_exists(var_name)) {
+				main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map(rp->hostreference.substr(1));
+			cb_field_ptr hr = main_module_driver.field_map(var_name);
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in SELECT statements
 			// They are decomposed into their sub-elements
 			if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
+
+				if (has_indicator) {
+					main_module_driver.error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
+					return false;					
+				}
 
 				if (hr->group_levels_count != 1) {
 					main_module_driver.error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
@@ -1084,6 +1099,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					pp_call.addParameter(pp_scale > 0 ? -pp_scale : 0, BY_VALUE);
 					pp_call.addParameter(pp_flags, BY_VALUE);
 					pp_call.addParameter(pp->sname, BY_REFERENCE);
+					pp_call.addParameter(0, BY_REFERENCE);
 
 					if (!put_call(pp_call, false))
 						return false;
@@ -1097,6 +1113,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 			else {
 				ESQLCall rp_call(get_call_id("SetResultParams"), emit_static);
 
+				if (has_indicator && !main_module_driver.field_exists(ind_name)) {
+					main_module_driver.error("Cannot find host variable: " + ind_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+					return false;
+				}
+
 				int flags = is_varlen ? CBL_FIELD_FLAG_VARLEN : CBL_FIELD_FLAG_NONE;
 				flags |= (hr->usage == Usage::Binary) ? CBL_FIELD_FLAG_BINARY : CBL_FIELD_FLAG_NONE;
 
@@ -1104,7 +1125,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				rp_call.addParameter(f_size, BY_VALUE);
 				rp_call.addParameter(f_scale > 0 ? -f_scale : 0, BY_VALUE);
 				rp_call.addParameter(flags, BY_VALUE);
-				rp_call.addParameter(rp->hostreference.substr(1), BY_REFERENCE);
+				rp_call.addParameter(var_name, BY_REFERENCE);
+				if (has_indicator)
+					rp_call.addParameter(ind_name, BY_REFERENCE);
+				else
+					rp_call.addParameter(0, BY_REFERENCE);
 
 				if (!put_call(rp_call, false))
 					return false;
@@ -1180,19 +1205,27 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		// Special case: we cannot use the put_host_parameters method because we need to handle group variables
 		for (cb_hostreference_ptr p : *stmt->host_list) {
 
-			if (!main_module_driver.field_exists(p->hostreference.substr(1))) {
+			std::string var_name, ind_name;
+			bool has_indicator = decode_indicator(p->hostreference.substr(1), var_name, ind_name);
+			if (!main_module_driver.field_exists(var_name)) {
 				main_module_driver.error("Cannot find host variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map(p->hostreference.substr(1));
+			cb_field_ptr hr = main_module_driver.field_map(var_name);
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in INSERT statements
 			// They are decomposed into their sub-elements
 			if (cmd == ESQL_Command::Insert && f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
+
+				if (has_indicator) {
+					main_module_driver.error("Invalid null indicator reference: " + var_name, ERR_INVALID_NULLIND_REF, stmt->src_abs_path, p->lineno);
+					return false;					
+				}
+
 				if (hr->group_levels_count != 1) {
-					main_module_driver.error("Nested levels not allowed in group variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+					main_module_driver.error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 					return false;
 				}
 
@@ -1228,6 +1261,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 					pp_call.addParameter(pp_flags, BY_VALUE);
 
 					pp_call.addParameter(pp->sname, BY_REFERENCE);
+					pp_call.addParameter(0, BY_VALUE);
 
 					if (!put_call(pp_call, false))
 						return false;
@@ -1254,7 +1288,11 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 				p_call.addParameter(f_size, BY_VALUE);
 				p_call.addParameter(f_scale > 0 ? -f_scale : 0, BY_VALUE);
 				p_call.addParameter(flags, BY_VALUE);
-				p_call.addParameter(p->hostreference.substr(1), BY_REFERENCE);
+				p_call.addParameter(var_name, BY_REFERENCE);
+				if (has_indicator)
+					p_call.addParameter(ind_name, BY_REFERENCE);
+				else
+					p_call.addParameter(0, BY_REFERENCE);
 
 				if (!put_call(p_call, false))
 					return false;
@@ -1288,6 +1326,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		}
 
 		std::string var_name = stmt->host_list->at(0)->hostreference;
+		ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
 		if (!main_module_driver.field_exists(var_name)) {
 			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 			return false;
@@ -1448,6 +1487,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		ps_call.addParameter("\"" + stmt->statementName + "\" & x\"00\"", BY_REFERENCE);
 		if (stmt->statementSource) {	// statement source is a variable, we must check its type
 			auto sv_name = stmt->statementSource->name.substr(1);
+			ASSERT_NO_INDICATOR(sv_name, stmt->src_abs_path, stmt->startLine);
 			if (!main_module_driver.field_exists(sv_name)) {
 				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
@@ -1515,6 +1555,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 		ei_call.addParameter(&main_module_driver, stmt->connectionId);
 		if (stmt->statementSource) {	// statement source is a variable, we must check its type
 			auto sv_name = stmt->statementSource->name.substr(1);
+			ASSERT_NO_INDICATOR(sv_name, stmt->src_abs_path, stmt->startLine);
 			if (!main_module_driver.field_exists(sv_name)) {
 				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
@@ -1968,7 +2009,7 @@ bool TPESQLProcessing::fixup_declared_vars()
 		decode_sql_type_info(type_info, &sql_type, &precision, &scale, &flags);
 
 		if (HAS_FLAG_EMIT_VAR(flags)) {
-
+			ASSERT_NO_INDICATOR(var_name, orig_src_file, orig_start_line);
 			if (!main_module_driver.field_exists(var_name)) {
 				if (precision == 0) {
 					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
@@ -1988,6 +2029,7 @@ bool TPESQLProcessing::fixup_declared_vars()
 			}
 		}
 
+		ASSERT_NO_INDICATOR(var_name, orig_src_file, orig_start_line);
 		if (!main_module_driver.field_exists(var_name)) {
 			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
 			return false;
@@ -2286,20 +2328,28 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 
 	for (cb_res_hostreference_ptr rp : *stmt->res_host_list) {
 
-		if (!main_module_driver.field_exists(rp->hostreference.substr(1))) {
-			main_module_driver.error("Cannot find host variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+		std::string var_name, ind_name;
+		bool has_indicator = decode_indicator(rp->hostreference.substr(1), var_name, ind_name);
+
+		if (!main_module_driver.field_exists(var_name)) {
+			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map(rp->hostreference.substr(1));
+		cb_field_ptr hr = main_module_driver.field_map(var_name);
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		// Support for group items used as host variables in SELECT statements
 		// They are decomposed into their sub-elements
 		if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
+			if (has_indicator) {
+				main_module_driver.error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
+				return false;
+			}
+
 			if (hr->group_levels_count != 1) {
-				main_module_driver.error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+				main_module_driver.error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
@@ -2327,6 +2377,7 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 				pp_call.addParameter(pp_scale > 0 ? -pp_scale : 0, BY_VALUE);
 				pp_call.addParameter(pp_flags, BY_VALUE);
 				pp_call.addParameter(pp->sname, BY_REFERENCE);
+				pp_call.addParameter(0, BY_REFERENCE);
 
 				if (!put_call(pp_call, false))
 					return false;
@@ -2347,7 +2398,12 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 			rp_call.addParameter(f_size, BY_VALUE);
 			rp_call.addParameter(f_scale > 0 ? -f_scale : 0, BY_VALUE);
 			rp_call.addParameter(flags, BY_VALUE);
-			rp_call.addParameter(rp->hostreference.substr(1), BY_REFERENCE);
+			rp_call.addParameter(var_name, BY_REFERENCE);
+
+			if (has_indicator)
+				rp_call.addParameter(ind_name, BY_REFERENCE);
+			else
+				rp_call.addParameter(0, BY_REFERENCE);
 
 			if (!put_call(rp_call, false))
 				return false;
@@ -2368,12 +2424,16 @@ bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 
 	for (cb_hostreference_ptr p : *stmt->host_list) {
 		ESQLCall p_call(get_call_id("SetSQLParams"), emit_static);
-		if (!main_module_driver.field_exists(p->hostreference.substr(1))) {
-			main_module_driver.error("Cannot find host variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+
+		std::string var_name, ind_name;
+		bool has_indicator = decode_indicator(p->hostreference.substr(1), var_name, ind_name);
+
+		if (!main_module_driver.field_exists(var_name)) {
+			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map(p->hostreference.substr(1));
+		cb_field_ptr hr = main_module_driver.field_map(var_name);
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		int flags = is_varlen ? CBL_FIELD_FLAG_VARLEN : CBL_FIELD_FLAG_NONE;
@@ -2390,7 +2450,12 @@ bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 		p_call.addParameter(f_size, BY_VALUE);
 		p_call.addParameter(f_scale > 0 ? -f_scale : 0, BY_VALUE);
 		p_call.addParameter(flags, BY_VALUE);
-		p_call.addParameter(p->hostreference.substr(1), BY_REFERENCE);
+		p_call.addParameter(var_name, BY_REFERENCE);
+
+		if (has_indicator)
+			p_call.addParameter(ind_name, BY_REFERENCE);
+		else
+			p_call.addParameter(0, BY_REFERENCE);
 
 		if (!put_call(p_call, false))
 			return false;
@@ -2439,6 +2504,24 @@ void TPESQLProcessing::add_preprocessed_blocks()
 		preprocessed_blocks.push_back(bi);
 	}
 
+}
+
+bool TPESQLProcessing::decode_indicator(const std::string& orig_name, std::string& var_name, std::string& ind_name)
+{
+	bool res = false;
+	const auto pos = orig_name.find(":");
+	const auto pos2 = orig_name.find("::");	// This is to work around a problem with casts in PostgreSQL
+	if (pos != std::string::npos && pos2 == std::string::npos) {
+		res = true;
+		var_name = orig_name.substr(0, pos);
+		ind_name = orig_name.substr(pos + 1);
+	}
+	else {
+		res = false;
+		var_name = orig_name;
+		ind_name = "";
+	}
+	return res;
 }
 
 void TPESQLProcessing::put_whenever_handler(bool terminate_with_period)

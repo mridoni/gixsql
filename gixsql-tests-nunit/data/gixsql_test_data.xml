@@ -3322,5 +3322,109 @@
 			</expected-output>
 		</test>
 
+		<test name="TSQL042A" enabled="true">
+			<description>Null indicator variables</description>
+			<issue-coverage>#140</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL042A.cbl" deps="EMPREC.cpy" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<pre-run-sql-file data-source-index="1">dbdata-042.sql</pre-run-sql-file>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>fetch 00000000</line>
+				<line>employee #: [+0123]</line>
+				<line>last name : [Doe       ]</line>
+				<line>first name: [John      ]</line>
+				<line>street    : [123, Nowhere Lane   ]</line>
+				<line>city      : [Noplace        ]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00100]</line>
+				<line>department: [DEP1]</line>
+				<line>payrate   : [+0000000000200.00]</line>
+				<line>commission: [+1.23]</line>
+				<line>misc      : [abcd1234                                                                                                                        ]</line>
+				<line>misc (len): [0000000008]</line>
+				<line>Doe       : commission 001</line>
+				<line>fetch 00000000</line>
+				<line>fetch +0000000000</line>
+				<line>employee #: [+0456]</line>
+				<line>last name : [Smith     ]</line>
+				<line>first name: [Jane      ]</line>
+				<line>street    : [456, Someplace Rd.  ]</line>
+				<line>city      : [Somewhere      ]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00111]</line>
+				<line>department: [DEP2]</line>
+				<line>payrate   : [+0000000000130.00]</line>
+				<line>commission: [+3.45]</line>
+				<line>misc      : [defg5678hijk                                                                                                                    ]</line>
+				<line>misc (len): [0000000012]</line>
+				<line>Smith     : commission 003</line>
+				<line>fetch 00000000</line>
+				<line>fetch +0000000000</line>
+				<line>employee #: [+0789]</line>
+				<line>last name : [Smith2    ]</line>
+				<line>first name: [Jane2     ]</line>
+				<line>street    : [789, Someplace 2 Rd.]</line>
+				<line>city      : [Someplace Else ]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00123]</line>
+				<line>department: [DEP3]</line>
+				<line>payrate   : [+0000000000230.00]</line>
+				<line>commission: [+4.56]</line>
+				<line>misc      : [98005678hijk                                                                                                                    ]</line>
+				<line>misc (len): [0000000012]</line>
+				<line>Smith2    : commission 004</line>
+				<line>fetch 00000000</line>
+				<line>fetch +0000000000</line>
+				<line>employee #: [+0888]</line>
+				<line>last name : [Smith3    ]</line>
+				<line>first name: [Jane3     ]</line>
+				<line>street    : [888, Someplace Rd.  ]</line>
+				<line>city      : [Someplace Again]</line>
+				<line>state     : [NA]</line>
+				<line>zip code  : [00888]</line>
+				<line>department: [DEP4]</line>
+				<line>payrate   : [+0000000000240.00]</line>
+				<line>commission: [+0.00]</line>
+				<line>misc      : [aaabbb888                                                                                                                       ]</line>
+				<line>misc (len): [0000000009]</line>
+				<line>Smith3    : commission 000</line>
+				<line>fetch 00000100</line>
+				<line>fetch +0000000100</line>
+				<line>All records in this table have been selected</line>
+				<line>INSERT 1 - SQLCODE     : +0000000000</line>
+				<line>INSERT 1 - SQLERRM     :                                                                      </line>
+				<line>INSERT 2 - SQLCODE     : +0000000000</line>
+				<line>INSERT 2 - SQLERRM     :                                                                      </line>
+				<line>READBACK 1 - SQLCODE     : +0000000000</line>
+				<line>READBACK 1 - SQLERRM     :                                                                      </line>
+				<line>READBACK 1 - PAYRATE     : +0000000000094.00</line>
+				<line>READBACK 1 - COM         : +0.00</line>
+				<line>READBACK 1 - COM-NULL-IND: -0001</line>
+				<line>READBACK 2 - SQLCODE     : +0000000000</line>
+				<line>READBACK 2 - SQLERRM     :                                                                      </line>
+				<line>READBACK 2 - PAYRATE     : +0000000000095.00</line>
+				<line>READBACK 2 - COM         : +1.80</line>
+				<line>READBACK 2 - COM-NULL-IND: +0000</line>
+			</expected-output>
+		</test>
+
+
 	</tests>
 </test-data>

@@ -20,10 +20,11 @@
     <None Remove="data\dbdata-016.sql" />
     <None Remove="data\dbdata-017-oracle.sql" />
     <None Remove="data\dbdata-017.sql" />
+    <None Remove="data\dbdata-042-oracle.sql" />
+    <None Remove="data\dbdata-042.sql" />
     <None Remove="data\dbdata-oracle.sql" />
     <None Remove="data\dbdata.sql" />
     <None Remove="data\EMPREC.cpy" />
-    <None Remove="data\TEST001.cbl" />
     <None Remove="data\TSQL001A.cbl" />
     <None Remove="data\TSQL002A.cbl" />
     <None Remove="data\TSQL003A.cbl" />
@@ -90,10 +91,13 @@
     <None Remove="data\TSQL040A.cbl" />
     <None Remove="data\TSQL041A-ORACLE.cbl" />
     <None Remove="data\TSQL041A.cbl" />
+    <None Remove="data\TSQL042A.cbl" />
     <None Remove="gixsql_test_data.xml" />
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="data\dbdata-042.sql" />
+    <EmbeddedResource Include="data\dbdata-042-oracle.sql" />
     <EmbeddedResource Include="data\gixsql_test_data.xml" />
   </ItemGroup>
 
@@ -107,7 +111,7 @@
     <EmbeddedResource Include="data\dbdata-oracle.sql" />
     <EmbeddedResource Include="data\dbdata.sql" />
     <EmbeddedResource Include="data\EMPREC.cpy" />
-    <EmbeddedResource Include="data\TEST001.cbl" />
+    <EmbeddedResource Include="data\TSQL042A.cbl" />
     <EmbeddedResource Include="data\TSQL001A.cbl" />
     <EmbeddedResource Include="data\TSQL002A.cbl" />
     <EmbeddedResource Include="data\TSQL003A.cbl" />

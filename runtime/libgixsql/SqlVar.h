@@ -34,7 +34,7 @@ class SqlVar
 	friend class SqlVarList;
 
 public:
-	SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr);
+	SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr, void* _ind_addr);
 	~SqlVar();
 
 	SqlVar *copy();
@@ -42,6 +42,7 @@ public:
 	void createRealData();
 
 	void* getAddr();
+	void* getIndAddr();
 	const std_binary_data& getDbData();
 	CobolVarType getType();
 	unsigned long getLength();
@@ -51,6 +52,8 @@ public:
 	bool isVarLen();
 	bool isBinary();
 	bool isAutoTrim();
+
+	bool isDbNull();
 
 	void createCobolData(char *retstr, int datalen, int* sqlcode);
 
@@ -62,6 +65,7 @@ private:
 	int length;								// includes the extra 2 bytes for variable length fields (level 49)
 	int power; 
 	void *addr = nullptr;					// address of variable (COBOL-side)
+	void *ind_addr = nullptr;					// address of NULL-indicator variable (COBOL-side); = nullptr if not present
 	std_binary_data db_data_buffer;			// realdata (i.e. displayable data) buffer
 	unsigned long db_data_buffer_len = 0;	// length of db_data_buffer (actual length of allocated buffer is always realdata_len)
 	int db_data_len = -1;			// actual length of data in db_data_buffer

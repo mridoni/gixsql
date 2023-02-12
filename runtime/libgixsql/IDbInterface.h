@@ -136,7 +136,8 @@ public:
 	virtual int cursor_open(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_close(const std::shared_ptr<ICursor>& crsr) = 0;
 	virtual int cursor_fetch_one(const std::shared_ptr<ICursor>& crsr, int) = 0;
-	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len) = 0;
+	virtual bool get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+	                                 * is_db_null) = 0;
 	virtual bool move_to_first_record(const std::string& stmt_name = "") = 0;
 	virtual uint64_t get_native_features() = 0;
 	virtual int get_num_rows(const std::shared_ptr<ICursor>& crsr) = 0;

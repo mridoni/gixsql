@@ -247,6 +247,9 @@ int DbInterfaceODBC::prepare(const std::string& _stmt_name, const std::string& q
 
 int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<CobolVarType> paramTypes, std::vector<std_binary_data>& paramValues, std::vector<unsigned long> paramLengths, const std::vector<uint32_t>& paramFlags)
 {
+	int rc = 0;
+	SQLLEN null_data = SQL_NULL_DATA;
+
 	lib_logger->trace(FMT_FILE_FUNC "statement name: {}", __FILE__, __func__, _stmt_name);
 
 	if (paramTypes.size() != paramValues.size() || paramTypes.size() != paramFlags.size()) {
@@ -275,17 +278,34 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
 
 		lengths[i] = paramLengths[i];
-
-		int rc = SQLBindParameter(wk_rs->statement,
-			i + 1,
-			SQL_PARAM_INPUT,
-			c_type,
-			sql_type, // SQL_VARCHAR,
-			10,
-			0,
-			(SQLPOINTER)paramValues.at(i).data(),
-			(SQLLEN)paramLengths.at(i),		
-			&lengths[i]);
+		
+		if (paramLengths.at(i) != DB_NULL) {
+			rc = SQLBindParameter(
+				wk_rs->statement,
+				i + 1,
+				SQL_PARAM_INPUT,
+				c_type,
+				sql_type,
+				10,
+				0,
+				(SQLPOINTER)paramValues.at(i).data(),
+				(SQLLEN)paramLengths.at(i),
+				&lengths[i]);
+		}
+		else
+		{
+			rc = SQLBindParameter(
+				wk_rs->statement,
+				i + 1,
+				SQL_PARAM_INPUT,
+				c_type,
+				sql_type,
+				10,
+				0,
+				nullptr,
+				(SQLLEN)paramLengths.at(i),
+				&null_data);
+		}
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			last_rc = rc;
@@ -294,7 +314,7 @@ int DbInterfaceODBC::exec_prepared(const std::string& _stmt_name, std::vector<Co
 		}
 	}
 
-	int rc = SQLExecute(wk_rs->statement);
+	rc = SQLExecute(wk_rs->statement);
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return DBERR_SQL_ERROR;
 	}
@@ -387,6 +407,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 {
 	std::string q = query;
 	int rc = 0;
+	SQLLEN null_data = SQL_NULL_DATA;
 
 	lib_logger->trace(FMT_FILE_FUNC "SQL: #{}#", __FILE__, __func__, q);
 
@@ -426,23 +447,41 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 
 	std::vector<SQLLEN> lengths(paramLengths.size());
 
+
 	for (int i = 0; i < nParams; i++) {
 		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
 		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
 
 		lengths[i] = paramLengths[i];
 
-		rc = SQLBindParameter(
-			wk_rs->statement,
-			i + 1,
-			SQL_PARAM_INPUT,
-			c_type,
-			sql_type, 
-			10,
-			0,
-			(SQLPOINTER)paramValues.at(i).data(),
-			(SQLLEN)paramLengths.at(i),
-			&lengths[i]);
+		if (paramLengths.at(i) != DB_NULL) {
+			rc = SQLBindParameter(
+				wk_rs->statement,
+				i + 1,
+				SQL_PARAM_INPUT,
+				c_type,
+				sql_type,
+				10,
+				0,
+				(SQLPOINTER)paramValues.at(i).data(),
+				(SQLLEN)paramLengths.at(i),
+				&lengths[i]);
+		}
+		else
+		{
+			
+			rc = SQLBindParameter(
+				wk_rs->statement,
+				i + 1,
+				SQL_PARAM_INPUT,
+				c_type,
+				sql_type,
+				10,
+				0,
+				nullptr,
+				(SQLLEN)paramLengths.at(i),
+				&null_data);
+		}
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			//free(pvals);
@@ -651,7 +690,8 @@ int DbInterfaceODBC::cursor_fetch_one(const std::shared_ptr<ICursor>& cursor, in
 	return DBERR_NO_ERROR;
 }
 
-bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len)
+bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context_type, const IResultSetContextData& context, int row, int col, char* bfr, uint64_t bfrlen, uint64_t* value_len, bool
+                                          * is_db_null)
 {
 	int rc = 0;
 	std::shared_ptr<ODBCStatementData> wk_rs;
@@ -696,6 +736,7 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	//SQL_C_BINARY
 
 	SQLLEN reslen = 0;
+
 	bool is_binary = false;
 	if (!column_is_binary(wk_rs->statement, col + 1, &is_binary))
 		return false;
@@ -705,6 +746,13 @@ bool DbInterfaceODBC::get_resultset_value(ResultSetContextType resultset_context
 	rc = SQLGetData(wk_rs->statement, col + 1, target_type, bfr, (SQLLEN) bfrlen, &reslen);
 	if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 		return false;
+	}
+
+	if (reslen == SQL_NULL_DATA) {
+		*is_db_null = true;
+		*value_len = 0;
+		bfr[0] = 0;
+		return true;
 	}
 
 	// TODO: fix this, with proper null handling

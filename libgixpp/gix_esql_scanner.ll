@@ -123,6 +123,8 @@ OPERATOR {OP_CHARS}+
 COMPARISON "="|"<>"|"<"|">"|"<="|">="
 COMMA ","
 PGSQL_CAST_OP "::"
+/* HOSTTOKEN_WITH_NULL_IND ":"([A-Za-z\-0-9_]*([\xA0-\xDF]|([\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC]))*[A-Za-z\-0-9_]*)":"([A-Za-z\-0-9_]*([\xA0-\xDF]|([\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC]))*[A-Za-z\-0-9_]*) */
+HOSTTOKEN_WITH_NULL_IND ":"([A-Za-z\-0-9_]+)":"([A-Za-z\-0-9_]+)
 HOSTWORD ":"([A-Za-z\-0-9_]*([\xA0-\xDF]|([\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC]))*[A-Za-z\-0-9_]*)
 INT_CONSTANT {digit}+
 LOW_VALUE "LOW\-VALUE"
@@ -247,6 +249,10 @@ LOW_VALUE "LOW\-VALUE"
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
+	}
+
+	{HOSTTOKEN_WITH_NULL_IND} {
+		return yy::gix_esql_parser::make_HOSTTOKEN_WITH_NULL_IND(yytext, loc);
 	}
 
 	{HOSTWORD} {
@@ -720,6 +726,14 @@ LOW_VALUE "LOW\-VALUE"
 		return __MAKE_TOKEN(yytext, loc);
 	}
 	
+	{PGSQL_CAST_OP} {
+		return __MAKE_TOKEN(yytext, loc);
+	}
+
+	{HOSTTOKEN_WITH_NULL_IND} {
+		return yy::gix_esql_parser::make_HOSTTOKEN_WITH_NULL_IND(yytext, loc);
+	}
+
 	{HOSTWORD} {
 			driver.hostlineno = yylineno;
 			return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
@@ -730,10 +744,6 @@ LOW_VALUE "LOW\-VALUE"
 			return __MAKE_TOKEN(yytext, loc);
 	}	
 
-	{PGSQL_CAST_OP} {
-		return __MAKE_TOKEN(yytext, loc);
-	}
-	
 	/*
 	{FILENAME} {
 			driver.hostlineno = yylineno;   

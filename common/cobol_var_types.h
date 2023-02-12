@@ -29,3 +29,5 @@ enum class CobolVarType : int {
 									T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC || T == CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD || T == CobolVarType::COBOL_TYPE_UNSIGNED_BINARY || \
 									T == CobolVarType::COBOL_TYPE_SIGNED_BINARY || T == CobolVarType::COBOL_TYPE_FLOAT || T ==CobolVarType::COBOL_TYPE_DOUBLE)
+
+#define DB_NULL ULONG_MAX
