@@ -152,6 +152,7 @@ jobs:
         dotnet gixsql-tests-nunit/bin/Debug/net6.0/gixsql-tests-nunit.dll
 
     - name: Archive test logs
+      if: always()
       uses: actions/upload-artifact@v3
       with:
         name: gixsql-linux-test-${{ env.GIXSQL_VERSION }}
