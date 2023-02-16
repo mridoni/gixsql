@@ -479,14 +479,14 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 				10,
 				0,
 				nullptr,
-				(SQLLEN)paramLengths.at(i),
+				0,
 				&null_data);
 		}
 
 		if (odbcRetrieveError(rc, ErrorSource::Statement, wk_rs->statement) != SQL_SUCCESS) {
 			//free(pvals);
 			last_rc = rc;
-			lib_logger->error("ODBC: Error while binding parameter {} in statement ({}): {}", i + 1, last_rc, query);
+			lib_logger->error("ODBC: Error while binding parameter {} in statement ({}): {} - {}", i + 1, last_rc, last_error, query);
 			return DBERR_SQL_ERROR;
 		}
 	}
