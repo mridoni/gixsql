@@ -6,7 +6,7 @@ on:
 env:
   GIXSQLMAJ: 1
   GIXSQLMIN: 0
-  GIXSQLREL: 20
+  GIXSQLREL: 20a
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   VCPKG_ROOT: C:\vcpkg

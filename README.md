@@ -594,6 +594,34 @@ Driver notes:
 - MySQL and SQLite have updatable cursor emulation: the table on which the cursor is opened must have a unique key that will be used for the update. This has been proven to work, but it is obviously (a lot) slower than native support.
 - ODBC will defer updatable cursor handling to its own drivers: it depends on them whether updatable cursors will be available or not. As a side note the ODBC driver for MySQL (MySQL Connector/ODBC) uses the same technique illustrated above to emulate updatable cursors.
 
+### NULL indicators
+
+Starting from v1.0.20a, the standard COBOL NULL indicators are supported for all drivers. You will need to declare a specific variable as a NULL indicator (type **must** be `PIC S9(4) COMP`:
+
+           01 COM-NULL-IND PIC S9(4) COMP. 
+
+Then you case youse it like this:
+
+           EXEC SQL
+               SELECT PAYRATE, COM
+                INTO :PAYRATE, :COM:COM-NULL-IND
+                FROM EMPTABLE 
+                    WHERE LNAME = 'XYZ1' AND 
+                        FNAME = 'ABC1' AND 
+                        COM IS NULL
+           END-EXEC.
+
+or this:
+
+           EXEC SQL
+               INSERT INTO EMPTABLE 
+                    (LNAME, FNAME, PAYRATE, COM)
+                    VALUES 
+                    ('XYZ1', 'ABC1', 94.00, :COM:COM-NULL-IND)
+           END-EXEC.
+
+A standard value of `-1` in the indicator value is retrieved on output (`INSERT...`) or set on input (`SELECT...`, `FETCH...`) to indicate NULL fields. There is currently no support for other values of the indicator (e.g. to indicate truncation).
+
 ## Driver notes
 
 ### PostgreSQL
