@@ -1,5 +1,6 @@
 #pragma once
 
+#include <climits>
 
 enum class CobolVarType : int {
 	UNKNOWN = 0,
