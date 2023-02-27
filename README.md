@@ -1,29 +1,28 @@
-
 ## GixSQL
 
-GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCOBOL to access PostgreSQL, ODBC, MySQL, Oracle and SQLite databases.
+GixSQL is an ESQL preprocessor and a set of runtime libraries that allow GnuCOBOL or sufficiently compatible enough COBOL implementations to access PostgreSQL, ODBC, MySQL, Oracle and SQLite databases.
 
-_**For updated news and current developments [look here](https://mridoni.github.io/) on the development blog.**_
+_**For the latest news and current developments [see here](https://mridoni.github.io/) on the development blog.**_
 
-It originated as a (private) fork of [ocesql](https://github.com/GitMensch/Open-COBOL-ESQL) but has been almost completely rewritten: while the semantics related to the GnuCOBOL interface are similar and several support functions have been kept, the parser, scanner and library frameworks have been developed in C++ and have a different organization, with dynamically loadable modules as "database drivers".
+It started as a (private) fork of [ocesql](https://github.com/opensourcecobol/Open-COBOL-ESQL) but has been almost completely rewritten: while the semantics related to the GnuCOBOL interface are similar and several support functions have been retained, the parser, scanner and library frameworks have been developed in C++ and have a different organisation, with dynamically loadable modules as "database drivers".
 
-The core of GixSQL has been incorporated in a more generic "preprocessing library" (libgixpp) that is used in [Gix-IDE](https://github.com/mridoni/gix) to parse COBOL files and derive some metadata used for navigation and debugging.
+The core of GixSQL has been incorporated into a more generic "preprocessing library" (libgixpp) which is used in [Gix-IDE](https://github.com/mridoni/gix) to parse COBOL files and derive some metadata used for navigation and debugging.
 
-GixSQL is available both as an integrated module in Gix-IDE and as an external set of tools and libraries. As of v1.0.4 GixSQL is standard C++ and does not depend any more on Qt.
+GixSQL is available both as an integrated module in Gix-IDE and as an external set of tools and libraries. Since version 1.0.4 GixSQL is standard C++ and no longer depends on Qt.
 
-As of v1.0.7 GixSQL comes also in a standalone install package, so it can also be used without installing the full-blown IDE.
+Since version 1.0.7 GixSQL comes also in a standalone install package, so it can also be used without installing the full-blown IDE.
 
-As of v1.0.13 GixSQL has been moved to its own repository.
+Since version 1.0.13 GixSQL has been moved to its own repository.
 
 ### Architecture
  
-GixSQL comprises a preprocessor (a standalone executable or a library) and a set of runtime libraries. libgixsql.dll/.so is the main library and it is the one that will be linked to your COBOL modules. The other libraries (e.g. libgisql-odbc.dll/.so) will be dynamically loaded at runtime depending on the DB you chose in your configuration (see below). It is possible, if so desired, to develop additional libraries for specific DBMSs not covered in the standard install.
+GixSQL consists of a preprocessor (a standalone executable or a library) and a set of runtime libraries. libgixsql.dll/.so is the main library and it is the one that will be linked to your COBOL modules. The other libraries (e.g. libgisql-odbc.dll/.so) are dynamically loaded at runtime depending on the DB you have chosen in your configuration (see below). It is possible to develop additional libraries for specific DBMSs not covered in the standard installation, if desired.
 
 ### Connecting to a database from COBOL
 
-*Note: the "connection string" format has changed in v1.0.8 and is incompatible with the old one. Given the amount of fixes and improvements, it is strongly suggested to upgrade to the latest version anyway.*
+*Note: the "connection string" format has changed in version 1.0.8 and is incompatible with the old one. Given the amount of fixes and improvements, it is strongly recommended  to upgrade to the latest version anyway.*
 
-There is no "bind" procedure in GixSQL, you will have to manually open a connection to a database. This can be done in different ways: this is an example of a syntax that is quite similar to the one used in Micro Focus COBOL:
+There is no "bind" procedure in GixSQL, you will have to open a connection to a database manually in COBOL. This can be done in a number of ways, the following example uses a syntax similar to that used in Micro Focus COBOL:
 
 ```cobol
     ACCEPT DATASRC FROM ENVIRONMENT-VALUE.                        
@@ -35,7 +34,7 @@ There is no "bind" procedure in GixSQL, you will have to manually open a connect
 
 In this case the two values are retrieved from the environment variables `DBNAME` and `DBAUTH` and passed to the CONNECT function.
 
-`DATASRC` is a "connection string"-style alphanumeric field, whose standard format (see below) is basically
+`DATASRC` is an alphanumeric "connection string"-style field, whose default format (see below) is basically
 
     <dbtype>://<host>[:port][/dbname][?[opt1=val1]&...]
 
@@ -47,7 +46,7 @@ In this case the username and password are provided in the second parameter (`DB
 
     username.password
 
-You can also use other formats for your connection statements, like
+You can also use other formats for your connection statements, such as
 
 	CONNECT TO :DATASOURCE USER :USERNAME USING :PASSWORD
 
@@ -55,31 +54,29 @@ or
 
 	CONNECT :USERNAME IDENTIFIED BY :PASSWORD USING :DATASOURCE
 
-All the identifiers for data sources, usernames and passwords can be either COBOL variables (prefixed by a semi-colon) or string literals.
+All the identifiers for data sources, usernames and passwords can be either COBOL variables (prefixed by a semicolon) or string literals.
 
 #### Connection string formats
 
-Starting from version 1.0.16dev1 there are three supported formats for "connection strings":
+Since version 1.0.16dev1 there are three supported formats for "connection strings":
 
 1) GixSQL "standard", e.g.:
     - `pgsql://test.test@localhost:5432/testdb1`
     - `pgsql://localhost:5432/testdb1`
 
-2) GixSQL with "no DB driver"
+2) GixSQL without explicit DB driver
     - `localhost:5432/testdb1`
     - `test.test@localhost:5432/testdb1`
 
 3) OCESQL-compatible
     - `testdb1@localhost:5432`
 
-For cases 2) and 3) the DB/driver type is inferred by:
+For cases 2) and 3), the DB/driver type is inferred by:
 
 - setting a compile-time constant (compile-time means "when GixSQL is compiled"):
 	 - manually in default_driver.h (e.g. `#define GIXSQL_DEFAULT_DRIVER	"pgsql"`)
-	 - using the `--with-default-driver=pgsql|odbc|mysql|none` when executing the configure script (Linux/MinGW only)
-- if this constant is missing or empty (default), the content of the environment variable `GIXSQL_DEFAULT_DRIVER` is used. If no default driver is available (either set by the user or provided by the compile-time configuration) and none has been specified in the user-supplied connection string, the library will return an error.
-
-
+	 - by using the `--with-default-driver=pgsql|odbc|mysql|none` when running the configure script (Linux/MinGW only)
+- If this constant is missing or empty (default), the content of the environment variable `GIXSQL_DEFAULT_DRIVER` is used. If no default driver is available (either set by the user or provided by the compile-time configuration), and none has been specified in the user-supplied connection string, the library will return an error.
 
 ### Multiple connections
 
@@ -93,9 +90,10 @@ or
 	
 where **db_conn_id** is an identifier for your connection.
 
-Then you can use this identifier in your SQL statements, e.g.:
+You can then use this identifier in your SQL statements, for example
 
-	       EXEC SQL
+```sql
+           EXEC SQL
               CONNECT TO :DATASRC-1 AS CONN1 USER :DBUSR-1
            END-EXEC.    
            
@@ -106,13 +104,12 @@ Then you can use this identifier in your SQL statements, e.g.:
            EXEC SQL AT CONN1 DROP TABLE IF EXISTS TAB1 END-EXEC.
 
            EXEC SQL AT CONN2 DROP TABLE IF EXISTS TAB2 END-EXEC.
-           
-
-
+```
 
 ### Declaring SQL host variables
 
-For the time being the `BEGIN DECLARE SECTION`/`END DECLARE SECTIONS` statements are processed but ignored. You can use any COBOL field in SQL statements, e.g.:
+Currently, the time `BEGIN DECLARE SECTION`/`END DECLARE SECTIONS` statements are processed but ignored.
+You can use any COBOL field in SQL statements, e.g.:
 
 ```cobol
 	      WORKING-STORAGE SECTION. 
@@ -126,9 +123,9 @@ For the time being the `BEGIN DECLARE SECTION`/`END DECLARE SECTIONS` statements
            END-EXEC.
 ```
 
-As a special case, if you need to declare and use field to be associated with variable length database fields (i.e. VARBINARY or VARCHAR), you can do it in one of the following ways:
+As a special case, if you need to declare and use field to be associated with variable length database fields (i.e. VARBINARY or VARCHAR), you can do this in one of the following ways:
 
-1) use the `SQL TYPE IS` clause:  
+1) Use the `SQL TYPE IS` clause:  
 
     ```cobol
             01 VBFLD SQL TYPE IS VARBINARY(100).
@@ -154,14 +151,14 @@ As a special case, if you need to declare and use field to be associated with va
 
     The default suffixes `-LEN` and `-ARR` can be customized by using the `-Y`/`--varying` option in `gixpp`.
 
-    Another `gixpp` option (`-P`/`--picx-as arg`) allows to choose the default handling for standard `PIC X` fields (as `CHAR`, with padding or as `VARCHAR`, auto-trimmed when written to the database). Please not that this does not apply to variable-length groups, whose actual length is always determined by the length indicator field.
+    Another `gixpp` option (`-P`/`--picx-as arg`) allows to choose the default handling for standard `PIC X` fields (as `CHAR`, with padding or as `VARCHAR`, auto-trimmed when written to the database). Please note that this does not apply to variable-length groups, whose actual length is always determined by the length indicator field.
 
-    *(Note: you can select 2 or 4 bytes for the data item length indicator, the standard being 4. This option can be currently changed at compile time of GixSQL only, by defining the `USE_VARLEN_16` constant).*
+    *(Note: you can select 2 or 4 bytes for the data item length indicator, the standard being 4. This option can currently be changed only at compile time of GixSQL, by defining the `USE_VARLEN_16` constant).*
 
-2) manually define "level 49" fields as in case 1, this is the case with some legacy code.  
-As noted above ensure that the length (2 or 4 bytes) matches your installation of GixSQL.
+2) Manually define "level 49" fields as in case 1, this is the case with some legacy code.  
+As mentioned above, make sure that the length (2 or 4 bytes) matches your installation of GixSQL.
 
-3) use the `EXEC SQL VAR` syntax for a given field:
+3) Use the `EXEC SQL VAR` syntax for a given field:
  
     ```cobol
              WORKING-STORAGE SECTION. 
@@ -175,7 +172,7 @@ As noted above ensure that the length (2 or 4 bytes) matches your installation o
              END-EXEC.   
     ```
 
-Note: You can also use the `EXEC SQL VAR` syntax to declare other SQL-typed fields, e.g:
+Note: You can also use the `EXEC SQL VAR` syntax to declare other SQL-typed fields, such as
 
 ```sql
    EXEC SQL VAR NUM3 IS FLOAT END-EXEC.
@@ -183,10 +180,11 @@ Note: You can also use the `EXEC SQL VAR` syntax to declare other SQL-typed fiel
    EXEC SQL VAR NUM4 IS FLOAT(6,2) END-EXEC.
 ```
 
-As of v1.0.10 the supported SQL types are `FLOAT`, `REAL`, `INTEGER`, `DECIMAL`. `VARCHAR2` is supported at a syntactic level but for now is treated as a standard `VARCHAR`.
+As of version 1.0.10, the supported SQL types are `FLOAT`, `REAL`, `INTEGER`, `DECIMAL`.
+`VARCHAR2` is supported at a syntactic level but for now is treated as a standard `VARCHAR`.
 
 ### Prepared statements
-Starting from v1.0.10 GixSQL supports prepared statements:
+Since version 1.0.10 GixSQL supports prepared statements:
 
 ```cobol
        WORKING-STORAGE SECTION. 
@@ -209,7 +207,7 @@ Starting from v1.0.10 GixSQL supports prepared statements:
            EXEC SQL EXECUTE SQLSTMT1 USING :T1, :T2 END-EXEC.
 ```
 
-`EXECUTE IMMEDIATE` is also supported (as is the case above, you can use literals or host references):
+`EXECUTE IMMEDIATE` is also supported (as with the case above, you can use literals or host references):
 
 ```
            EXEC SQL EXECUTE IMMEDIATE 
@@ -219,63 +217,65 @@ Starting from v1.0.10 GixSQL supports prepared statements:
 
 ### Driver options and notes
 
-Starting from v1.0.8 it is possible to pass options to the backend "drivers", i.e., the submodules of GixSQL that interface with a specific DBMS. For now only a few options are supported, but their number will probably grow in the next releases:
+Starting from version 1.0.8 it is possible to pass options to the backend "drivers", i.e., the submodules of GixSQL that interface with a specific DBMS.
+Only a few options are supported at the moment, but the number is likely to increase in future releases:
 
 - `client_encoding`: sets the default text encoding for client connections (supported in MySQL and PostgreSQL)
 - `autocommit`: sets autocommit on or off (default: off, supported in MySQL and PostgreSQL)
 - `default_schema`: selects the default schema (supported in PostgreSQL, maps to the search_path)
 
-Driver options are passed in the connection string, e.g.:
+Driver options are passed in the connection string, e.g.
 
 	pgsql://localhost/mydb?autocommit=on&client_encoding=UTF8&default_schema=myschema
 
-For “boolean" options you can use either `on`/`off` or `1`/`0` to enable or disable them.
+For "boolean" options you can use either `on`/`off` or `1`/`0` to enable or disable them.
 
 ### Setting client encoding and autocommit
 
 You can set client encoding and autocommit options for a given connection in two different ways.
 
-- using a parameter in the datasource, like indicated above e.g.
+- using a parameter in the datasource, as shown above, e.g.
 
       pgsql://localhost:5432/testdb?default_schema=myschema&client_encoding=LATIN1
 
-- using  an environment variable, e.g.
-	
-	  export GIXSQL_CLIENT_ENCODING=UTF8
-	  export GIXSQL_AUTOCOMMIT=on
+- using an environment variable, e.g.
+
+   ```sh
+   export GIXSQL_CLIENT_ENCODING=UTF8
+   export GIXSQL_AUTOCOMMIT=on
+   ```
 
 Notes:
 
 - A setting specified in the datasource definition (the first method) takes precedence over a setting specified in an environment variable
-- Defaults are:
-	-	client encoding: UTF8
-	-	autocommit: off  
+- The defaults are:
+	- client encoding: UTF8
+	- autocommit: off
 - Client encoding identifiers are driver-specific, i.e. you should use:  
-	+	`export GIXSQL_CLIENT_ENCODING=utf8mb4` for MySQL
-	+	`export GIXSQL_CLIENT_ENCODING=UTF8` for PostgreSQL
+	- `export GIXSQL_CLIENT_ENCODING=utf8mb4` for MySQL
+	- `export GIXSQL_CLIENT_ENCODING=UTF8` for PostgreSQL
 	
 ### Logging
 
-Starting from version 1.0.16 GixSQL supports an improved logging engine, based on [spdlog](https://github.com/gabime/spdlog). Logging options can be controlled by using two environment variables:
+Starting with version 1.0.16, GixSQL supports an improved logging engine, based on [spdlog](https://github.com/gabime/spdlog). Logging options can be controlled by using two environment variables:
 
 - **GIXSQL_LOG_LEVEL**  
 Sets the debug level. It can be `off`, `critical`, `error` (default), `warn`, `info`, `debug` or `trace`. Be aware that the `trace` option: 1) exposes a lot of internal information, including possibly sensitive data. 2) causes a slowdown of about 30%.
 
 - **GIXSQL_LOG_FILE**  
-Specifies the file where the debug output (if any) is written. Defaults to "gixsql.log"
+Specifies the file to which the debug output (if any) is written. Defaults to "gixsql.log"
 
 *Pre-v1.0.18* the two environment variables were named `GIXSQL_DEBUG_LOG_LEVEL` and `GIXSQL_DEBUG_LOG_FILE`. The default log level was `off`.
-
-*Pre -v1.0.16*: you can use the environment variables `GIXSQL_DEBUG_LOG-ON=1` (which defaults to 0=OFF) and `GIXSQL_DEBUG_LOG` (defaults to "gixsql.log" in your temp directory). This mechanism has been removed in v1.0.16+
+*Pre-v1.0.16*: you can use the environment variables `GIXSQL_DEBUG_LOG-ON=1` (which defaults to 0=OFF) and `GIXSQL_DEBUG_LOG` (defaults to "gixsql.log" in your temp directory). This mechanism has been removed in later versions.
 
 ### Examples
 
 You can find a sample project collection for GixSQL (TEST001.gix) in the folder `%USERPROFILE%\Documents\Gix\Examples` (`$HOME/Documents/gix/examples` on GNU/Linux) that should have been created when you installed Gix-IDE.  
-Under the project directory (`%USERPROFILE%\Documents\Gix\Examples\TEST001` or `$HOME/Documents/gix/examples/TEST001` on GNU/Linux) there is a SQL file with a DDL query and some data you can use to run the sample project.
+Under the project directory (`%USERPROFILE%\Documents\Gix\Examples\TEST001` or `$HOME/Documents/gix/examples/TEST001` on GNU/Linux) there is a SQL file with a DDL query and some data you can use to run the example project.
 
 ### Using GixSQL
 
-If you want to manually precompile COBOL programs for ESQL, you can use the preprocessor binary (**gixpp** or **gixpp.exe**) you will find in the **bin** folder in Gix-IDE's install directory. When you run it from the console, ensure you have the same **bin** directory in your `PATH`/`LD_LIBRARY_PATH` since it contains some libraries that are needed by **gixpp**. These are the command line options available, that correspond to those described earlier:
+If you want to manually precompile COBOL programs for ESQL, you can use the preprocessor binary (**gixpp** or **gixpp.exe**) you will find in the **bin** folder in Gix-IDE's installation directory. If you are running it from the console, make sure you have the same **bin** directory in your `PATH`/`LD_LIBRARY_PATH` since it contains some libraries that are needed by **gixpp**. These are the available command line options
 
 ```text
 gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
@@ -304,25 +304,26 @@ Options:
   -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
   -P, --picx-as arg (=char)   text field options (=char|charf|varchar)
   --no-rec-code arg           custom code for "no record" condition(=nnn)
-```	  
+```
 
-When you want to build and link from the console, remember also to add the `<gix-install-dir>/share/gixsql/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
+Alternatively, you can use **gixsql**, which is a wrapper around the gixsql binary.
 
-As an alternative you may call **gixsql** which is a wrapper around the gixsql binary.
+When you want to build and link the resulting COBOL program from the console, remember to also add the `<gix-install-dir>/share/gixsql/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
+
 
 ### Basic command line example
 
-First of all, you will (rather obviously) need a database server: this can be PostgreSQL, MySQL, or any other database that has a ODBC driver (DB2 works too). The DDL for this example targets PostgreSQL and might need to be modified to work with your DBMS of choice. 
+First of all, you will (rather obviously) need a database server: this can be PostgreSQL, MySQL, or any other database that has an ODBC driver (DB2 works too). The DDL for this example targets PostgreSQL and may need to be modified to work with your DBMS of choice. 
 
-You will find the files needed to run this example in the "examples/test001" subfolder, inside the "Gix" folder that the installer created in your "Documents" folder. On Windows this should be: 
+The files needed to run this example can be found in the "examples/test001" subfolder within the "Gix" folder that the installer created in your "Documents" folder. On Windows this should be: 
 
 `C:\Users\%USERNAME%\Documents\gix\test001`
 
-On Linux (this may vary according to your distribution) it should be 
+On GNU/Linux (this may vary depending on your distribution) it should be 
 
 `$HOME/Documents/gix/test001`
 
-Create an empty database or a schema, ensure you can access it with a given username and password, then use the DDL file `test001.sql` to create the test table we are going to use (named `emptable`). 
+Create an empty database or a schema, make sure you can access it with a given username and password, then use the DDL file `test001.sql` to create the test table we will use (named `emptable`). 
 
 Make sure that the preprocessor (gixpp) is in your path, then preprocess the COBOL source file:
 
@@ -334,7 +335,7 @@ where:
 - `-e `: preprocess for ESQL (mandatory for preprocessing)
 - `-S`: use static calls when emitting GixSQL library calls (this is the mode to be normally used)
 - `-I.`: use the current directory for included COPY files (SQLCA is included from GixSQL's own directory)
-- `-ext ".,.cpy,.CPY"`: look for COPY files having one of these extensions (comma-separated list)
+- `-ext ".,.cpy,.CPY"`: search for COPY files with one of these extensions (comma-separated list)
 - `-i` and `-o`: input and output file paths
 
 Another interesting option is `--picx-as`: this indicates how standard `PIC(X)` fields should be treated when sent to the DBMS. There are three possible options:
@@ -352,9 +353,9 @@ If all goes well, you can compile the preprocessed file `TEST001.cbsql`:
 
 The location of the actual path for `GIXSQL_LIB_DIR` depends on several elements:
 
-- The install path for GixIDE (if you have installed the full-blown IDE) or GixSQL (if you only have installed one of the GixSQL packages)
+- The installation path for GixIDE (if you have installed the full-blown IDE) or GixSQL (if you have installed one of the GixSQL-only packages)
 - The architecture your version of Gix-IDE/GixSQL was compiled for or is running on (x86 or x64)
-- On Windows only: the flavour of GnuCOBOL compiler you are running (MSVC-based or MinGW-based)
+- On Windows only: the flavour of the GnuCOBOL compiler you are running (MSVC-based or MinGW-based)
 
 For instance, if we are on Windows x64, using GixSQL as shipped with Gix-IDE and an x64 version of GnuCOBOL, MSVC-based, the actual command will be:
 
@@ -375,7 +376,7 @@ Now we can run the test program, we just need to set some environment variables 
 		export PATH=$PATH:/opt/gix-ide/lib/x64/gcc
 	
 	
-- Set the two environment variables needed by the COBOL code itself (obviously they can be named as you wish):
+- Set the two environment variables needed by the COBOL code itself (they can be named whatever you like, of course):
 
 		set DBNAME=pgsql://192.168.1.1:5432/testdb
 		set DBAUTH=test.test
@@ -412,21 +413,19 @@ Keep pressing 'y' to advance in the loop and display all the three records in th
 
 ## Building from source
 
-GixSQL requires a C++17-compatible compiler, with support of the `filesystem` namespace. This usually means GCC 8+ and Visual Studio 2017 onwards (minimum 15.7) or, better, Visual Studio 2019/2022. Building GixSQL with older compilers might need adding `LIBS=-lstdc++fs` to your configure line (old gcc/lang) or `LIBS=-lc++fs` (old LLVM).
+GixSQL requires a C++17-compatible compiler, with support of the `filesystem` namespace. This usually means GCC 8+ and Visual Studio 2017 onwards (minimum 15.7) or, better, Visual Studio 2019/2022. Building GixSQL with older compilers may require adding `LIBS=-lstdc++fs` to your configure line (old gcc/lang) or `LIBS=-lc++fs` (old LLVM).
 
 ### Windows (Visual Studio)
 
-After cloning or downloading the repository you will find a solution file (`gixsql.sln`). You can use Visual Studio 2019 to build it, but first you  will likely have to check the include and library definitions for the PostgreSQL and MySQL client libraries (32/and or 64 bit). The preprocessor (`gixpp`) does not have any specific dependency, while the main runtime library (`libgixsql`)  - starting from v1.0.18 - depends on [spdlog](https://github.com/gabime/spdlog) and [fmt](https://github.com/fmtlib/fmt).
+After cloning or downloading the repository you will find a solution file (`gixsql.sln`). You can use Visual Studio 2019 to build it, but first you probably need to check the include and library definitions for the PostgreSQL and MySQL client libraries (32/and or 64 bit). The preprocessor (`gixpp`) does not have any specific dependency, while the main runtime library (`libgixsql`)  - starting from version 1.0.18 - depends on [spdlog](https://github.com/gabime/spdlog) and [fmt](https://github.com/fmtlib/fmt).
 
-The solution file is already set up to build with libraries from [vcpkg](https://vcpkg.io/en/index.html), so you can simply do:
+The solution file is already set up to build with libraries from [vcpkg](https://vcpkg.io/en/index.html), so you can simply do
 
 `vcpkg install libpq:x64-windows libmariadb:x64-windows fmt:x64-windows-static-md spdlog:x64-windows-static-md`
 
-for x64, or :
+for x64, or in case you want to to build a 32-bit version:
 
-`vcpkg install libpq:x86-windows libmariadb:x86-windows fmt:x86-windows-static-md spdlog:x86-windows-static-md`
-
-in case you want to to build a 32-bit version.
+`vcpkg install libpq:x86-windows libmariadb:x86-windows fmt:x86-windows-static-md spdlog:x86-windows-static-md`.
 
 ### Linux
 
@@ -440,7 +439,7 @@ You will need the development packages for some of the DBMS client libraries, e.
 
 The client support code for Oracle and SQLite is integrated in GixSQL, so no additional package is needed.
 
-Starting from v1.0.16 you will also need the development packages for spdlog and fmt, if not already installed:
+Starting with version 1.0.16, you will also need the development packages for spdlog and fmt, if not already installed:
 
 	apt install libspdlog-dev libfmt-dev
 
@@ -479,7 +478,7 @@ It should compile all the libraries, then the preprocessing library and the prep
 	
 ### Windows (MinGW/MSYS2)
 
-Starting from v1.0.16, the `configure` script can also be used to build with MSYS2 (MinGW32/64). You will need to install the following packages with `pacman`:
+Starting with version 1.0.16, the `configure` script can also be used to build with MSYS2 (MinGW32/64). You will need to install the following packages with `pacman`:
 
 `pacman -S mingw-w64-x64-pkg-config autoconf make automake libtool bison flex mingw-w64-x64-gcc mingw-w64-x64-postgresql mingw-w64-x64-libmariadbclient mingw-w64-x64-unixodbc mingw-w64-x64-spdlog `
 
@@ -488,7 +487,7 @@ Reasonably up-to-date installs of MinGW already have a correct version of `bison
 ## Usage notes
 
 ### Using GixSQL from Gix-IDE
-When you create a project in Gix-IDE, you are asked whether you want to enable it for ESQL preprocessing. This is not an absolute requirement. At any point you can set the project property "Preprocess for ESQL" (under "General") to "Yes". There are several properties you can configure here that affed code generation by the preprocessor:
+When you create a project in Gix-IDE, you are asked whether you want to enable it for ESQL preprocessing. This is not an absolute requirement. At any point you can set the project property "Preprocess for ESQL" (under "General") to "Yes". There are several properties you can configure here that affect code generation by the preprocessor:
 
 - **Preprocess COPY files**: if set to "Yes" all copy files (not only those in EXEC SQL INCLUDE sections) will be parsed by the ESQL preprocessor. This is useful when you have copy files containing code that includes EXEC SQL statements.
 - **Use anonymous parameters**: if set to "Yes", parameters in SQL statements will be represented as `?`, otherwise a numeric indicator (i.e `$1`) will be used.
@@ -560,13 +559,13 @@ GixSQL can optionally convert all the parameter placeholders in a prepared state
 
 ### Customization of SQLCODE on "no record found"
 
-The return values for `SQLCODE`, as it is common knowledge, are not standard. Many DBMSs, when no data is found (e.g. when trying to fetch after the last row in a cursor has been reached, or when a `SELECT` statements returns no results) supply `100` as a return code when flagging this condition. While this behaviour is widespread, it is far from being a standard. Oracle, for instance, uses `1403`. GixSQL, in this condition, returns a (more standardized) `02000` for `SQLSTATE` and, until v1.0.18, used to return a fixed value of `100` in `SQLCODE`. From v1.0.18 onwards, this value can be customized, to conform to the standards used by the combination of your COBOL code and DBMS of choice. A custom code for the "no record found" condition can (actually should) be set in two different places:
+The return values for `SQLCODE`, as it is common knowledge, are not standard. Many DBMSs, when no data is found (e.g. when trying to fetch after the last row in a cursor has been reached, or when a `SELECT` statements returns no results) supply `100` as a return code when flagging this condition. While this behaviour is widespread, it is far from being a standard. Oracle, for instance, uses `1403`. GixSQL, in this condition, returns a (more standardized) `02000` for `SQLSTATE` and, until version 1.0.18, used to return a fixed value of `100` in `SQLCODE`. From version 1.0.18 onwards, this value can be customized, to conform to the standards used by the combination of your COBOL code and DBMS of choice. A custom code for the "no record found" condition can (actually should) be set in two different places:
 
 - While preprocessing, by using the `--no-rec-code` option and adding a numeric value (e.g. `--no-rec-code 1403`). This instructs the preprocessor to correctly handle the `NOT FOUND` clauses in `EXEC SQL WHENEVER` statements.
 - At runtime, by setting the `GIXSQL_NOREC_CODE` environment variable (e.g. `export GIXSQL_NOREC_CODE=1403` (Linux) or `set GIXSQL_NOREC_CODE=1403` (Windows)
 
 ### Autocommit 
-Starting from v1.0.19 the autocommit feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
+Starting from version 1.0.19 the autocommit feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
 
 The new implementation sees this feature being moved mainly from the main library (libgixsql) to the database driver libraries (e.g. libgixsql-pgsql), with only a few parameters passed around. The rationale behind this move is that different DBMSs behave in different ways, and trying to keep a unified approach would only lead to confusion (and bugs, a lot of bugs). What follows is the level of support featured by the various DB drivers.
 
@@ -582,7 +581,7 @@ Autocommit will basically work in three different modes:
 - Oracle has no concept of autocommit, just as PostgreSQL, but the first one always work in transaction mode, while transactions must be explicitly started in PostgreSQL. While autocommit (or "transaction mode" in the case of PostgreSQL) have been - and will further be - tested, these differences (and the ones above) can probably lead to different behaviours when switching a single codebase that makes heavy use of the autocommit feature to a different DB, if precautions are not taken and tests performed.
 
 ### Updatable cursors
-Starting from v1.0.19 the updatable cursor feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
+Starting from version 1.0.19 the updatable cursor feature has been re-implemented. It has been there since the first releases, but due to several reasons (essentially lack of usage and bad assumptions) it was left behind and its functionality was, in its previous incarnation, rather dubious.
 
 The new implementation sees this feature being moved mainly from the main library (libgixsql) to the database driver libraries (e.g. libgixsql-pgsql), with only a few parameters passed around. The rationale behind this move is that different DBMSs behave in different ways, and trying to keep a unified approach would only lead to confusion (and bugs, a lot of bugs). What follows is the level of support featured by the various DB drivers.
 
@@ -596,7 +595,7 @@ Driver notes:
 
 ### NULL indicators
 
-Starting from v1.0.20a, the standard COBOL NULL indicators are supported for all drivers. You will need to declare a specific variable as a NULL indicator (type **must** be `PIC S9(4) COMP`:
+Starting from version 1.0.20a, the standard COBOL NULL indicators are supported for all drivers. You will need to declare a specific variable as a NULL indicator (type **must** be `PIC S9(4) COMP`:
 
            01 COM-NULL-IND PIC S9(4) COMP. 
 
