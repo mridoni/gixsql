@@ -24,8 +24,8 @@ USA.
 
 #include "FileData.h"
 #include "libcpputils.h"
-#include "TPESQLProcessing.h"
-
+#include "TPESQLParser.h"
+#include "TPESQLProcessor.h"
 
 #define SET_PP_ERR(I,S) err_data.err_code = I; err_data.err_messages.push_back(S)
 
@@ -150,28 +150,34 @@ void GixPreProcessor::addStep(ITransformationStep *s)
 	steps.push_back(s);
 }
 
-bool GixPreProcessor::setInputFile(std::string infile)
+bool GixPreProcessor::setInputFile(std::string _infile)
 {
 	if (!steps.size()) {
-		input_file = std::string();
+		input = nullptr;
 		return false;
 	}
 
+	TransformationStepData *infile = new TransformationStepData();
+	infile->type = TransformationStepDataType::Filename;
+	infile->data.filename = _infile;
 	steps.at(0)->setInput(infile);
-	input_file = infile;
+	input = infile;
 
 	return true;
 }
 
-bool GixPreProcessor::setOutputFile(std::string outfile)
+bool GixPreProcessor::setOutputFile(std::string _outfile)
 {
 	if (!steps.size()) {
-		output_file = std::string();
+		output = nullptr;
 		return false;
 	}
 
+	TransformationStepData* outfile = new TransformationStepData();
+	outfile->type = TransformationStepDataType::Filename;
+	outfile->data.filename = _outfile;
 	steps.back()->setOutput(outfile);
-	output_file = outfile;
+	output = outfile;
 
 	return true;
 }

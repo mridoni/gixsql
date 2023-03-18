@@ -27,6 +27,22 @@ USA.
 class ITransformationStep;
 class GixPreProcessor;
 
+enum class TransformationStepDataType
+{
+	NotSet = 0,
+	Filename = 1,
+	ESQLParseData = 2
+};
+
+struct TransformationStepData {
+	TransformationStepDataType type = TransformationStepDataType::NotSet;
+	union transformation_step_data {
+		constexpr transformation_step_data() {}
+		void* parse_data = nullptr;
+		std::string filename;
+	} data;
+};
+
 class ITransformationStep
 {
 public:
@@ -34,11 +50,11 @@ public:
 	virtual ~ITransformationStep() {}
 
 	virtual bool run(ITransformationStep* prev_step) = 0;
-	virtual std::string getInput();
-	virtual std::string getOutput(ITransformationStep* me = nullptr);
+	virtual TransformationStepData* getInput();
+	virtual TransformationStepData* getOutput(ITransformationStep* me = nullptr);
 
-	virtual void setInput(std::string in_file);
-	virtual void setOutput(std::string out_file);
+	virtual void setInput(TransformationStepData *input);
+	virtual void setOutput(TransformationStepData* output);
 
 	GixPreProcessor *getOwner();
 
@@ -47,9 +63,9 @@ protected:
 
 	ITransformationStep(GixPreProcessor* gpp);
 
-	GixPreProcessor* owner;
-	std::string input_file;
-	std::string output_file;
+	GixPreProcessor* owner = nullptr;
+	TransformationStepData* input = nullptr;
+	TransformationStepData* output = nullptr;
 
 };
 
