@@ -66,23 +66,6 @@ public:
 
 private:
 
-	// ESQL options
-	ESQL_ParameterStyle opt_params_style;
-	bool opt_preprocess_copy_files;
-	bool opt_emit_static_calls;
-	bool opt_emit_debug_info;
-	bool opt_emit_compat;
-	bool opt_consolidated_map;
-	bool opt_no_output;
-	bool opt_emit_map_file;
-	bool opt_emit_cobol85;
-	bool opt_picx_as_varchar;
-	int opt_norec_sqlcode = 100;	// Just to be safe, it will be (re)set in the constructor
-
-	std::string opt_varlen_suffix_len;
-	std::string opt_varlen_suffix_data;
-
-	gix_esql_driver main_module_driver;
 
 	 std::vector<std::string> output_lines;
 

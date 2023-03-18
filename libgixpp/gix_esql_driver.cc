@@ -24,13 +24,12 @@ USA.
 
 #include "gix_esql_parser.hh"
 #include "libcpputils.h"
-//#include "cobol_var_types.h"
-
-#include "TPESQLProcessing.h"
 
 #if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
 #include <Windows.h>
 #endif
+#include "TPESQLParser.h"
+#include "cobol_var_types.h"
 
 #if _DEBUG
 #if defined (VERBOSE)
@@ -94,7 +93,7 @@ gix_esql_driver::~gix_esql_driver ()
 	delete hostref_or_literal_list;
 }
 
-void gix_esql_driver::setCaller(TPESQLProcessor* p)
+void gix_esql_driver::setCaller(TPESQLParser* p)
 {
 	pp_caller = p;
 }

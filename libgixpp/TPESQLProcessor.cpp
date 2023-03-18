@@ -19,6 +19,7 @@ USA.
 */
 
 #include "TPESQLProcessor.h"
+#include "TPESQLCommon.h"
 #include "ESQLCall.h"
 #include "gix_esql_driver.hh"
 #include "MapFileWriter.h"
@@ -32,37 +33,6 @@ USA.
 #if defined(_WIN32) && defined(_DEBUG)
 #include <Windows.h>
 #endif
-
-#define ESQL_CONNECT					"CONNECT"
-#define ESQL_CONNECT_RESET				"CONNECT_RESET"
-#define ESQL_DISCONNECT					"DISCONNECT"
-#define ESQL_CLOSE						"CLOSE"
-#define ESQL_COMMIT						"COMMIT"
-#define ESQL_ROLLBACK					"ROLLBACK"
-#define ESQL_FETCH						"FETCH"
-#define ESQL_INCFILE					"INCFILE"
-#define ESQL_INCSQLCA					"INCSQLCA"
-#define ESQL_INSERT						"INSERT"
-#define ESQL_OPEN						"OPEN"
-#define ESQL_SELECT						"SELECT"
-#define ESQL_UPDATE						"UPDATE"
-#define ESQL_DELETE						"DELETE"
-#define ESQL_WORKING_BEGIN				"WORKING_BEGIN"
-#define ESQL_WORKING_END				"WORKING_END"
-#define ESQL_FILE_BEGIN					"FILE_BEGIN"
-#define ESQL_FILE_END					"FILE_END"
-#define ESQL_LINKAGE_BEGIN				"LINKAGE_BEGIN"
-#define ESQL_LINKAGE_END				"LINKAGE_END"
-#define ESQL_PROCEDURE_DIVISION			"PROCEDURE_DIVISION"
-#define ESQL_DECLARE_TABLE				"DECLARE_TABLE"
-#define ESQL_DECLARE_VAR				"DECLARE_VAR"
-#define ESQL_COMMENT					"COMMENT"
-#define ESQL_IGNORE						"IGNORE"
-#define ESQL_PREPARE					"PREPARE_STATEMENT"
-#define ESQL_EXEC_PREPARED				"EXECUTE_PREPARED"
-#define ESQL_EXEC_IMMEDIATE				"EXECUTE_IMMEDIATE"
-#define ESQL_PASSTHRU					"PASSTHRU"
-#define ESQL_WHENEVER					"WHENEVER"
 
 #define BEGIN_DECLARE_SECTION			"HOST_BEGIN"
 #define END_DECLARE_SECTION				"HOST_END"
@@ -101,57 +71,6 @@ USA.
 										main_module_driver.error("Invalid null indicator reference: " + _V, ERR_INVALID_NULLIND_REF, _F, _L); \
 										return false; \
 									}
-
-enum class ESQL_Command
-{
-	Connect,
-	ConnectReset,
-	Disconnect,
-	Close,
-	Commit,
-	Rollback,
-	Fetch,
-	Incfile,
-	IncSQLCA,
-	Insert,
-	Open,
-	Select,
-	Update,
-	Delete,
-	WorkingBegin,
-	WorkingEnd,
-	FileBegin,
-	FileEnd,
-	LinkageBegin,
-	LinkageEnd,
-	ProcedureDivision,
-	DeclareTable,
-	PrepareStatement,
-	ExecPrepared,
-	ExecImmediate,
-	Whenever,
-
-	// Helpers
-	StartSQL,
-	EndSQL,
-
-	BeginDeclareSection,
-	EndDeclareSection,
-
-	// Fields declaration
-	DeclareVar,
-
-	// Comment code ranges (also comment everything between EXEC SQL IGNORE and END-EXEC)
-	Comment,
-
-	// Comment code ranges (leave anything between EXEC SQL IGNORE and END-EXEC uncommented)
-	Ignore,
-
-	// ESQL is passed directly to the database driver (unknow statements, DBMS-specific syntax, etc.)
-	PassThru,
-
-	Unknown
-};
 
 static bool check_sql_type_compatibility(uint64_t type_info, cb_field_ptr var);
 
@@ -192,6 +111,9 @@ inline std::string TPESQLProcessor::get_call_id(const std::string s)
 
 TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
+
+	code_tag = TAG_PREFIX;
+
 	std::string ps = std::get<std::string>(gpp->getOpt("params_style", std::string("d")));
 	if (ps == "d")
 		opt_params_style = ESQL_ParameterStyle::DollarPrefix;
@@ -205,6 +127,7 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 				opt_params_style = ESQL_ParameterStyle::Unknown;
 
 	opt_preprocess_copy_files = std::get<bool>(gpp->getOpt("preprocess_copy_files", false));
+
 	opt_emit_static_calls = std::get<bool>(gpp->getOpt("emit_static_calls", false));
 	opt_emit_debug_info = std::get<bool>(gpp->getOpt("emit_debug_info", false));
 	opt_emit_compat = std::get<bool>(gpp->getOpt("emit_compat", false));
@@ -235,64 +158,10 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 
 bool TPESQLProcessor::run(ITransformationStep* prev_step)
 {
-	if (input_file.empty()) {
-		if (!prev_step || prev_step->getOutput().empty())
-			return false;
-
-		input_file = prev_step->getOutput();
-	}
-
-#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
-	char bfr[512];
-	sprintf(bfr, "********************\nStarting run, processing file %s\n", input_file.c_str());
-	OutputDebugStringA(bfr);
-#endif
-
-#if _DEBUG_LOG_ON
-	char dbg_bfr[512];
-#if defined(_WIN32)
-	OutputDebugStringA("TPESQLProcessor invoked\n===============\n");
-#else
-	fprintf(stderr, "TPESQLProcessor invoked\n===============\n");
-#endif
-
-	for (auto it = owner->getOpts().begin(); it != owner->getOpts().end(); ++it) {
-		sprintf(dbg_bfr, "%s = %s\n", it.key().toLocal8Bit().data(), it.value().toString().toLocal8Bit().data());
-#if defined(_WIN32)
-		OutputDebugStringA(dbg_bfr);
-#else
-		fprintf(stderr, dbg_bfr);
-#endif
-
-	}
-	for (auto cd : owner->getCopyResolver()->getCopyDirs()) {
-		sprintf(dbg_bfr, "COPY path: %s\n", cd.toLocal8Bit().data());
-#if defined(_WIN32)
-		OutputDebugStringA(dbg_bfr);
-#else
-		fprintf(stderr, dbg_bfr);
-#endif
-	}
-#if defined(_WIN32)
-	OutputDebugStringA("===============\n");
-#else
-	fprintf(stderr, "TPESQLProcessor invoked\n===============\n");
-#endif
-#endif
-
 	if (opt_params_style == ESQL_ParameterStyle::Unknown) {
-		main_module_driver.error("Unsupported or invalid paramter style", ERR_PP_PARAM_ERROR);
+		main_module_driver.error("Unsupported or invalid parameter style", ERR_PP_PARAM_ERROR);
 		return false;
 	}
-
-	main_module_driver.opt_params_style = opt_params_style;
-	main_module_driver.opt_preprocess_copy_files = opt_preprocess_copy_files;
-
-	main_module_driver.setCaller(this);
-
-	code_tag = TAG_PREFIX;
-
-	int rc = main_module_driver.parse(owner, input_file);
 
 	// *****************************
 
