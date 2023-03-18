@@ -94,7 +94,7 @@ gix_esql_driver::~gix_esql_driver ()
 	delete hostref_or_literal_list;
 }
 
-void gix_esql_driver::setCaller(TPESQLProcessing* p)
+void gix_esql_driver::setCaller(TPESQLProcessor* p)
 {
 	pp_caller = p;
 }

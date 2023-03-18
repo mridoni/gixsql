@@ -121,7 +121,8 @@
     <ClCompile Include="ITransformationStep.cpp" />
     <ClCompile Include="MapFileReader.cpp" />
     <ClCompile Include="MapFileWriter.cpp" />
-    <ClCompile Include="TPESQLProcessing.cpp" />
+    <ClCompile Include="TPESQLParser.cpp" />
+    <ClCompile Include="TPESQLProcessor.cpp" />
     <ClCompile Include="TPSourceConsolidation.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -139,7 +140,8 @@
     <ClInclude Include="location.hh" />
     <ClInclude Include="MapFileReader.h" />
     <ClInclude Include="MapFileWriter.h" />
-    <ClInclude Include="TPESQLProcessing.h" />
+    <ClInclude Include="TPESQLParser.h" />
+    <ClInclude Include="TPESQLProcessor.h" />
     <ClInclude Include="TPSourceConsolidation.h" />
     <ClInclude Include="varlen_defs.h" />
   </ItemGroup>

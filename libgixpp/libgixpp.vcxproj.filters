@@ -33,7 +33,7 @@
     <ClCompile Include="ITransformationStep.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TPESQLProcessing.cpp">
+    <ClCompile Include="TPESQLProcessor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="TPSourceConsolidation.cpp">
@@ -49,6 +49,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="gix_esql_scanner.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TPESQLParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -77,7 +80,7 @@
     <ClInclude Include="libgixpp_global.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="TPESQLProcessing.h">
+    <ClInclude Include="TPESQLProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TPSourceConsolidation.h">
@@ -102,6 +105,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="varlen_defs.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TPESQLParser.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

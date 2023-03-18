@@ -35,12 +35,12 @@ struct esql_whenever_clause_handler_t;
 
 enum class ESQL_Command;
 
-class TPESQLProcessing : public ITransformationStep
+class TPESQLProcessor : public ITransformationStep
 {
 	friend class gix_esql_driver;
 
 public:
-	TPESQLProcessing(GixPreProcessor *gpp);
+	TPESQLProcessor(GixPreProcessor *gpp);
 
 	std::string getModuleName();
 

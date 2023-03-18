@@ -18,7 +18,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA.
 */
 
-#include "TPESQLProcessing.h"
+#include "TPESQLProcessor.h"
 #include "ESQLCall.h"
 #include "gix_esql_driver.hh"
 #include "MapFileWriter.h"
@@ -185,12 +185,12 @@ static struct esql_whenever_handler_t
 	esql_whenever_clause_handler_t sqlerror;
 } esql_whenever_handler;
 
-inline std::string TPESQLProcessing::get_call_id(const std::string s)
+inline std::string TPESQLProcessor::get_call_id(const std::string s)
 {
 	return CALL_PREFIX + s;
 }
 
-TPESQLProcessing::TPESQLProcessing(GixPreProcessor* gpp) : ITransformationStep(gpp)
+TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
 	std::string ps = std::get<std::string>(gpp->getOpt("params_style", std::string("d")));
 	if (ps == "d")
@@ -233,7 +233,7 @@ TPESQLProcessing::TPESQLProcessing(GixPreProcessor* gpp) : ITransformationStep(g
 	current_input_line = 0;
 }
 
-bool TPESQLProcessing::run(ITransformationStep* prev_step)
+bool TPESQLProcessor::run(ITransformationStep* prev_step)
 {
 	if (input_file.empty()) {
 		if (!prev_step || prev_step->getOutput().empty())
@@ -251,9 +251,9 @@ bool TPESQLProcessing::run(ITransformationStep* prev_step)
 #if _DEBUG_LOG_ON
 	char dbg_bfr[512];
 #if defined(_WIN32)
-	OutputDebugStringA("TPESQLProcessing invoked\n===============\n");
+	OutputDebugStringA("TPESQLProcessor invoked\n===============\n");
 #else
-	fprintf(stderr, "TPESQLProcessing invoked\n===============\n");
+	fprintf(stderr, "TPESQLProcessor invoked\n===============\n");
 #endif
 
 	for (auto it = owner->getOpts().begin(); it != owner->getOpts().end(); ++it) {
@@ -276,7 +276,7 @@ bool TPESQLProcessing::run(ITransformationStep* prev_step)
 #if defined(_WIN32)
 	OutputDebugStringA("===============\n");
 #else
-	fprintf(stderr, "TPESQLProcessing invoked\n===============\n");
+	fprintf(stderr, "TPESQLProcessor invoked\n===============\n");
 #endif
 #endif
 
@@ -293,6 +293,9 @@ bool TPESQLProcessing::run(ITransformationStep* prev_step)
 	code_tag = TAG_PREFIX;
 
 	int rc = main_module_driver.parse(owner, input_file);
+
+	// *****************************
+
 	if (!rc) {
 		rc = outputESQL();
 		if (rc == 0)
@@ -306,12 +309,12 @@ bool TPESQLProcessing::run(ITransformationStep* prev_step)
 	return rc == 0;
 }
 
-std::string TPESQLProcessing::getOutput(ITransformationStep* me)
+std::string TPESQLProcessor::getOutput(ITransformationStep* me)
 {
 	return output_file;
 }
 
-int TPESQLProcessing::outputESQL()
+int TPESQLProcessor::outputESQL()
 {
 	working_begin_line = 0;
 	working_end_line = 0;
@@ -378,7 +381,7 @@ int TPESQLProcessing::outputESQL()
 }
 
 
-bool TPESQLProcessing::generate_consolidated_map()
+bool TPESQLProcessor::generate_consolidated_map()
 {
 	output_line = 0;
 	working_begin_line = 0;
@@ -400,7 +403,7 @@ bool TPESQLProcessing::generate_consolidated_map()
 }
 
 
-bool TPESQLProcessing::processNextFile()
+bool TPESQLProcessor::processNextFile()
 {
 	std::string the_file = input_file_stack.top();
 	std::vector<std::string> input_lines = file_read_all_lines(the_file);
@@ -510,13 +513,13 @@ bool TPESQLProcessing::processNextFile()
 	return true;
 }
 
-void TPESQLProcessing::put_start_exec_sql(bool with_period)
+void TPESQLProcessor::put_start_exec_sql(bool with_period)
 {
 	ESQLCall start_exec_sql_call(get_call_id("StartSQL"), opt_emit_static_calls);
 	put_call(start_exec_sql_call, with_period);
 }
 
-void TPESQLProcessing::put_end_exec_sql(bool with_period)
+void TPESQLProcessor::put_end_exec_sql(bool with_period)
 {
 	ESQLCall start_exec_sql_call(get_call_id("EndSQL"), opt_emit_static_calls);
 	put_call(start_exec_sql_call, with_period);
@@ -547,7 +550,7 @@ static int str_count(const std::string& obj, const std::string& tgt)
 	return occs;
 }
 
-bool TPESQLProcessing::put_query_defs()
+bool TPESQLProcessor::put_query_defs()
 {
 	if (emitted_query_defs)
 		return true;
@@ -637,12 +640,12 @@ bool TPESQLProcessing::put_query_defs()
 	return true;
 }
 
-void TPESQLProcessing::put_working_storage()
+void TPESQLProcessor::put_working_storage()
 {
 	put_output_line(code_tag + std::string(" WORKING-STORAGE SECTION."));
 }
 
-bool TPESQLProcessing::put_cursor_declarations()
+bool TPESQLProcessor::put_cursor_declarations()
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
@@ -747,7 +750,7 @@ bool TPESQLProcessing::put_cursor_declarations()
 	return true;
 }
 
-bool TPESQLProcessing::put_call(const ESQLCall& c, bool terminate_with_period, int indent_level)
+bool TPESQLProcessor::put_call(const ESQLCall& c, bool terminate_with_period, int indent_level)
 {
 
 	if (c.hasError()) {
@@ -769,7 +772,7 @@ bool TPESQLProcessing::put_call(const ESQLCall& c, bool terminate_with_period, i
 	return true;
 }
 
-cb_exec_sql_stmt_ptr TPESQLProcessing::find_exec_sql_stmt(const std::string f1, int i)
+cb_exec_sql_stmt_ptr TPESQLProcessor::find_exec_sql_stmt(const std::string f1, int i)
 {
 	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
 	for (auto e : *p) {
@@ -781,7 +784,7 @@ cb_exec_sql_stmt_ptr TPESQLProcessing::find_exec_sql_stmt(const std::string f1, 
 	return NULL;
 }
 
-cb_exec_sql_stmt_ptr TPESQLProcessing::find_esql_cmd(std::string cmd, int idx)
+cb_exec_sql_stmt_ptr TPESQLProcessor::find_esql_cmd(std::string cmd, int idx)
 {
 	int n = 0;
 	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
@@ -797,7 +800,7 @@ cb_exec_sql_stmt_ptr TPESQLProcessing::find_esql_cmd(std::string cmd, int idx)
 	return NULL;
 }
 
-void TPESQLProcessing::put_output_line(const std::string& line)
+void TPESQLProcessor::put_output_line(const std::string& line)
 {
 	output_line++;
 
@@ -812,7 +815,7 @@ void TPESQLProcessing::put_output_line(const std::string& line)
 	in_to_out[input_id] = output_id;
 }
 
-bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql_stmt_ptr stmt, bool in_ws)
+bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql_stmt_ptr stmt, bool in_ws)
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
@@ -1672,7 +1675,7 @@ bool TPESQLProcessing::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sq
 	return true;
 }
 
-bool TPESQLProcessing::find_working_storage(int* working_begin_line, int* working_end_line)
+bool TPESQLProcessor::find_working_storage(int* working_begin_line, int* working_end_line)
 {
 	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
 
@@ -1690,7 +1693,7 @@ bool TPESQLProcessing::find_working_storage(int* working_begin_line, int* workin
 	return (*working_begin_line | *working_end_line) > 0;
 }
 
-std::string TPESQLProcessing::comment_line(const std::string& comment, const std::string& line)
+std::string TPESQLProcessor::comment_line(const std::string& comment, const std::string& line)
 {
 	std::string ln = line;
 	if (ln.size() < 7)
@@ -1705,7 +1708,7 @@ std::string TPESQLProcessing::comment_line(const std::string& comment, const std
 }
 
 
-bool TPESQLProcessing::is_var_len_group(cb_field_ptr f)
+bool TPESQLProcessor::is_var_len_group(cb_field_ptr f)
 {
 	if (f->level == 49)
 		return false;
@@ -1892,7 +1895,7 @@ void compute_group_size(cb_field_ptr root, cb_field_ptr f, int* size)
 
 }
 
-bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale)
+bool TPESQLProcessor::get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale)
 {
 	bool is_varlen = is_var_len_group(f);
 	bool is_explicit_varlen = f->is_varlen;
@@ -1936,7 +1939,7 @@ bool TPESQLProcessing::get_actual_field_data(cb_field_ptr f, CobolVarType* type,
 	return is_varlen;
 }
 
-std::string TPESQLProcessing::process_sql_query_item(const std::vector<std::string>& input_sql_list)
+std::string TPESQLProcessor::process_sql_query_item(const std::vector<std::string>& input_sql_list)
 {
 	bool in_single_quoted_string = false;
 	bool in_double_quoted_string = false;
@@ -1978,7 +1981,7 @@ std::string TPESQLProcessing::process_sql_query_item(const std::vector<std::stri
 	return sql;
 }
 
-void TPESQLProcessing::process_sql_query_list()
+void TPESQLProcessor::process_sql_query_list()
 {
 	for (cb_exec_sql_stmt_ptr p : *main_module_driver.exec_list) {
 		if (p->sql_list->size()) {
@@ -1991,7 +1994,7 @@ void TPESQLProcessing::process_sql_query_list()
 	}
 }
 
-bool TPESQLProcessing::fixup_declared_vars()
+bool TPESQLProcessor::fixup_declared_vars()
 {
 	int n = 99999;
 	for (auto it = main_module_driver.field_sql_type_info.begin(); it != main_module_driver.field_sql_type_info.end(); ++it) {
@@ -2085,17 +2088,17 @@ bool TPESQLProcessing::fixup_declared_vars()
 	return true;
 }
 
-std::map<uint64_t, uint64_t>& TPESQLProcessing::getBinarySrcLineMap() const
+std::map<uint64_t, uint64_t>& TPESQLProcessor::getBinarySrcLineMap() const
 {
 	return const_cast<std::map<uint64_t, uint64_t>&>(b_in_to_out);
 }
 
-std::map<uint64_t, uint64_t>& TPESQLProcessing::getBinarySrcLineMapReverse() const
+std::map<uint64_t, uint64_t>& TPESQLProcessor::getBinarySrcLineMapReverse() const
 {
 	return const_cast<std::map<uint64_t, uint64_t>&>(b_out_to_in);
 }
 
-bool TPESQLProcessing::build_map_data()
+bool TPESQLProcessor::build_map_data()
 {
 	map_collect_files(filemap);
 
@@ -2159,7 +2162,7 @@ bool TPESQLProcessing::build_map_data()
 	return true;
 }
 
-bool TPESQLProcessing::write_map_file(const std::string& preprocd_file)
+bool TPESQLProcessor::write_map_file(const std::string& preprocd_file)
 {
 	map_collect_files(filemap);
 
@@ -2246,19 +2249,19 @@ bool TPESQLProcessing::write_map_file(const std::string& preprocd_file)
 	return mw.writeToFile(outfile);
 }
 
-void TPESQLProcessing::add_dependency(const std::string& parent, const std::string& dep_path)
+void TPESQLProcessor::add_dependency(const std::string& parent, const std::string& dep_path)
 {
 	std::vector<std::string> deps = (map_contains< std::string, std::vector<std::string>>(file_dependencies, parent) ? file_dependencies.at(parent) : std::vector<std::string>());
 	deps.push_back(dep_path);
 	file_dependencies[parent] = deps;
 }
 
-bool TPESQLProcessing::is_current_file_included()
+bool TPESQLProcessor::is_current_file_included()
 {
 	return input_file_stack.size() > 1;
 }
 
-void TPESQLProcessing::put_whenever_clause_handler(esql_whenever_clause_handler_t* ch)
+void TPESQLProcessor::put_whenever_clause_handler(esql_whenever_clause_handler_t* ch)
 {
 	const char* lp = AREA_B_CPREFIX;
 
@@ -2277,7 +2280,7 @@ void TPESQLProcessing::put_whenever_clause_handler(esql_whenever_clause_handler_
 	}
 }
 
-void TPESQLProcessing::put_smart_cursor_init_flags()
+void TPESQLProcessor::put_smart_cursor_init_flags()
 {
 	const char* lp = AREA_B_CPREFIX;
 
@@ -2301,7 +2304,7 @@ void TPESQLProcessing::put_smart_cursor_init_flags()
 	emitted_smart_cursor_init_flags = true;
 }
 
-void TPESQLProcessing::put_smart_cursor_init_check(const std::string& crsr_name, bool reset_sqlcode)
+void TPESQLProcessor::put_smart_cursor_init_check(const std::string& crsr_name, bool reset_sqlcode)
 {
 	std::string cname = string_replace(crsr_name, "_", "-");
 	std::string crsr_init_var = "GIXSQL-CI-F-" + cname;
@@ -2319,7 +2322,7 @@ void TPESQLProcessing::put_smart_cursor_init_check(const std::string& crsr_name,
 	put_output_line(string_format(AREA_B_CPREFIX "END-IF"));
 }
 
-bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, int* res_params_count)
+bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, int* res_params_count)
 {
 	int rp_count = 0;
 	CobolVarType f_type;
@@ -2416,7 +2419,7 @@ bool TPESQLProcessing::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, 
 	return true;
 }
 
-bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
+bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
@@ -2463,7 +2466,7 @@ bool TPESQLProcessing::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 	return true;
 }
 
-void TPESQLProcessing::add_preprocessed_blocks()
+void TPESQLProcessor::add_preprocessed_blocks()
 {
 	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
 	for (auto e : *p) {
@@ -2506,7 +2509,7 @@ void TPESQLProcessing::add_preprocessed_blocks()
 
 }
 
-bool TPESQLProcessing::decode_indicator(const std::string& orig_name, std::string& var_name, std::string& ind_name)
+bool TPESQLProcessor::decode_indicator(const std::string& orig_name, std::string& var_name, std::string& ind_name)
 {
 	bool res = false;
 	const auto pos = orig_name.find(":");
@@ -2524,7 +2527,7 @@ bool TPESQLProcessing::decode_indicator(const std::string& orig_name, std::strin
 	return res;
 }
 
-void TPESQLProcessing::put_whenever_handler(bool terminate_with_period)
+void TPESQLProcessor::put_whenever_handler(bool terminate_with_period)
 {
 	const char* lp = AREA_B_CPREFIX;
 
@@ -2562,19 +2565,19 @@ void TPESQLProcessing::put_whenever_handler(bool terminate_with_period)
 	}
 }
 
-std::string TPESQLProcessing::getModuleName()
+std::string TPESQLProcessor::getModuleName()
 {
 	return main_module_driver.program_id;
 }
 
-void TPESQLProcessing::splitLineEntry(const std::string& k, std::string& s, int* i)
+void TPESQLProcessor::splitLineEntry(const std::string& k, std::string& s, int* i)
 {
 	int p = k.find("@");
 	s = k.substr(p + 1);
 	*i = std::stoi(k.substr(0, p));
 }
 
-void TPESQLProcessing::map_collect_files(std::map<std::string, int>& filemap)
+void TPESQLProcessor::map_collect_files(std::map<std::string, int>& filemap)
 {
 	int l;
 	int n = 1;
@@ -2604,22 +2607,22 @@ void TPESQLProcessing::map_collect_files(std::map<std::string, int>& filemap)
 	}
 }
 
-std::map<std::string, std::string>& TPESQLProcessing::getSrcLineMap() const
+std::map<std::string, std::string>& TPESQLProcessor::getSrcLineMap() const
 {
 	return const_cast<std::map<std::string, std::string>&>(in_to_out);
 }
 
-std::map<std::string, std::string>& TPESQLProcessing::getSrcLineMapReverse() const
+std::map<std::string, std::string>& TPESQLProcessor::getSrcLineMapReverse() const
 {
 	return const_cast<std::map<std::string, std::string>&>(out_to_in);
 }
 
-std::map<std::string, int>& TPESQLProcessing::getFileMap() const
+std::map<std::string, int>& TPESQLProcessor::getFileMap() const
 {
 	return const_cast<std::map<std::string, int>&>(filemap);
 }
 
-std::map<int, std::string> TPESQLProcessing::getReverseFileMap()
+std::map<int, std::string> TPESQLProcessor::getReverseFileMap()
 {
 	std::map<int, std::string> rm;
 	for (const std::string& k : map_get_keys(filemap)) {
@@ -2629,22 +2632,22 @@ std::map<int, std::string> TPESQLProcessing::getReverseFileMap()
 	return rm;
 }
 
-std::map<std::string, cb_field_ptr>& TPESQLProcessing::getVariableDeclarationInfoMap() const
+std::map<std::string, cb_field_ptr>& TPESQLProcessor::getVariableDeclarationInfoMap() const
 {
 	return main_module_driver.get_field_map();
 }
 
-std::map<std::string, srcLocation> TPESQLProcessing::getParagraphs()
+std::map<std::string, srcLocation> TPESQLProcessor::getParagraphs()
 {
 	return main_module_driver.paragraphs;
 }
 
-std::map<std::string, std::vector<std::string>> TPESQLProcessing::getFileDependencies()
+std::map<std::string, std::vector<std::string>> TPESQLProcessor::getFileDependencies()
 {
 	return file_dependencies;
 }
 
-std::vector<PreprocessedBlockInfo*> TPESQLProcessing::getPreprocessedBlocks()
+std::vector<PreprocessedBlockInfo*> TPESQLProcessor::getPreprocessedBlocks()
 {
 	return preprocessed_blocks;
 }

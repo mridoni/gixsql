@@ -73,7 +73,7 @@ enum class ESQL_ParameterStyle {
     Unknown
 };
 
-class TPESQLProcessing;
+class TPESQLProcessor;
 
 // Conducting the whole scanning and parsing of Calc++.
 class gix_esql_driver
@@ -82,7 +82,7 @@ public:
     gix_esql_driver ();
     virtual ~gix_esql_driver ();
 
-    void setCaller(TPESQLProcessing* p);
+    void setCaller(TPESQLProcessor* p);
 
 #pragma region Options
 
@@ -198,7 +198,7 @@ public:
 
 #pragma region Management
     GixPreProcessor *pp_inst = nullptr;
-    TPESQLProcessing* pp_caller = nullptr;
+    TPESQLProcessor* pp_caller = nullptr;
     
 
     std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;

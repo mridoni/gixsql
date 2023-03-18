@@ -27,7 +27,8 @@ USA.
 #include "libgixpp.h"
 #include "GixPreProcessor.h"
 #include "TPSourceConsolidation.h"
-#include "TPESQLProcessing.h"
+#include "TPESQLParser.h"
+#include "TPESQLProcessor.h"
 #include "libcpputils.h"
 
 #include "config.h"
@@ -185,7 +186,8 @@ int main(int argc, char** argv)
 					}
 				}
 
-				gp.addStep(new TPESQLProcessing(&gp));
+				gp.addStep(new TPESQLParser(&gp));
+				gp.addStep(new TPESQLProcessor(&gp));
 			}
 
 			gp.setOpt("emit_debug_info", opt_debug_info->is_set());
