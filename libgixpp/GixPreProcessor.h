@@ -66,8 +66,8 @@ public:
 	void setOpt(std::string id, variant v);
 
 private:
-	std::string input_file;
-	std::string output_file;
+	TransformationStepData* input = nullptr;
+	TransformationStepData* output = nullptr;
 
 	std::vector<ITransformationStep *> steps;
 	std::string copy_file_path;
