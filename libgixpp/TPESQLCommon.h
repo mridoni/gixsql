@@ -99,3 +99,22 @@ struct ESQLJobParams
 	std::string opt_varlen_suffix_len;
 	std::string opt_varlen_suffix_data;
 };
+
+class ESQLParserData
+{
+public:
+
+	bool field_exists(const std::string& f);
+	std::map<std::string, cb_field_ptr>& get_field_map() const;
+
+private:
+	std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
+
+	std::map<std::string, srcLocation> paragraphs;
+
+	std::string program_id;
+
+	std::map<std::string, cb_field_ptr> _field_map;
+
+};
+

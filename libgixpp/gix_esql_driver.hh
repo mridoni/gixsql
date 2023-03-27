@@ -175,10 +175,11 @@ public:
     int orig_state = 0;
 
     int hostreferenceCount;
+
     std::vector<cb_hostreference_ptr> *host_reference_list;
     std::vector<cb_res_hostreference_ptr> *res_host_reference_list;
     std::vector<cb_sql_token_t> *sql_list;
-    std::vector<cb_exec_sql_stmt_ptr> *exec_list;
+    /*std::vector<cb_exec_sql_stmt_ptr> *exec_list;*/
     std::vector<hostref_or_literal_t *> *hostref_or_literal_list;
 
     std::vector<std::string> declared_statements;
@@ -202,14 +203,14 @@ public:
     TPESQLParser* pp_caller = nullptr;
     
 
-    std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
+    //std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
 
-    std::map<std::string, srcLocation> paragraphs;
+    //std::map<std::string, srcLocation> paragraphs;
 
-    std::string program_id;
+    //std::string program_id;
 
-    bool field_exists(const std::string &f);
-    std::map<std::string, cb_field_ptr>& get_field_map() const;
+    //bool field_exists(const std::string &f);
+    //std::map<std::string, cb_field_ptr>& get_field_map() const;
 
 #pragma endregion
 

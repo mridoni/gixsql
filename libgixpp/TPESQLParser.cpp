@@ -7,7 +7,7 @@ TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 
 bool TPESQLParser::run(ITransformationStep* prev_step)
 {
-	if (input_file.empty()) {
+	if (!input->isValid()) {
 		if (!prev_step || prev_step->getOutput().empty())
 			return false;
 

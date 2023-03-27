@@ -15,7 +15,8 @@ private:
 
 	
 	ESQLJobParams params;
+	ESQLParserData parser_data;
 
-	gix_esql_driver main_module_driver;
+	//gix_esql_driver main_module_driver;
 };
 
