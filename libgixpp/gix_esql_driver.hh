@@ -75,6 +75,7 @@ enum class ESQL_ParameterStyle {
 
 class TPESQLProcessor;
 class TPESQLParser;
+class ESQLParserData;
 
 // Conducting the whole scanning and parsing of Calc++.
 class gix_esql_driver
@@ -110,7 +111,7 @@ public:
     
     // Run the parser on file F.
     // Return 0 on success.
-    int parse (GixPreProcessor *gpp, const std::string& f);
+    int parse(TransformationStepData* input, ESQLParserData* _parser_data)
     // The name of the file being parsed.
     // Used later to pass the file name to the location tracker.
     std::string file;
@@ -216,6 +217,8 @@ public:
 
 private:
 
-    std::map<std::string, cb_field_ptr> _field_map;
+    //std::map<std::string, cb_field_ptr> _field_map;
+
+    ESQLParserData* parser_data;
 
 };

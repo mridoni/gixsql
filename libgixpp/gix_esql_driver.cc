@@ -73,7 +73,7 @@ gix_esql_driver::gix_esql_driver ()
 	host_reference_list = NULL;
 	res_host_reference_list = NULL;
 	sql_list = NULL;
-	exec_list = NULL;
+	//exec_list = NULL;
 
 	current_field = NULL;
 	description_field = NULL;
@@ -83,7 +83,7 @@ gix_esql_driver::gix_esql_driver ()
 	host_reference_list = new std::vector<cb_hostreference_ptr>();
 	res_host_reference_list = new std::vector<cb_res_hostreference_ptr>();
 	sql_list = new std::vector<cb_sql_token_t>();
-	exec_list = new std::vector<cb_exec_sql_stmt_ptr>();
+	//exec_list = new std::vector<cb_exec_sql_stmt_ptr>();
 	hostref_or_literal_list = new std::vector<hostref_or_literal_t *>();
 
 }
@@ -93,7 +93,7 @@ gix_esql_driver::~gix_esql_driver ()
 	delete host_reference_list;
 	delete res_host_reference_list;
 	delete sql_list;
-	delete exec_list;
+	//delete exec_list;
 	delete hostref_or_literal_list;
 }
 
@@ -102,9 +102,12 @@ void gix_esql_driver::setCaller(TPESQLParser* p)
 	pp_caller = p;
 }
 
-int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
+//int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
+int gix_esql_driver::parse (TransformationStepData *input, ESQLParserData *_parser_data)
 {
-	pp_inst = gpp;
+	parser_data = _parser_data;
+
+	pp_inst = pp_caller->getOwner();
 
 	bool debug_parser_scanner = std::get<2>(pp_inst->getOpt("debug_parser_scanner", false));
 

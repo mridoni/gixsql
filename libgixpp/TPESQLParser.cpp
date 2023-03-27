@@ -2,16 +2,16 @@
 
 TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
-
+	
 }
 
 bool TPESQLParser::run(ITransformationStep* prev_step)
 {
 	if (!input->isValid()) {
-		if (!prev_step || prev_step->getOutput().empty())
+		if (!prev_step || prev_step->getOutput())
 			return false;
 
-		input_file = prev_step->getOutput();
+		input = prev_step->getOutput();
 	}
 
 #if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
@@ -59,5 +59,5 @@ bool TPESQLParser::run(ITransformationStep* prev_step)
 	main_module_driver.setCaller(this);
 
 
-	int rc = main_module_driver.parse(owner, input_file);
+	int rc = main_module_driver.parse(input, parser_data);
 }
