@@ -24,7 +24,8 @@ USA.
 
 #include "FileData.h"
 #include "libcpputils.h"
-#include "TPESQLProcessing.h"
+#include "TPESQLParser.h"
+#include "TPESQLProcessor.h"
 
 
 #define SET_PP_ERR(I,S) err_data.err_code = I; err_data.err_messages.push_back(S)

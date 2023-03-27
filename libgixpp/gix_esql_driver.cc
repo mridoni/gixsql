@@ -24,9 +24,10 @@ USA.
 
 #include "gix_esql_parser.hh"
 #include "libcpputils.h"
-//#include "cobol_var_types.h"
+#include "cobol_var_types.h"
 
-#include "TPESQLProcessing.h"
+//#include "TPESQLProcessor.h"
+#include "TPESQLParser.h"
 
 #if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
 #include <Windows.h>
