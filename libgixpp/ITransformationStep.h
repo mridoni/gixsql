@@ -41,6 +41,35 @@ struct TransformationStepData {
 		void* parse_data = nullptr;
 		std::string filename;
 	} data;
+
+	bool isValid() {
+		switch (type)
+		{
+			case TransformationStepDataType::Filename:
+				return !data.filename.empty();
+
+			case TransformationStepDataType::ESQLParseData:
+				return data.parse_data != nullptr;
+
+			default:
+				return false;
+		}
+	}
+
+	std::string toString()
+	{
+		switch (type)
+		{
+			case TransformationStepDataType::Filename:
+				return data.filename;
+
+			case TransformationStepDataType::ESQLParseData:
+				return "(binary data)";
+
+			default:
+				return "N/A";
+		}
+	}
 };
 
 class ITransformationStep

@@ -111,7 +111,6 @@ inline std::string TPESQLProcessor::get_call_id(const std::string s)
 
 TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
-
 	code_tag = TAG_PREFIX;
 
 	std::string ps = std::get<std::string>(gpp->getOpt("params_style", std::string("d")));

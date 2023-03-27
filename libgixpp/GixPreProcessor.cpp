@@ -95,24 +95,24 @@ static std::string variant_to_string(const variant &input)
 
 bool GixPreProcessor::process()
 {
-    if (input_file.empty()) {
+    if (input == nullptr || !input->isValid()) {
 		SET_PP_ERR(1, "Bad input file");
         return false;
     }
 
-    if (!std::get<bool>(getOpt("no_output", false)) && output_file.empty()) {
+    if (!std::get<bool>(getOpt("no_output", false)) && (output == nullptr || !output->isValid())) {
 		SET_PP_ERR(2, "Bad output file");
         return false;
     }
 
-    if (!file_exists(input_file)) {
+    if (!file_exists(input->data.filename)) {
 		SET_PP_ERR(4, "Input file does not exist");
         return false;
     }
 
 	if (verbose) {
-		printf("ESQL: Input file: %s\n", input_file.c_str());
-		printf("ESQL: Output file: %s\n", output_file.c_str());
+		printf("ESQL: Input file: %s\n", input->toString().c_str());
+		printf("ESQL: Output file: %s\n", output->toString().c_str());
 		for (std::string cd : copy_resolver->getCopyDirs()) {
 			printf("ESQL: Copy dir: %s\n", cd.c_str());
 		}
