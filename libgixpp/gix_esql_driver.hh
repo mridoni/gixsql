@@ -36,11 +36,6 @@ USA.
 #include "GixPreProcessor.h"
 #include "TPESQLCommon.h"
 
-#define PIC_ALPHABETIC 		0x01
-#define PIC_NUMERIC 		0x02
-#define PIC_NATIONAL		0x04
-#define PIC_ALPHANUMERIC	(PIC_ALPHABETIC | PIC_NUMERIC)
-
 #define DD_SECTION_INITIAL  0   // INITIAL
 #define DD_SECTION_FS       1   // FILE SECTION
 #define DD_SECTION_WS       2   // WORKING-STORAGE SECTION

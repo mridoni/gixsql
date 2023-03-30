@@ -8,6 +8,11 @@
 #include "GixEsqlLexer.hh"
 #include "cobol_var_types.h"
 
+#define PIC_ALPHABETIC 		0x01
+#define PIC_NUMERIC 		0x02
+#define PIC_NATIONAL		0x04
+#define PIC_ALPHANUMERIC	(PIC_ALPHABETIC | PIC_NUMERIC)
+
 #define ESQL_CONNECT					"CONNECT"
 #define ESQL_CONNECT_RESET				"CONNECT_RESET"
 #define ESQL_DISCONNECT					"DISCONNECT"
