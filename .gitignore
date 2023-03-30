@@ -23,3 +23,5 @@ config.h
 */bin
 */obj
 /deploy/checklist.txt
+/redist/msvc/x86
+/redist/msvcrt/x86
