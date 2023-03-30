@@ -61,7 +61,7 @@ public:
 
 	// Inherited via ITransformationStep
 	virtual bool run(ITransformationStep *prev_step) override;
-	virtual std::string getOutput(ITransformationStep *me = nullptr) override;
+	virtual TransformationStepData* getOutput(ITransformationStep *me = nullptr) override;
 
 
 private:

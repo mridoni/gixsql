@@ -35,9 +35,14 @@ enum class TransformationStepDataType
 };
 
 struct TransformationStepData {
-	TransformationStepDataType type = TransformationStepDataType::NotSet;
+
+	TransformationStepData() {}
+	~TransformationStepData() {}
+
+	TransformationStepDataType type = TransformationStepDataType::NotSet; 
 	union transformation_step_data {
 		constexpr transformation_step_data() {}
+		~transformation_step_data() {}
 		void* parse_data = nullptr;
 		std::string filename;
 	} data;

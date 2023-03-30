@@ -57,6 +57,9 @@
     <ClCompile Include="ESQLParserData.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TPESQLCommon.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ESQLCall.h">

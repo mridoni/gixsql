@@ -1,5 +1,11 @@
 #pragma once
 
+#include <string>
+#include <map>
+
+#include "ESQLDefinitions.h"
+#include "GixEsqlLexer.hh"
+
 #define ESQL_CONNECT					"CONNECT"
 #define ESQL_CONNECT_RESET				"CONNECT_RESET"
 #define ESQL_DISCONNECT					"DISCONNECT"
@@ -83,6 +89,14 @@ enum class ESQL_Command
 	Unknown
 };
 
+
+enum class ESQL_ParameterStyle {
+	DollarPrefix,
+	ColonPrefix,
+	Anonymous,
+	Unknown
+};
+
 struct ESQLJobParams
 {
 	ESQL_ParameterStyle opt_params_style;
@@ -106,6 +120,8 @@ public:
 
 	bool field_exists(const std::string& f);
 	std::map<std::string, cb_field_ptr>& get_field_map() const;
+	void add_to_field_map(std::string k, cb_field_ptr f);
+	cb_field_ptr field_map(std::string k);
 
 private:
 	std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
@@ -115,6 +131,7 @@ private:
 	std::string program_id;
 
 	std::map<std::string, cb_field_ptr> _field_map;
+
 
 };
 

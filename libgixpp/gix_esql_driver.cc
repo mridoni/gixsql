@@ -105,7 +105,7 @@ void gix_esql_driver::setCaller(TPESQLParser* p)
 //int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
 int gix_esql_driver::parse (TransformationStepData *input, ESQLParserData *_parser_data)
 {
-	parser_data = _parser_data;
+	_parser_data = _parser_data;
 
 	pp_inst = pp_caller->getOwner();
 
@@ -114,12 +114,12 @@ int gix_esql_driver::parse (TransformationStepData *input, ESQLParserData *_pars
 	trace_scanning = debug_parser_scanner;
 	trace_parsing = debug_parser_scanner;
 
-	std::string tf = filename_change_ext(f, "");
+	std::string tf = filename_change_ext(input->data.filename, "");
 
 	filenameID = filename_get_name(tf);
-	file = f;
+	file = input->data.filename;
 
-	lexer.src_location_stack.push({ filename_absolute_path(f), 1 });
+	lexer.src_location_stack.push({ filename_absolute_path(input->data.filename), 1 });
 
     scan_begin ();
     yy::gix_esql_parser parser (*this);
@@ -217,10 +217,10 @@ std::vector<cb_sql_token_t> *gix_esql_driver::cb_concat_text_list(std::vector<cb
 std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> *list, std::string text)
 {
 	// Handle placeholders for group items passed as host variables
-	if (map_contains(_field_map, text.substr(1))) {
+	if (map_contains(parser_data()->get_field_map(), text.substr(1))) {
 		CobolVarType f_type = CobolVarType::UNKNOWN;
 		int f_size = 0, f_scale = 0;
-		cb_field_ptr f = _field_map[text.substr(1)];
+		cb_field_ptr f = parser_data()->field_map(text.substr(1));
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") && 
@@ -254,10 +254,10 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
 {
 	// Handle placeholders for group items passed as host variables
-	if (map_contains(_field_map, text.substr(1))) {
+	if (parser_data()->field_exists(text.substr(1))) {
 		CobolVarType f_type = CobolVarType::UNKNOWN;
 		int f_size = 0, f_scale = 0;
-		cb_field_ptr f = _field_map[text.substr(1)];
+		cb_field_ptr f = parser_data()->field_map(text.substr(1));
 		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
@@ -397,29 +397,9 @@ void gix_esql_driver::put_exec_list()
 
 }
 
-void gix_esql_driver::add_to_field_map(std::string k, cb_field_ptr f)
+ESQLParserData* gix_esql_driver::parser_data()
 {
-#if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
-	char bfr[512];
-	sprintf(bfr, "Adding field to field_map: %s\n", k.c_str());
-	OutputDebugStringA(bfr);
-#endif
-	_field_map[k] = f;
-}
-
-cb_field_ptr gix_esql_driver::field_map(std::string k)
-{
-	return field_exists(k) ? _field_map[k] : nullptr;
-}
-
-bool gix_esql_driver::field_exists(const std::string &f)
-{
-	return (_field_map.find(f) != _field_map.end());
-}
-
-std::map<std::string, cb_field_ptr>& gix_esql_driver::get_field_map() const
-{
-	return const_cast<std::map<std::string, cb_field_ptr>&>(_field_map);
+	return _parser_data;
 }
 
 int cb_get_level(int val)

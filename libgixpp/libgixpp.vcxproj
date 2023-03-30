@@ -122,6 +122,7 @@
     <ClCompile Include="ITransformationStep.cpp" />
     <ClCompile Include="MapFileReader.cpp" />
     <ClCompile Include="MapFileWriter.cpp" />
+    <ClCompile Include="TPESQLCommon.cpp" />
     <ClCompile Include="TPESQLParser.cpp" />
     <ClCompile Include="TPESQLProcessor.cpp" />
     <ClCompile Include="TPSourceConsolidation.cpp" />
