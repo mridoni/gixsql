@@ -83,7 +83,10 @@ public:
 
 	virtual ~ITransformationStep() {}
 
+	virtual TransformationStepDataType getInputType() = 0;
+	virtual TransformationStepDataType getOutputType() = 0;
 	virtual bool run(ITransformationStep* prev_step) = 0;
+
 	virtual TransformationStepData* getInput();
 	virtual TransformationStepData* getOutput(ITransformationStep* me = nullptr);
 

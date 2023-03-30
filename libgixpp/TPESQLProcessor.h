@@ -24,6 +24,7 @@ USA.
 #include <vector>
 #include <map>
 #include <stack>
+#include <memory>
 
 #include "ITransformationStep.h"
 #include "ESQLDefinitions.h"
@@ -61,13 +62,19 @@ public:
 
 	// Inherited via ITransformationStep
 	virtual bool run(ITransformationStep *prev_step) override;
+	TransformationStepDataType getInputType() override;
+	TransformationStepDataType getOutputType() override;
 	virtual TransformationStepData* getOutput(ITransformationStep *me = nullptr) override;
 
 
 private:
 
+	std::string current_file;
 
-	 std::vector<std::string> output_lines;
+	std::string input_file;
+	std::string output_file;
+
+	std::vector<std::string> output_lines;
 
 	int output_line;
 
@@ -136,7 +143,7 @@ private:
 	int working_end_line;
 	std::string code_tag;
 
-	 std::vector<std::string> ws_query_list;
+	std::vector<std::string> ws_query_list;
 	std::vector<cb_exec_sql_stmt_ptr> startup_items;
 
 	std::map<std::string, int> filemap;
@@ -147,5 +154,10 @@ private:
 
 	bool emitted_query_defs = false;
 	bool emitted_smart_cursor_init_flags = false;
+
+	std::shared_ptr<ESQLParserData> parser_data;
+
+	void raise_error(const std::string& m, int err_code, std::string filename = std::string(), int line = -1);
+
 };
 

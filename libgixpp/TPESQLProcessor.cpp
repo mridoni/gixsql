@@ -68,7 +68,7 @@ USA.
 
 #define HAS_INDICATOR(_V) (_V.find(":") != std::string::npos && _V.find(":") == std::string::npos)
 #define ASSERT_NO_INDICATOR(_V,_F,_L) 		if (HAS_INDICATOR(_V)) { \
-										main_module_driver.error("Invalid null indicator reference: " + _V, ERR_INVALID_NULLIND_REF, _F, _L); \
+										raise_error("Invalid null indicator reference: " + _V, ERR_INVALID_NULLIND_REF, _F, _L); \
 										return false; \
 									}
 
@@ -113,41 +113,29 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 {
 	code_tag = TAG_PREFIX;
 
-	std::string ps = std::get<std::string>(gpp->getOpt("params_style", std::string("d")));
-	if (ps == "d")
-		opt_params_style = ESQL_ParameterStyle::DollarPrefix;
-	else
-		if (ps == "c")
-			opt_params_style = ESQL_ParameterStyle::ColonPrefix;
-		else
-			if (ps == "a")
-				opt_params_style = ESQL_ParameterStyle::Anonymous;
-			else
-				opt_params_style = ESQL_ParameterStyle::Unknown;
+	// opt_params_style and opt_preprocess_copy_files are set in the parser stage
 
-	opt_preprocess_copy_files = std::get<bool>(gpp->getOpt("preprocess_copy_files", false));
-
-	opt_emit_static_calls = std::get<bool>(gpp->getOpt("emit_static_calls", false));
-	opt_emit_debug_info = std::get<bool>(gpp->getOpt("emit_debug_info", false));
-	opt_emit_compat = std::get<bool>(gpp->getOpt("emit_compat", false));
-	opt_consolidated_map = std::get<bool>(gpp->getOpt("consolidated_map", false));
-	opt_no_output = std::get<bool>(gpp->getOpt("no_output", false));
-	opt_emit_map_file = std::get<bool>(gpp->getOpt("emit_map_file", false));
-	opt_emit_cobol85 = std::get<bool>(gpp->getOpt("emit_cobol85", false));
-	opt_picx_as_varchar = std::get<bool>(gpp->getOpt("picx_as_varchar", false));
+	parser_data->job_params()->opt_emit_static_calls = std::get<bool>(gpp->getOpt("emit_static_calls", false));
+	parser_data->job_params()->opt_emit_debug_info = std::get<bool>(gpp->getOpt("emit_debug_info", false));
+	parser_data->job_params()->opt_emit_compat = std::get<bool>(gpp->getOpt("emit_compat", false));
+	parser_data->job_params()->opt_consolidated_map = std::get<bool>(gpp->getOpt("consolidated_map", false));
+	parser_data->job_params()->opt_no_output = std::get<bool>(gpp->getOpt("no_output", false));
+	parser_data->job_params()->opt_emit_map_file = std::get<bool>(gpp->getOpt("emit_map_file", false));
+	parser_data->job_params()->opt_emit_cobol85 = std::get<bool>(gpp->getOpt("emit_cobol85", false));
+	parser_data->job_params()->opt_picx_as_varchar = std::get<bool>(gpp->getOpt("picx_as_varchar", false));
 
 	auto vsfxs = std::get<std::string>(gpp->getOpt("varlen_suffixes", std::string()));
 	if (vsfxs.empty()) {
-		opt_varlen_suffix_len = DEFAULT_VARLEN_SUFFIX_LENGTH;
-		opt_varlen_suffix_data = DEFAULT_VARLEN_SUFFIX_DATA;
+		parser_data->job_params()->opt_varlen_suffix_len = DEFAULT_VARLEN_SUFFIX_LENGTH;
+		parser_data->job_params()->opt_varlen_suffix_data = DEFAULT_VARLEN_SUFFIX_DATA;
 	}
 	else {
 		int p = vsfxs.find(",");
-		opt_varlen_suffix_len = vsfxs.substr(0, p);
-		opt_varlen_suffix_data = vsfxs.substr(p + 1);
+		parser_data->job_params()->opt_varlen_suffix_len = vsfxs.substr(0, p);
+		parser_data->job_params()->opt_varlen_suffix_data = vsfxs.substr(p + 1);
 	}
 
-	opt_norec_sqlcode = std::get<int>(gpp->getOpt("no_rec_code", DEFAULT_NO_REC_CODE));
+	parser_data->job_params()->opt_norec_sqlcode = std::get<int>(gpp->getOpt("no_rec_code", DEFAULT_NO_REC_CODE));
 
 	output_line = 0;
 	working_begin_line = 0;
@@ -157,29 +145,35 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 
 bool TPESQLProcessor::run(ITransformationStep* prev_step)
 {
-	if (opt_params_style == ESQL_ParameterStyle::Unknown) {
-		main_module_driver.error("Unsupported or invalid parameter style", ERR_PP_PARAM_ERROR);
+	if (parser_data->job_params()->opt_params_style == ESQL_ParameterStyle::Unknown) {
+		raise_error("Unsupported or invalid parameter style", ERR_PP_PARAM_ERROR);
 		return false;
 	}
 
 	// *****************************
 
-	if (!rc) {
-		rc = outputESQL();
-		if (rc == 0)
+	int rc = outputESQL();
+	if (rc == 0)
 		add_preprocessed_blocks();
-	}
-
-
 
 	owner->err_data.err_code = rc;
 
 	return rc == 0;
 }
 
-std::string TPESQLProcessor::getOutput(ITransformationStep* me)
+TransformationStepDataType TPESQLProcessor::getInputType()
 {
-	return output_file;
+	return TransformationStepDataType::ESQLParseData;
+}
+
+TransformationStepDataType TPESQLProcessor::getOutputType()
+{
+	return TransformationStepDataType::Filename;
+}
+
+TransformationStepData *TPESQLProcessor::getOutput(ITransformationStep* me)
+{
+	return output;
 }
 
 int TPESQLProcessor::outputESQL()
@@ -193,15 +187,17 @@ int TPESQLProcessor::outputESQL()
 		output_file = "#" + filename_get_name(f);
 	}
 
-	if (!starts_with(output_file, "#") && !file_is_writable(output_file))
+	if (!starts_with(output_file, "#") && !file_is_writable(output_file)) {
+		raise_error("File is not writable: " + output_file, ERR_FILE_NOT_FOUND);
 		return -1;
+	}
 
 	input_file_stack.push(filename_clean_path(input_file));
 
 	if (!find_working_storage(&working_begin_line, &working_end_line))
 		return -1;
 
-	startup_items = cpplinq::from(*(main_module_driver.exec_list)).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item != 0; }).to_vector();
+	startup_items = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item != 0; }).to_vector();
 	process_sql_query_list();
 	if (!fixup_declared_vars()) {
 		return -1;
@@ -209,7 +205,7 @@ int TPESQLProcessor::outputESQL()
 
 
 #if defined(_WIN32) && defined(_DEBUG)
-	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
 	for (auto e : *p) {
 		char bfr[1024];
 		sprintf(bfr, "%04d-%04d : %s\n", e->startLine, e->endLine, e->commandName.c_str());
@@ -224,20 +220,20 @@ int TPESQLProcessor::outputESQL()
 	// otherwise it has already been output at the start of the PROCEDURE DIVISION
 	input_file_stack.push(filename_clean_path(input_file));
 	if (!put_cursor_declarations()) {
-		main_module_driver.error("An error occurred while generating ESQL cursor declarations", ERR_CRSR_GEN);
+		raise_error("An error occurred while generating ESQL cursor declarations", ERR_CRSR_GEN);
 		return 1;
 	}
 	input_file_stack.pop();
 
 
-	bool b1 = opt_no_output ? true : file_write_all_lines(output_file, output_lines);
+	bool b1 = parser_data->job_params()->opt_no_output ? true : file_write_all_lines(output_file, output_lines);
 	bool b2;
-	if (opt_no_output) {
+	if (parser_data->job_params()->opt_no_output) {
 		build_map_data();
 		b2 = true;
 	}
 	else {
-		if (opt_emit_map_file)
+		if (parser_data->job_params()->opt_emit_map_file)
 			b2 = write_map_file(output_file);
 		else {
 			build_map_data();
@@ -251,23 +247,24 @@ int TPESQLProcessor::outputESQL()
 
 bool TPESQLProcessor::generate_consolidated_map()
 {
-	output_line = 0;
-	working_begin_line = 0;
-	working_end_line = 0;
-	working_begin_line = 0;
-	working_end_line = 0;
-	current_input_line = 0;
-	in_to_out.clear();
-	out_to_in.clear();
-	input_file_stack = std::stack<std::string>();
-	input_file_stack.push(filename_clean_path(input_file));
+	//output_line = 0;
+	//working_begin_line = 0;
+	//working_end_line = 0;
+	//working_begin_line = 0;
+	//working_end_line = 0;
+	//current_input_line = 0;
+	//in_to_out.clear();
+	//out_to_in.clear();
+	//input_file_stack = std::stack<std::string>();
+	//input_file_stack.push(filename_clean_path(input_file));
 
-	opt_preprocess_copy_files = true;
-	main_module_driver.opt_preprocess_copy_files = true;
+	//parser_data->job_params()->opt_preprocess_copy_files = true;
 
-	int rc = main_module_driver.parse(owner, input_file);
+	//int rc = main_module_driver.parse(owner, input_file);
 
-	return processNextFile();
+	//return processNextFile();
+
+	return false;
 }
 
 
@@ -277,15 +274,15 @@ bool TPESQLProcessor::processNextFile()
 	std::vector<std::string> input_lines = file_read_all_lines(the_file);
 
 #if defined(_WIN32) && defined(_DEBUG) && defined(VERBOSE)
-		char bfr[512];
-		sprintf(bfr, "Processing file %s\n", the_file.c_str());
-		OutputDebugStringA(bfr);
+	char bfr[512];
+	sprintf(bfr, "Processing file %s\n", the_file.c_str());
+	OutputDebugStringA(bfr);
 #endif
 
 	if (!input_lines.size()) {
 		input_file_stack.pop();
 		if (input_file_stack.size() > 0)
-			main_module_driver.file = input_file_stack.top();
+			current_file = input_file_stack.top();
 
 		return true;
 	}
@@ -356,7 +353,7 @@ bool TPESQLProcessor::processNextFile()
 
 			// Add ESQL calls
 			if (!handle_esql_stmt(cmd, exec_sql_stmt, in_ws)) {
-				main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
+				raise_error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
 				return false;
 			}
 		}
@@ -364,7 +361,7 @@ bool TPESQLProcessor::processNextFile()
 		// Special case
 		if (exec_sql_stmt->endLine == working_end_line) {
 			if (!handle_esql_stmt(ESQL_Command::WorkingEnd, find_esql_cmd(ESQL_WORKING_END, 0), 0)) {
-				main_module_driver.error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
+				raise_error("Error in ESQL statement", ERR_ALREADY_SET, exec_sql_stmt->src_file, exec_sql_stmt->startLine);
 				return false;
 			}
 		}
@@ -376,20 +373,20 @@ bool TPESQLProcessor::processNextFile()
 
 	input_file_stack.pop();
 	if (input_file_stack.size() > 0)
-		main_module_driver.file = input_file_stack.top();
+		current_file = input_file_stack.top();
 
 	return true;
 }
 
 void TPESQLProcessor::put_start_exec_sql(bool with_period)
 {
-	ESQLCall start_exec_sql_call(get_call_id("StartSQL"), opt_emit_static_calls);
+	ESQLCall start_exec_sql_call(get_call_id("StartSQL"), parser_data->job_params()->opt_emit_static_calls);
 	put_call(start_exec_sql_call, with_period);
 }
 
 void TPESQLProcessor::put_end_exec_sql(bool with_period)
 {
-	ESQLCall start_exec_sql_call(get_call_id("EndSQL"), opt_emit_static_calls);
+	ESQLCall start_exec_sql_call(get_call_id("EndSQL"), parser_data->job_params()->opt_emit_static_calls);
 	put_call(start_exec_sql_call, with_period);
 }
 
@@ -430,7 +427,7 @@ bool TPESQLProcessor::put_query_defs()
 
 		put_output_line(code_tag + string_format(" 01  SQ%04d.", i));
 
-		if (!opt_emit_cobol85) {
+		if (!parser_data->job_params()->opt_emit_cobol85) {
 
 			int pos = 0;
 			int max_sec_len = 30;
@@ -517,7 +514,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
-	bool emit_static = opt_emit_static_calls;
+	bool emit_static = parser_data->job_params()->opt_emit_static_calls;
 	const char* _areab = AREA_B_CPREFIX;
 
 	put_output_line(code_tag + "*");
@@ -526,14 +523,14 @@ bool TPESQLProcessor::put_cursor_declarations()
 	put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
 
 	auto cursor_list = startup_items;
-	auto other_crsrs = cpplinq::from(*(main_module_driver.exec_list)).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
+	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
 	cursor_list.insert(cursor_list.end(), other_crsrs.begin(), other_crsrs.end());
 
 	for (cb_exec_sql_stmt_ptr stmt : cursor_list) {
 		bool has_params = stmt->host_list->size() > 0;
 
 		//if (stmt->statementSource && !stmt->statementSource->is_literal) {
-		//	main_module_driver.error("Cursors declared in WORKING-STORAGE cannot use a field as source: " + stmt->cursorName, ERR_CRSR_GEN, stmt->src_abs_path, stmt->startLine);
+		//	raise_error("Cursors declared in WORKING-STORAGE cannot use a field as source: " + stmt->cursorName, ERR_CRSR_GEN, stmt->src_abs_path, stmt->startLine);
 		//	return false;
 		//}
 
@@ -547,7 +544,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 
 			ESQLCall cd_call(get_call_id("CursorDeclareParams"), emit_static);
 			cd_call.addParameter("SQLCA", BY_REFERENCE);
-			cd_call.addParameter(&main_module_driver, stmt->connectionId);
+			cd_call.addParameter(parser_data.get(), stmt->connectionId);
 			cd_call.addParameter("\"" + stmt->cursorName + "\" & x\"00\"", BY_REFERENCE); //& x\"00\"
 			cd_call.addParameter(std::to_string(stmt->cursor_hold ? 1 : 0), BY_VALUE);
 
@@ -560,12 +557,12 @@ bool TPESQLProcessor::put_cursor_declarations()
 			else {
 				std::string var_name = sql_content.substr(2);
 				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
-				if (!main_module_driver.field_exists(var_name)) {
-					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+				if (!parser_data->field_exists(var_name)) {
+					raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 					return false;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
-				auto hr = main_module_driver.field_map(var_name);
+				auto hr = parser_data->field_map(var_name);
 				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
@@ -582,7 +579,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 		else {
 			ESQLCall cd_call(get_call_id("CursorDeclare"), emit_static);
 			cd_call.addParameter("SQLCA", BY_REFERENCE);
-			cd_call.addParameter(&main_module_driver, stmt->connectionId);
+			cd_call.addParameter(parser_data.get(), stmt->connectionId);
 			cd_call.addParameter("\"" + stmt->cursorName + "\" & x\"00\"", BY_REFERENCE);
 			cd_call.addParameter(stmt->cursor_hold, BY_VALUE);
 
@@ -594,12 +591,12 @@ bool TPESQLProcessor::put_cursor_declarations()
 			else {
 				std::string var_name = sql_content.substr(2);
 				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
-				if (!main_module_driver.field_exists(var_name)) {
-					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+				if (!parser_data->field_exists(var_name)) {
+					raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 					return false;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
-				auto hr = main_module_driver.field_map(var_name);
+				auto hr = parser_data->field_map(var_name);
 				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
@@ -642,7 +639,7 @@ bool TPESQLProcessor::put_call(const ESQLCall& c, bool terminate_with_period, in
 
 cb_exec_sql_stmt_ptr TPESQLProcessor::find_exec_sql_stmt(const std::string f1, int i)
 {
-	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
 	for (auto e : *p) {
 		std::string f2 = e->src_abs_path;
 		if (f1 == f2 && (e->startLine <= i && e->endLine >= i))
@@ -655,7 +652,7 @@ cb_exec_sql_stmt_ptr TPESQLProcessor::find_exec_sql_stmt(const std::string f1, i
 cb_exec_sql_stmt_ptr TPESQLProcessor::find_esql_cmd(std::string cmd, int idx)
 {
 	int n = 0;
-	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
 	for (auto e : *p) {
 		if (e->commandName == cmd) {
 			if (n == idx)
@@ -687,7 +684,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
-	bool emit_static = opt_emit_static_calls;
+	bool emit_static = parser_data->job_params()->opt_emit_static_calls;
 
 	if (stmt->startup_item)
 		return true;
@@ -717,11 +714,11 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	{
 		std::string copy_file;
 		std::string inc_copy_name = (cmd == ESQL_Command::Incfile) ? stmt->incfileName : "SQLCA";
-		if (opt_preprocess_copy_files) {
+		if (parser_data->job_params()->opt_preprocess_copy_files) {
 			// inline file
 			if (!owner->getCopyResolver()->resolveCopyFile(inc_copy_name, copy_file)) {
 				//owner->err_data.err_messages.push_back("Cannot resolve copybook: " + inc_copy_name);
-				main_module_driver.error("Cannot resolve copybook: " + inc_copy_name, ERR_MISSING_COPYFILE);
+				raise_error("Cannot resolve copybook: " + inc_copy_name, ERR_MISSING_COPYFILE);
 				return false;
 			}
 
@@ -760,11 +757,11 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		ESQLCall connect_call(get_call_id("Connect"), emit_static);
 		connect_call.addParameter("SQLCA", BY_REFERENCE);
 
-		connect_call.addParameter(&main_module_driver, stmt->conninfo->data_source);
-		connect_call.addParameter(&main_module_driver, stmt->conninfo->id);
-		connect_call.addParameter(&main_module_driver, stmt->conninfo->dbname);
-		connect_call.addParameter(&main_module_driver, stmt->conninfo->username);
-		connect_call.addParameter(&main_module_driver, stmt->conninfo->password);
+		connect_call.addParameter(parser_data.get(), stmt->conninfo->data_source);
+		connect_call.addParameter(parser_data.get(), stmt->conninfo->id);
+		connect_call.addParameter(parser_data.get(), stmt->conninfo->dbname);
+		connect_call.addParameter(parser_data.get(), stmt->conninfo->username);
+		connect_call.addParameter(parser_data.get(), stmt->conninfo->password);
 
 		if (!put_call(connect_call, false))
 			return false;
@@ -777,7 +774,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	{
 		ESQLCall connect_call(get_call_id("ConnectReset"), emit_static);
 		connect_call.addParameter("SQLCA", BY_REFERENCE);
-		connect_call.addParameter(&main_module_driver, stmt->connectionId);
+		connect_call.addParameter(parser_data.get(), stmt->connectionId);
 
 		if (!put_call(connect_call, false))
 			return false;
@@ -790,7 +787,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	{
 		ESQLCall connect_call(get_call_id("ConnectReset"), emit_static);
 		connect_call.addParameter("SQLCA", BY_REFERENCE);
-		connect_call.addParameter(&main_module_driver, stmt->connectionId);
+		connect_call.addParameter(parser_data.get(), stmt->connectionId);
 
 		if (!put_call(connect_call, false))
 			return false;
@@ -832,7 +829,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 			ESQLCall select_call(call_id, emit_static);
 			select_call.addParameter("SQLCA", BY_REFERENCE);
-			select_call.addParameter(&main_module_driver, stmt->connectionId);
+			select_call.addParameter(parser_data.get(), stmt->connectionId);
 			select_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 
 			if (ends_with(call_id, "Exec")) {
@@ -924,12 +921,12 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 			std::string var_name, ind_name;
 			bool has_indicator = decode_indicator(rp->hostreference.substr(1), var_name, ind_name);
-			if (!main_module_driver.field_exists(var_name)) {
-				main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+			if (!parser_data->field_exists(var_name)) {
+				raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map(var_name);
+			cb_field_ptr hr = parser_data->field_map(var_name);
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in SELECT statements
@@ -937,18 +934,18 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
 				if (has_indicator) {
-					main_module_driver.error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
-					return false;					
+					raise_error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
+					return false;
 				}
 
 				if (hr->group_levels_count != 1) {
-					main_module_driver.error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+					raise_error("Nested levels not allowed in group variable: " + rp->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 					return false;
 				}
 
 				cb_field_ptr pp = hr->children;
 				if (!pp) {
-					main_module_driver.error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+					raise_error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 					return false;
 				}
 
@@ -961,7 +958,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					int pp_size = 0, pp_scale = 0;
 					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
-						main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+						raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 						return false;
 					}
 
@@ -984,8 +981,8 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			else {
 				ESQLCall rp_call(get_call_id("SetResultParams"), emit_static);
 
-				if (has_indicator && !main_module_driver.field_exists(ind_name)) {
-					main_module_driver.error("Cannot find host variable: " + ind_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+				if (has_indicator && !parser_data->field_exists(ind_name)) {
+					raise_error("Cannot find host variable: " + ind_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 					return false;
 				}
 
@@ -1034,7 +1031,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		put_start_exec_sql(false);
 		ESQLCall commit_call(get_call_id("Exec"), emit_static);
 		commit_call.addParameter("SQLCA", BY_REFERENCE);
-		commit_call.addParameter(&main_module_driver, stmt->connectionId);
+		commit_call.addParameter(parser_data.get(), stmt->connectionId);
 		commit_call.addParameter("\"COMMIT\" & x\"00\"", BY_REFERENCE);
 
 		if (!put_call(commit_call, false))
@@ -1052,7 +1049,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		put_start_exec_sql(false);
 		ESQLCall rollback_call(get_call_id("Exec"), emit_static);
 		rollback_call.addParameter("SQLCA", BY_REFERENCE);
-		rollback_call.addParameter(&main_module_driver, stmt->connectionId);
+		rollback_call.addParameter(parser_data.get(), stmt->connectionId);
 		rollback_call.addParameter("\"ROLLBACK\" & x\"00\"", BY_REFERENCE);
 
 		if (!put_call(rollback_call, false))
@@ -1078,12 +1075,12 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 			std::string var_name, ind_name;
 			bool has_indicator = decode_indicator(p->hostreference.substr(1), var_name, ind_name);
-			if (!main_module_driver.field_exists(var_name)) {
-				main_module_driver.error("Cannot find host variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+			if (!parser_data->field_exists(var_name)) {
+				raise_error("Cannot find host variable: " + p->hostreference.substr(1), ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 				return false;
 			}
 
-			cb_field_ptr hr = main_module_driver.field_map(var_name);
+			cb_field_ptr hr = parser_data->field_map(var_name);
 			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in INSERT statements
@@ -1091,18 +1088,18 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			if (cmd == ESQL_Command::Insert && f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
 				if (has_indicator) {
-					main_module_driver.error("Invalid null indicator reference: " + var_name, ERR_INVALID_NULLIND_REF, stmt->src_abs_path, p->lineno);
-					return false;					
+					raise_error("Invalid null indicator reference: " + var_name, ERR_INVALID_NULLIND_REF, stmt->src_abs_path, p->lineno);
+					return false;
 				}
 
 				if (hr->group_levels_count != 1) {
-					main_module_driver.error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+					raise_error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 					return false;
 				}
 
 				cb_field_ptr pp = hr->children;
 				if (!pp) {
-					main_module_driver.error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+					raise_error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 					return false;
 				}
 
@@ -1115,14 +1112,14 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					uint16_t _scale;
 					uint8_t _flags;
 					decode_sql_type_info(hr->sql_type, &_type, &_precision, &_scale, &_flags);
-					if (HAS_PICX_AS_VARCHAR(_flags) || opt_picx_as_varchar)
+					if (HAS_PICX_AS_VARCHAR(_flags) || parser_data->job_params()->opt_picx_as_varchar)
 						pp_flags |= CBL_FIELD_FLAG_AUTOTRIM;
 
 					CobolVarType pp_type = CobolVarType::UNKNOWN;
 					int pp_size = 0, pp_scale = 0;
 					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
-						main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+						raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 						return false;
 					}
 
@@ -1152,7 +1149,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 				uint16_t _scale;
 				uint8_t _flags;
 				decode_sql_type_info(hr->sql_type, &_type, &_precision, &_scale, &_flags);
-				if (HAS_PICX_AS_VARCHAR(_flags) || opt_picx_as_varchar)
+				if (HAS_PICX_AS_VARCHAR(_flags) || parser_data->job_params()->opt_picx_as_varchar)
 					flags |= CBL_FIELD_FLAG_AUTOTRIM;
 
 				p_call.addParameter(f_type, BY_VALUE);
@@ -1175,7 +1172,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		std::string dml_call_id = get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams");
 		ESQLCall dml_call(dml_call_id, emit_static);
 		dml_call.addParameter("SQLCA", BY_REFERENCE);
-		dml_call.addParameter(&main_module_driver, stmt->connectionId);
+		dml_call.addParameter(parser_data.get(), stmt->connectionId);
 		dml_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 		if (ends_with(dml_call_id, "Params"))
 			dml_call.addParameter(sql_params_count, BY_VALUE);
@@ -1192,20 +1189,20 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	case ESQL_Command::DeclareVar:
 	{
 		if (stmt->host_list->size() != 1) {
-			main_module_driver.error("Cannot find host variable (invalid declaration)", ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+			raise_error("Cannot find host variable (invalid declaration)", ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 
 		std::string var_name = stmt->host_list->at(0)->hostreference;
 		ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
-		if (!main_module_driver.field_exists(var_name)) {
-			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+		if (!parser_data->field_exists(var_name)) {
+			raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 
-		cb_field_ptr var = main_module_driver.field_map(var_name);
+		cb_field_ptr var = parser_data->field_map(var_name);
 		if (var->level != 1) {
-			main_module_driver.error(string_format("Invalid level for SQL variable, it is %02d, should be 01", var->level), ERR_INVALID_LEVEL, var->defined_at_source_file, var->defined_at_source_line);
+			raise_error(string_format("Invalid level for SQL variable, it is %02d, should be 01", var->level), ERR_INVALID_LEVEL, var->defined_at_source_file, var->defined_at_source_line);
 			return false;
 		}
 
@@ -1219,14 +1216,14 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 #ifdef USE_VARLEN_16
 		if (precision > USHRT_MAX) {
 			std::string msg = string_format("Unsupported field length (%d > %d)", precision, USHRT_MAX);
-			main_module_driver.error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
+			raise_error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 #endif
 
 		if (!check_sql_type_compatibility(type_info, var)) {
 			std::string msg = string_format("SQL type definition for %s (%s) is not compatible with the COBOL one (%s)", var->sname, "N/A", "N/A");
-			main_module_driver.error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
+			raise_error(msg, ERR_INCOMPATIBLE_TYPES, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 
@@ -1241,7 +1238,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 			if (cbl_int_part_len <= 0) {
 				if (precision == 0) {
-					main_module_driver.error(string_format("Missing length for field %s", var_name), ERR_MISSING_LENGTH, var->defined_at_source_file, var->defined_at_source_line);
+					raise_error(string_format("Missing length for field %s", var_name), ERR_MISSING_LENGTH, var->defined_at_source_file, var->defined_at_source_line);
 					return false;
 				}
 				else {
@@ -1262,16 +1259,16 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					fdata->picnsize = cbl_int_part_len;
 					fdata->scale = 0;
 					fdata->parent = nullptr;
-					main_module_driver.add_to_field_map(fdata->sname, fdata);
+					parser_data->add_to_field_map(fdata->sname, fdata);
 				}
 				else {
 					put_output_line(AREA_B_CPREFIX + string_format("01 %s.", var->sname));
-					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, opt_varlen_suffix_len, VARLEN_LENGTH_PIC));
-					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC X(%d).", var->sname, opt_varlen_suffix_data, cbl_int_part_len));
+					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, parser_data->job_params()->opt_varlen_suffix_len, VARLEN_LENGTH_PIC));
+					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC X(%d).", var->sname, parser_data->job_params()->opt_varlen_suffix_data, cbl_int_part_len));
 
 					cb_field_ptr flength = new cb_field_t();
 					flength->level = 49;
-					flength->sname = var->sname + "-" + opt_varlen_suffix_len;
+					flength->sname = var->sname + "-" + parser_data->job_params()->opt_varlen_suffix_len;
 					flength->pictype = PIC_NUMERIC;
 					flength->usage = var->usage;
 					flength->picnsize = VARLEN_PIC_SZ;
@@ -1281,7 +1278,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					cb_field_ptr fdata = new cb_field_t();
 					fdata->level = 49;
 					fdata->sql_type = sql_type;
-					fdata->sname = var->sname + "-" + opt_varlen_suffix_data;
+					fdata->sname = var->sname + "-" + parser_data->job_params()->opt_varlen_suffix_data;
 					fdata->pictype = PIC_ALPHANUMERIC;
 					fdata->usage = Usage::None;
 					fdata->picnsize = cbl_int_part_len;
@@ -1289,8 +1286,8 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					fdata->parent = var;
 					var->children->sister = fdata;
 
-					main_module_driver.add_to_field_map(flength->sname, flength);
-					main_module_driver.add_to_field_map(fdata->sname, fdata);
+					parser_data->add_to_field_map(flength->sname, flength);
+					parser_data->add_to_field_map(fdata->sname, fdata);
 				}
 			}
 			else {
@@ -1309,7 +1306,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			if (cbl_int_part_len <= 0) {
 				if (precision == 0) {
 					//owner->err_data.err_messages.push_back(string_format("Missing length for field %s", var_name));
-					main_module_driver.error(string_format("Missing length for field %s", var_name), ERR_MISSING_LENGTH, var->defined_at_source_file, var->defined_at_source_line);
+					raise_error(string_format("Missing length for field %s", var_name), ERR_MISSING_LENGTH, var->defined_at_source_file, var->defined_at_source_line);
 					return false;
 				}
 				else {
@@ -1340,7 +1337,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		break;
 
 		default:
-			main_module_driver.error(string_format("Unsupported SQL type (ID: %d)", sql_type), ERR_INVALID_TYPE, var->defined_at_source_file, var->defined_at_source_line);
+			raise_error(string_format("Unsupported SQL type (ID: %d)", sql_type), ERR_INVALID_TYPE, var->defined_at_source_file, var->defined_at_source_line);
 			return false;
 		}
 	}
@@ -1354,28 +1351,28 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	{
 		ESQLCall ps_call(get_call_id("PrepareStatement"), emit_static);
 		ps_call.addParameter("SQLCA", BY_REFERENCE);
-		ps_call.addParameter(&main_module_driver, stmt->connectionId);
+		ps_call.addParameter(parser_data.get(), stmt->connectionId);
 		ps_call.addParameter("\"" + stmt->statementName + "\" & x\"00\"", BY_REFERENCE);
 		if (stmt->statementSource) {	// statement source is a variable, we must check its type
 			auto sv_name = stmt->statementSource->name.substr(1);
 			ASSERT_NO_INDICATOR(sv_name, stmt->src_abs_path, stmt->startLine);
-			if (!main_module_driver.field_exists(sv_name)) {
-				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+			if (!parser_data->field_exists(sv_name)) {
+				raise_error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
 			}
-			cb_field_ptr sv = main_module_driver.field_map(sv_name);
+			cb_field_ptr sv = parser_data->field_map(sv_name);
 			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
 			if (!is_varlen) {
 				if (sv->pictype != PIC_ALPHANUMERIC) {
-					main_module_driver.error("Unsupported type for host variable: " + sv_name, ERR_INVALID_TYPE, stmt->src_abs_path, stmt->startLine);
+					raise_error("Unsupported type for host variable: " + sv_name, ERR_INVALID_TYPE, stmt->src_abs_path, stmt->startLine);
 					return false;
 				}
 			}
 
 			int sz = !is_varlen ? 0 : f_size;
-			ps_call.addParameter(&main_module_driver, stmt->statementSource, sz);
+			ps_call.addParameter(parser_data.get(), stmt->statementSource, sz);
 		}
 		else {
 			ps_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
@@ -1404,7 +1401,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 		ESQLCall ep_call(get_call_id(!is_exec_into ? "ExecPrepared" : "ExecPreparedInto"), emit_static);
 		ep_call.addParameter("SQLCA", BY_REFERENCE);
-		ep_call.addParameter(&main_module_driver, stmt->connectionId);
+		ep_call.addParameter(parser_data.get(), stmt->connectionId);
 		ep_call.addParameter("\"" + stmt->statementName + "\" & x\"00\"", BY_REFERENCE);
 		ep_call.addParameter(stmt->host_list->size(), BY_VALUE);
 		if (is_exec_into)
@@ -1423,27 +1420,27 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	{
 		ESQLCall ei_call(get_call_id("ExecImmediate"), emit_static);
 		ei_call.addParameter("SQLCA", BY_REFERENCE);
-		ei_call.addParameter(&main_module_driver, stmt->connectionId);
+		ei_call.addParameter(parser_data.get(), stmt->connectionId);
 		if (stmt->statementSource) {	// statement source is a variable, we must check its type
 			auto sv_name = stmt->statementSource->name.substr(1);
 			ASSERT_NO_INDICATOR(sv_name, stmt->src_abs_path, stmt->startLine);
-			if (!main_module_driver.field_exists(sv_name)) {
-				main_module_driver.error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
+			if (!parser_data->field_exists(sv_name)) {
+				raise_error("Cannot find host variable: " + sv_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
 				return false;
 			}
-			cb_field_ptr sv = main_module_driver.field_map(sv_name);
+			cb_field_ptr sv = parser_data->field_map(sv_name);
 			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
 			if (!is_varlen) {
 				if (sv->pictype != PIC_ALPHANUMERIC) {
-					main_module_driver.error("Unsupported type for host variable: " + sv_name, ERR_INVALID_TYPE, stmt->src_abs_path, stmt->startLine);
+					raise_error("Unsupported type for host variable: " + sv_name, ERR_INVALID_TYPE, stmt->src_abs_path, stmt->startLine);
 					return false;
 				}
 			}
 
 			int sz = !is_varlen ? 0 : f_size;
-			ei_call.addParameter(&main_module_driver, stmt->statementSource, sz);
+			ei_call.addParameter(parser_data.get(), stmt->statementSource, sz);
 		}
 		else {
 			ei_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
@@ -1472,7 +1469,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		std::string dml_call_id = get_call_id(stmt->host_list->size() == 0 ? "Exec" : "ExecParams");
 		ESQLCall dml_call(dml_call_id, emit_static);
 		dml_call.addParameter("SQLCA", BY_REFERENCE);
-		dml_call.addParameter(&main_module_driver, stmt->connectionId);
+		dml_call.addParameter(parser_data.get(), stmt->connectionId);
 		dml_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 		if (ends_with(dml_call_id, "Params"))
 			dml_call.addParameter(stmt->host_list->size(), BY_VALUE);
@@ -1489,7 +1486,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 	case ESQL_Command::Whenever:
 	{
 		if (!stmt->whenever_data) {
-			main_module_driver.error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
+			raise_error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 
@@ -1510,7 +1507,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		}
 
 		if (!clause_handler) {
-			main_module_driver.error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
+			raise_error("Inconsistent data for WHENEVER statement", ERR_INVALID_DATA, stmt->src_abs_path, stmt->startLine);
 			return false;
 		}
 
@@ -1527,7 +1524,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		//return false;
 		ESQLCall exec_call(get_call_id("Exec"), emit_static);
 		exec_call.addParameter("SQLCA", BY_REFERENCE);
-		exec_call.addParameter(&main_module_driver, stmt->connectionId);
+		exec_call.addParameter(parser_data.get(), stmt->connectionId);
 		exec_call.addParameter(string_format("SQ%04d", stmt->sql_query_list_id), BY_REFERENCE);
 
 		if (!put_call(exec_call, stmt->period))
@@ -1545,7 +1542,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 bool TPESQLProcessor::find_working_storage(int* working_begin_line, int* working_end_line)
 {
-	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
 
 	*working_begin_line = 0;
 	*working_end_line = 0;
@@ -1763,50 +1760,6 @@ void compute_group_size(cb_field_ptr root, cb_field_ptr f, int* size)
 
 }
 
-bool TPESQLProcessor::get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale)
-{
-	bool is_varlen = is_var_len_group(f);
-	bool is_explicit_varlen = f->is_varlen;
-
-	if (!is_varlen && !is_explicit_varlen) {
-		gethostvarianttype(f, type);
-		if (*type == CobolVarType::COBOL_TYPE_GROUP) {
-			*size = 0;
-			f->group_levels_count = 0;
-			compute_group_size(f, f, size);
-		}
-		else {
-			*size = f->picnsize;
-		}
-		*scale = f->scale;
-	}
-	else {
-		std::string f_actual_name;
-		if (is_varlen) {
-			f_actual_name = f->children->sister->sname;
-
-		}
-		else {	// is_implicit_varlen
-			f_actual_name = f->sname + "-" + opt_varlen_suffix_data;
-		}
-
-		cb_field_ptr f_actual = main_module_driver.field_map(f_actual_name);
-
-		if (f_actual) {
-			gethostvarianttype(f_actual, type);
-			*size = f_actual->picnsize + VARLEN_LENGTH_SZ;
-			*scale = f_actual->scale;
-		}
-		else {
-			*type = CobolVarType::COBOL_TYPE_ALPHANUMERIC;
-			*size = f->picnsize + VARLEN_LENGTH_SZ;
-			*scale = f->scale;
-		}
-
-	}
-	return is_varlen;
-}
-
 std::string TPESQLProcessor::process_sql_query_item(const std::vector<std::string>& input_sql_list)
 {
 	bool in_single_quoted_string = false;
@@ -1851,7 +1804,7 @@ std::string TPESQLProcessor::process_sql_query_item(const std::vector<std::strin
 
 void TPESQLProcessor::process_sql_query_list()
 {
-	for (cb_exec_sql_stmt_ptr p : *main_module_driver.exec_list) {
+	for (cb_exec_sql_stmt_ptr p : *(parser_data->exec_list())) {
 		if (p->sql_list->size()) {
 			std::string sql = process_sql_query_item(*p->sql_list);
 			// We account for EOL differencrs between platforms, so the preprocessor behaves the same everywhere
@@ -1865,7 +1818,7 @@ void TPESQLProcessor::process_sql_query_list()
 bool TPESQLProcessor::fixup_declared_vars()
 {
 	int n = 99999;
-	for (auto it = main_module_driver.field_sql_type_info.begin(); it != main_module_driver.field_sql_type_info.end(); ++it) {
+	for (auto it = parser_data->field_sql_type_info().begin(); it != parser_data->field_sql_type_info().end(); ++it) {
 		cb_field_ptr var = nullptr;
 		std::string var_name = it->first;
 		std::tuple<uint64_t, int, int, std::string> d = it->second;
@@ -1881,9 +1834,9 @@ bool TPESQLProcessor::fixup_declared_vars()
 
 		if (HAS_FLAG_EMIT_VAR(flags)) {
 			ASSERT_NO_INDICATOR(var_name, orig_src_file, orig_start_line);
-			if (!main_module_driver.field_exists(var_name)) {
+			if (!parser_data->field_exists(var_name)) {
 				if (precision == 0) {
-					main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
+					raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
 					return false;
 				}
 				else {
@@ -1895,22 +1848,22 @@ bool TPESQLProcessor::fixup_declared_vars()
 					var->pictype = -1;
 					var->defined_at_source_line = orig_start_line;
 					var->defined_at_source_file = orig_src_file;
-					main_module_driver.add_to_field_map(var_name, var);
+					parser_data->add_to_field_map(var_name, var);
 				}
 			}
 		}
 
 		ASSERT_NO_INDICATOR(var_name, orig_src_file, orig_start_line);
-		if (!main_module_driver.field_exists(var_name)) {
-			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
+		if (!parser_data->field_exists(var_name)) {
+			raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, orig_src_file, orig_start_line);
 			return false;
 		}
 
-		var = main_module_driver.field_map(var_name);
+		var = parser_data->field_map(var_name);
 		if (var->level != 1) {
 			std::string msg = string_format("Host variable %s has level %02d, should be 01", var_name, var->level);
 			//owner->err_data.err_messages.push_back(msg);
-			main_module_driver.error(msg, ERR_INVALID_LEVEL);
+			raise_error(msg, ERR_INVALID_LEVEL);
 			return false;
 		}
 
@@ -1940,7 +1893,7 @@ bool TPESQLProcessor::fixup_declared_vars()
 			p->lineno = var->defined_at_source_line;
 
 			stmt->host_list->push_back(p);
-			main_module_driver.exec_list->push_back(stmt);
+			parser_data->exec_list()->push_back(stmt);
 		}
 		stmt = new cb_exec_sql_stmt_t();
 		stmt->commandName = ESQL_COMMENT;
@@ -1949,7 +1902,7 @@ bool TPESQLProcessor::fixup_declared_vars()
 		stmt->startLine = orig_start_line;
 		stmt->endLine = orig_end_line;
 
-		main_module_driver.exec_list->push_back(stmt);
+		parser_data->exec_list()->push_back(stmt);
 
 	}
 
@@ -2034,7 +1987,7 @@ bool TPESQLProcessor::write_map_file(const std::string& preprocd_file)
 {
 	map_collect_files(filemap);
 
-	if (opt_no_output)
+	if (parser_data->job_params()->opt_no_output)
 		return true;
 
 	MapFileWriter mw;
@@ -2093,10 +2046,10 @@ bool TPESQLProcessor::write_map_file(const std::string& preprocd_file)
 	// Variable declaraton source location info
 
 	mw.addSection("field_map");
-	auto const fmap = main_module_driver.get_field_map();
+	auto const fmap = parser_data->get_field_map();
 	mw.appendToSectionContents("field_map", fmap.size());
 	for (std::map<std::string, cb_field_ptr>::const_iterator it = fmap.begin(); it != fmap.end(); ++it) {
-		std::string path = "";
+		std::string path;
 		std::string var = it->first;
 		cb_field_ptr fld = it->second;
 
@@ -2162,7 +2115,7 @@ void TPESQLProcessor::put_smart_cursor_init_flags()
 		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
 	}
 	// Then the other cursors
-	auto other_crsrs = cpplinq::from(*(main_module_driver.exec_list)).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
+	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
 	for (cb_exec_sql_stmt_ptr stmt : other_crsrs) {
 		std::string cname = string_replace(stmt->cursorName, "_", "-");
 		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
@@ -2195,19 +2148,19 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 	int rp_count = 0;
 	CobolVarType f_type;
 	int f_size, f_scale;
-	bool emit_static = opt_emit_static_calls;
+	bool emit_static = parser_data->job_params()->opt_emit_static_calls;
 
 	for (cb_res_hostreference_ptr rp : *stmt->res_host_list) {
 
 		std::string var_name, ind_name;
 		bool has_indicator = decode_indicator(rp->hostreference.substr(1), var_name, ind_name);
 
-		if (!main_module_driver.field_exists(var_name)) {
-			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+		if (!parser_data->field_exists(var_name)) {
+			raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map(var_name);
+		cb_field_ptr hr = parser_data->field_map(var_name);
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		// Support for group items used as host variables in SELECT statements
@@ -2215,18 +2168,18 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 		if (f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
 
 			if (has_indicator) {
-				main_module_driver.error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
+				raise_error("Invalid null indicator reference: " + rp->hostreference.substr(1), ERR_INVALID_NULLIND_REF, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
 			if (hr->group_levels_count != 1) {
-				main_module_driver.error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+				raise_error("Nested levels not allowed in group variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
 			cb_field_ptr pp = hr->children;
 			if (!pp) {
-				main_module_driver.error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+				raise_error("Inconsistent data for group field : " + hr->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 				return false;
 			}
 
@@ -2239,7 +2192,7 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 				int pp_size = 0, pp_scale = 0;
 				bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 				if (pp_is_varlen) {
-					main_module_driver.error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
+					raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 					return false;
 				}
 
@@ -2291,7 +2244,7 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 {
 	CobolVarType f_type;
 	int f_size, f_scale;
-	bool emit_static = opt_emit_static_calls;
+	bool emit_static = parser_data->job_params()->opt_emit_static_calls;
 
 	for (cb_hostreference_ptr p : *stmt->host_list) {
 		ESQLCall p_call(get_call_id("SetSQLParams"), emit_static);
@@ -2299,12 +2252,12 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 		std::string var_name, ind_name;
 		bool has_indicator = decode_indicator(p->hostreference.substr(1), var_name, ind_name);
 
-		if (!main_module_driver.field_exists(var_name)) {
-			main_module_driver.error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
+		if (!parser_data->field_exists(var_name)) {
+			raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 			return false;
 		}
 
-		cb_field_ptr hr = main_module_driver.field_map(var_name);
+		cb_field_ptr hr = parser_data->field_map(var_name);
 		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		int flags = is_varlen ? CBL_FIELD_FLAG_VARLEN : CBL_FIELD_FLAG_NONE;
@@ -2314,7 +2267,7 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 		uint16_t hr_scale;
 		uint8_t hr_flags;
 		decode_sql_type_info(hr->sql_type, &hr_type, &hr_precision, &hr_scale, &hr_flags);
-		if (HAS_PICX_AS_VARCHAR(hr_flags) || opt_picx_as_varchar)
+		if (HAS_PICX_AS_VARCHAR(hr_flags) || parser_data->job_params()->opt_picx_as_varchar)
 			flags |= CBL_FIELD_FLAG_AUTOTRIM;
 
 		p_call.addParameter(f_type, BY_VALUE);
@@ -2336,9 +2289,9 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 
 void TPESQLProcessor::add_preprocessed_blocks()
 {
-	std::vector<cb_exec_sql_stmt_ptr>* p = main_module_driver.exec_list;
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
 	for (auto e : *p) {
-		PreprocessedBlockInfo *bi = new PreprocessedBlockInfo();
+		PreprocessedBlockInfo* bi = new PreprocessedBlockInfo();
 		bi->type = PreprocessedBlockType::ESQL;
 		bi->command = e->commandName;
 
@@ -2366,8 +2319,8 @@ void TPESQLProcessor::add_preprocessed_blocks()
 
 		bi->pp_end_line = atoi(in_out_end_val.substr(0, in_out_end_val.find("@")).c_str());
 
-		bi->module_name = main_module_driver.program_id;
-		
+		bi->module_name = parser_data->program_id();
+
 		auto gb = generated_blocks[e];
 		bi->pp_gen_start_line = std::get<0>(gb);
 		bi->pp_gen_end_line = std::get<1>(gb);
@@ -2395,6 +2348,25 @@ bool TPESQLProcessor::decode_indicator(const std::string& orig_name, std::string
 	return res;
 }
 
+void TPESQLProcessor::raise_error(const std::string& m, int err_code, std::string filename, int line)
+{
+	if (filename.empty())
+		filename = current_file;
+
+	if (line == -1)
+		line = 1;
+
+	std::string msg;
+	if (!filename.empty())
+		msg = string_format("%s(%d): error: %s", filename, line, m);
+	else
+		msg = string_format("unknown(0): error: %s", m);
+
+	this->owner->err_data.err_messages.push_back(msg);
+	if (!this->owner->err_data.err_code || err_code != ERR_ALREADY_SET)
+		this->owner->err_data.err_code = err_code;
+}
+
 void TPESQLProcessor::put_whenever_handler(bool terminate_with_period)
 {
 	const char* lp = AREA_B_CPREFIX;
@@ -2415,7 +2387,7 @@ void TPESQLProcessor::put_whenever_handler(bool terminate_with_period)
 	put_output_line(lp + std::string("EVALUATE TRUE"));
 
 	// Not found
-	put_output_line(lp + std::string("WHEN SQLCODE = ") + std::to_string(opt_norec_sqlcode));
+	put_output_line(lp + std::string("WHEN SQLCODE = ") + std::to_string(parser_data->job_params()->opt_norec_sqlcode));
 	put_whenever_clause_handler(&esql_whenever_handler.not_found);
 
 	// SQLWARNING
@@ -2435,7 +2407,7 @@ void TPESQLProcessor::put_whenever_handler(bool terminate_with_period)
 
 std::string TPESQLProcessor::getModuleName()
 {
-	return main_module_driver.program_id;
+	return parser_data->program_id();
 }
 
 void TPESQLProcessor::splitLineEntry(const std::string& k, std::string& s, int* i)
@@ -2502,12 +2474,12 @@ std::map<int, std::string> TPESQLProcessor::getReverseFileMap()
 
 std::map<std::string, cb_field_ptr>& TPESQLProcessor::getVariableDeclarationInfoMap() const
 {
-	return main_module_driver.get_field_map();
+	return parser_data->get_field_map();
 }
 
 std::map<std::string, srcLocation> TPESQLProcessor::getParagraphs()
 {
-	return main_module_driver.paragraphs;
+	return parser_data->paragraphs();
 }
 
 std::map<std::string, std::vector<std::string>> TPESQLProcessor::getFileDependencies()

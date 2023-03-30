@@ -46,7 +46,7 @@ public:
 	void addParameter(std::string value, bool by_reference);
 	void addParameter(int value, bool by_reference);
 	void addParameter(CobolVarType type, bool by_reference);
-	void addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, int varlen_sz = 0);
+	void addParameter(ESQLParserData* parser_data, hostref_or_literal_t *p, int varlen_sz = 0);
 
 	std::vector<std::string> format(int indent_level = 0) const;
 	std::string error() const;

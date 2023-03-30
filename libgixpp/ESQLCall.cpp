@@ -39,7 +39,7 @@ void ESQLCall::addParameter(std::string value, bool by_reference)
 	params.push_back({ value, by_reference });
 }
 
-void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, int varlen_sz)
+void ESQLCall::addParameter(ESQLParserData *parser_data, hostref_or_literal_t *p, int varlen_sz)
 {
 	int f_type = 0, f_size = 0, f_scale = 0;
 
@@ -55,7 +55,7 @@ void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, in
 		addParameter(0, BY_VALUE);
 	}
 	else {
-		if (!driver->parser_data()->field_exists(p->name.substr(1)) || !driver->parser_data()->field_map(p->name.substr(1))) {
+		if (!parser_data->field_exists(p->name.substr(1)) || !parser_data->field_map(p->name.substr(1))) {
 			this->error_msg = "Invalid or undefined parameter name: " + p->name.substr(1);
 			this->has_error = true;
 			return;
@@ -65,7 +65,7 @@ void ESQLCall::addParameter(gix_esql_driver *driver, hostref_or_literal_t *p, in
 		addParameter(p->name.substr(1), BY_REFERENCE);
 
 		if (!varlen_sz) {	// Not a variable length field
-			addParameter(driver->parser_data()->field_map(p->name.substr(1))->picnsize, BY_VALUE);
+			addParameter(parser_data->field_map(p->name.substr(1))->picnsize, BY_VALUE);
 		}
 		else {
 			addParameter(-varlen_sz, BY_VALUE);

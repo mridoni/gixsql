@@ -37,11 +37,15 @@ TPSourceConsolidation::TPSourceConsolidation(GixPreProcessor *gpp) : ITransforma
 
 bool TPSourceConsolidation::run(ITransformationStep *prev_step)
 {
-	if (input_file.empty() && !prev_step)
+	if (!input->isValid())
 		return false;
 
-	if (input_file.empty())
-		input_file = prev_step->getOutput();
+	if (input_file.empty()) {
+		if (prev_step->getOutputType() != TransformationStepDataType::Filename) {
+			return false;
+		}
+		input_file = prev_step->getOutput()->data.filename;
+	}
 	
 	map_only = std::get<bool>(owner->getOpt("no_output", false));
 
@@ -64,12 +68,25 @@ bool TPSourceConsolidation::run(ITransformationStep *prev_step)
 		file_write_all_lines(output_file, all_lines);
 	}
 
+	output->type = TransformationStepDataType::Filename;
+	output->data.filename = output_file;
+
 	return true;
 }
 
-std::string TPSourceConsolidation::getOutput(ITransformationStep *me)
+TransformationStepDataType TPSourceConsolidation::getInputType()
 {
-	return output_file;
+	return TransformationStepDataType::Filename;
+}
+
+TransformationStepDataType TPSourceConsolidation::getOutputType()
+{
+	return TransformationStepDataType::Filename;
+}
+
+TransformationStepData *TPSourceConsolidation::getOutput(ITransformationStep *me)
+{
+	return output;
 }
 
 std::map<int, std::string> &TPSourceConsolidation::getFileMap() const

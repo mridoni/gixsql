@@ -2,7 +2,7 @@
 
 TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
-	
+	owner = gpp;
 }
 
 bool TPESQLParser::run(ITransformationStep* prev_step)
@@ -52,12 +52,32 @@ bool TPESQLParser::run(ITransformationStep* prev_step)
 #endif
 #endif
 
+	std::string ps = std::get<std::string>(owner->getOpt("params_style", std::string("d")));
+	if (ps == "d")
+		parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::DollarPrefix;
+	else
+		if (ps == "c")
+			parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::ColonPrefix;
+		else
+			if (ps == "a")
+				parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Anonymous;
+			else
+				parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Unknown;
 
-	main_module_driver.opt_params_style = params.opt_params_style;
-	main_module_driver.opt_preprocess_copy_files = params.opt_preprocess_copy_files;
+	parser_data->job_params()->opt_preprocess_copy_files = std::get<bool>(owner->getOpt("preprocess_copy_files", false));
 
 	main_module_driver.setCaller(this);
 
 
 	int rc = main_module_driver.parse(input, parser_data);
+}
+
+TransformationStepDataType TPESQLParser::getInputType()
+{
+	return TransformationStepDataType::Filename;
+}
+
+TransformationStepDataType TPESQLParser::getOutputType()
+{
+	return TransformationStepDataType::ESQLParseData;
 }

@@ -34,8 +34,10 @@ public:
 
 	// Inherited via ITransformationStep
 	virtual bool run(ITransformationStep* prev_step) override;
+	TransformationStepDataType getInputType() override;
+	TransformationStepDataType getOutputType() override;
 
-	virtual std::string getOutput(ITransformationStep* me = nullptr) override;
+	virtual TransformationStepData *getOutput(ITransformationStep* me = nullptr) override;
 
 	std::map<std::string, std::string> &getSrcLineMap() const;
 	std::map<int, std::string> &getFileMap() const;
@@ -48,6 +50,9 @@ private:
 
 	std::stack<std::string> input_file_stack;
 
+	std::string input_file;
+	std::string output_file;
+
 	int current_input_line;
 	int cur_output_line;
 	int nlines;
@@ -58,5 +63,6 @@ private:
 	bool processNextFile();
 	void put_output_line(const std::string &line);
 	bool is_copy_statement(const std::string line, std::string &copy_name);
+
 };
 

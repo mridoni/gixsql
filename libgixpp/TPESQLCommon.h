@@ -2,9 +2,11 @@
 
 #include <string>
 #include <map>
+#include <memory>
 
 #include "ESQLDefinitions.h"
 #include "GixEsqlLexer.hh"
+#include "cobol_var_types.h"
 
 #define ESQL_CONNECT					"CONNECT"
 #define ESQL_CONNECT_RESET				"CONNECT_RESET"
@@ -37,6 +39,7 @@
 #define ESQL_PASSTHRU					"PASSTHRU"
 #define ESQL_WHENEVER					"WHENEVER"
 
+using sql_type_info_t = std::tuple<uint64_t, int, int, std::string>;
 
 enum class ESQL_Command
 {
@@ -118,20 +121,39 @@ class ESQLParserData
 {
 public:
 
+	ESQLParserData();
+
 	bool field_exists(const std::string& f);
 	std::map<std::string, cb_field_ptr>& get_field_map() const;
 	void add_to_field_map(std::string k, cb_field_ptr f);
 	cb_field_ptr field_map(std::string k);
 
+	sql_type_info_t field_sql_type_info(const std::string& n);
+	std::map<std::string, sql_type_info_t> field_sql_type_info() const;
+
+	void field_sql_type_info_add(const std::string& n, sql_type_info_t t);
+
+	std::shared_ptr<ESQLJobParams> job_params() const;
+	std::vector<cb_exec_sql_stmt_ptr>* exec_list() const;
+
+	std::string program_id();
+	void set_program_id(std::string id);
+
+	std::map<std::string, srcLocation>& paragraphs();
+	void paragraph_add(std::string, srcLocation p);
+
+	bool get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale);
+
 private:
-	std::map<std::string, std::tuple<uint64_t, int, int, std::string>> field_sql_type_info;
+	std::map<std::string, std::tuple<uint64_t, int, int, std::string>> _field_sql_type_info;
 
-	std::map<std::string, srcLocation> paragraphs;
+	std::map<std::string, srcLocation> _paragraphs;
 
-	std::string program_id;
-
+	std::string _program_id;
+	std::vector<cb_exec_sql_stmt_ptr>* _exec_list;
 	std::map<std::string, cb_field_ptr> _field_map;
 
+	std::shared_ptr<ESQLJobParams> _job_params;
 
 };
 

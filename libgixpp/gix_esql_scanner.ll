@@ -1439,7 +1439,7 @@ LOW_VALUE "LOW\-VALUE"
 		if (!driver.procedure_division_started && string_contains(cur_line_content, "PROGRAM-ID", true)) {
             std::string pid = string_replace_regex(cur_line_content, "PROGRAM-ID", "", true);
 			pid = trim_copy(string_replace(pid, ".", ""));
-			driver.program_id = pid;
+			driver.parser_data()->set_program_id(pid);
 		}
 		else
 			if (isParagraph(cur_line_content)) {
@@ -1449,7 +1449,7 @@ LOW_VALUE "LOW\-VALUE"
 				loc->is_included = driver.lexer.src_location_stack.size() > 1;
 				std::string paragraph_name = trim_copy(string_chop(trim_copy(cur_line_content), 1));
 			
-				driver.paragraphs[paragraph_name] = *loc;
+				driver.parser_data()->paragraph_add(paragraph_name, *loc);
 			}
 		}
 }

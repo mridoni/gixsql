@@ -455,13 +455,13 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 
 	// We do NOT set FLAG_EMIT_VAR
 
-	if (!driver.field_exists(var_name)) {
+	if (!driver.parser_data()->field_exists(var_name)) {
 		std::string src_file = driver.lexer.src_location_stack.top().filename;
 		std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
-		driver.field_sql_type_info[var_name] = d;
+		driver.parser_data()->field_sql_type_info_add(var_name, d);
 	}
 	else {
-		x = driver.field_map(var_name);
+		x = driver.parser_data()->field_map(var_name);
 		if (IS_VARLEN(sql_type) && !IS_BINARY(sql_type)) {
 			type_info = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_PICX_AS_VARCHAR);
 		}
@@ -489,7 +489,7 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 		stmt->src_file = x->defined_at_source_file;
 		stmt->startLine = x->defined_at_source_line;
 		stmt->endLine = x->defined_at_source_line;
-		driver.exec_list->push_back(stmt);
+		driver.parser_data()->exec_list()->push_back(stmt);
 	}
 }
 ;
@@ -973,7 +973,7 @@ varusage_type {
 	// We need to store the variable data, so we can fix it up before the output source is generated
 	std::string src_file = driver.lexer.src_location_stack.top().filename;
 	std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
-	driver.field_sql_type_info[x->sname] = d;
+	driver.parser_data()->field_sql_type_info_add(x->sname, d);
 }
 ;
 

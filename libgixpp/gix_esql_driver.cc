@@ -83,7 +83,6 @@ gix_esql_driver::gix_esql_driver ()
 	host_reference_list = new std::vector<cb_hostreference_ptr>();
 	res_host_reference_list = new std::vector<cb_res_hostreference_ptr>();
 	sql_list = new std::vector<cb_sql_token_t>();
-	//exec_list = new std::vector<cb_exec_sql_stmt_ptr>();
 	hostref_or_literal_list = new std::vector<hostref_or_literal_t *>();
 
 }
@@ -96,14 +95,13 @@ gix_esql_driver::~gix_esql_driver ()
 	//delete exec_list;
 	delete hostref_or_literal_list;
 }
+//
+//void gix_esql_driver::setCaller(TPESQLParser* p)
+//{
+//	pp_caller = p;
+//}
 
-void gix_esql_driver::setCaller(TPESQLParser* p)
-{
-	pp_caller = p;
-}
-
-//int gix_esql_driver::parse (GixPreProcessor *gpp, const std::string &f)
-int gix_esql_driver::parse (TransformationStepData *input, ESQLParserData *_parser_data)
+int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLParserData> _parser_data)
 {
 	_parser_data = _parser_data;
 
@@ -251,48 +249,48 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 	return "";	/* FIXME: possibly assert? */
 }
 
-std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
-{
-	// Handle placeholders for group items passed as host variables
-	if (parser_data()->field_exists(text.substr(1))) {
-		CobolVarType f_type = CobolVarType::UNKNOWN;
-		int f_size = 0, f_scale = 0;
-		cb_field_ptr f = parser_data()->field_map(text.substr(1));
-		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
-
-		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
-				f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
-			cb_field_ptr c = f->children;
-			std::string s;
-			while (c) {
-				s += cb_host_list_add_force(list, ":" + c->sname);
-				c = c->sister;
-				if (c) s += ",";
-			}
-			return "@[" + s + "]";
-		}
-	}
-
-	int hostno = list->size() + 1;
-
-	cb_hostreference_ptr p = new cb_hostreference_t();
-	p->hostreference = text;
-	p->hostno = hostno;
-	p->lineno = hostlineno;
-
-	list->push_back(p);
-	switch (opt_params_style) {
-	case ESQL_ParameterStyle::DollarPrefix:
-		return "$" + std::to_string(hostno);
-
-	case ESQL_ParameterStyle::ColonPrefix:
-		return ":" + std::to_string(hostno);
-
-	case ESQL_ParameterStyle::Anonymous:
-		return "?";
-	}
-	return "";	/* FIXME: possibly assert? */
-}
+//std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
+//{
+//	// Handle placeholders for group items passed as host variables
+//	if (parser_data()->field_exists(text.substr(1))) {
+//		CobolVarType f_type = CobolVarType::UNKNOWN;
+//		int f_size = 0, f_scale = 0;
+//		cb_field_ptr f = parser_data()->field_map(text.substr(1));
+//		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
+//
+//		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
+//				f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
+//			cb_field_ptr c = f->children;
+//			std::string s;
+//			while (c) {
+//				s += cb_host_list_add_force(list, ":" + c->sname);
+//				c = c->sister;
+//				if (c) s += ",";
+//			}
+//			return "@[" + s + "]";
+//		}
+//	}
+//
+//	int hostno = list->size() + 1;
+//
+//	cb_hostreference_ptr p = new cb_hostreference_t();
+//	p->hostreference = text;
+//	p->hostno = hostno;
+//	p->lineno = hostlineno;
+//
+//	list->push_back(p);
+//	switch (opt_params_style) {
+//	case ESQL_ParameterStyle::DollarPrefix:
+//		return "$" + std::to_string(hostno);
+//
+//	case ESQL_ParameterStyle::ColonPrefix:
+//		return ":" + std::to_string(hostno);
+//
+//	case ESQL_ParameterStyle::Anonymous:
+//		return "?";
+//	}
+//	return "";	/* FIXME: possibly assert? */
+//}
 
 
 void gix_esql_driver::cb_res_host_list_add(std::vector<cb_res_hostreference_ptr> *list, std::string text)
@@ -350,7 +348,7 @@ gix_esql_driver::cb_set_cursor_hold(bool h)
 void gix_esql_driver::put_startup_exec_list()
 {
 	put_exec_list();
-	exec_list->back()->startup_item = true;
+	parser_data()->exec_list()->back()->startup_item = true;
 }
 
 void gix_esql_driver::put_exec_list()
@@ -393,11 +391,11 @@ void gix_esql_driver::put_exec_list()
 	statement_name.clear();
 	statement_source = nullptr;
 
-	exec_list->push_back(l);
+	parser_data()->exec_list()->push_back(l);
 
 }
 
-ESQLParserData* gix_esql_driver::parser_data()
+std::shared_ptr<ESQLParserData> gix_esql_driver::parser_data()
 {
 	return _parser_data;
 }
@@ -548,7 +546,7 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 				break;
 
 		}
-		add_to_field_map(f->sname, f);
+		parser_data()->add_to_field_map(f->sname, f);
 	}
 
 	f->defined_at_source_line = lexer.getLineNo();
