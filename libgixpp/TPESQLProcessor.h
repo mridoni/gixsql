@@ -108,8 +108,8 @@ private:
 	bool put_cursor_declarations();
 	bool put_call(const ESQLCall &call, bool terminate_with_period, int indent_level = 0);
 
-	bool is_var_len_group(cb_field_ptr f);
-	bool get_actual_field_data(cb_field_ptr f, CobolVarType* type, int *size, int *scale);
+	//bool is_var_len_group(cb_field_ptr f);
+	//bool get_actual_field_data(cb_field_ptr f, CobolVarType* type, int *size, int *scale);
 	void process_sql_query_list();
 	std::string process_sql_query_item(const std::vector<std::string>& input_sql_list);
 	bool fixup_declared_vars();

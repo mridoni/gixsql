@@ -55,7 +55,7 @@ int GixEsqlLexer::LexerInput(char *buff, int max_size)
 
 		cur_line_content = buff;
 
-		if (driver->pp_inst->verbose_debug)
+		if (driver->preprocessor()->verbose_debug)
 			printf("%05d : %s\n", yylineno + 1, buff);
 
 		// This is needed to properly consume EOLs (yyin.getline discards them)
@@ -139,11 +139,11 @@ void GixEsqlLexer::pushNewFile(const std::string file_name, gix_esql_driver *dri
 {
 	std::string file_full_name = file_name;
 
-	if (driver->pp_inst->verbose_debug)
+	if (driver->preprocessor()->verbose_debug)
 		printf("Resolving %s\n", file_name.c_str());
 
 	if (resolve_as_copy) {
-		if (!driver->pp_inst->getCopyResolver()->resolveCopyFile(file_name, file_full_name)) {
+		if (!driver->preprocessor()->getCopyResolver()->resolveCopyFile(file_name, file_full_name)) {
 			driver->error("Cannot resolve copy file " + file_name, ERR_MISSING_COPYFILE);
 			return;
 		}
@@ -152,7 +152,7 @@ void GixEsqlLexer::pushNewFile(const std::string file_name, gix_esql_driver *dri
 	std::istream *in_file = new std::ifstream(file_full_name);
 	yy_buffer_state *new_buffer = yy_create_buffer(in_file, YY_BUF_SIZE);
 
-	if (driver->pp_inst->verbose_debug)
+	if (driver->preprocessor()->verbose_debug)
 		printf("Switching to file %s\n", file_full_name.c_str());
 
 	yypush_buffer_state(new_buffer);
@@ -197,7 +197,7 @@ int yyFlexLexer::yywrap()
 		p->driver->file = p->driver->lexer.src_location_stack.top().filename;
 		yylineno = loc.line;
 
-		if (p->driver->pp_inst->verbose_debug)
+		if (p->driver->preprocessor()->verbose_debug)
 			printf("Switching to file %s\n", p->driver->lexer.src_location_stack.top().filename.c_str());
 
 		return 0;

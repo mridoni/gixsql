@@ -563,7 +563,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
 				auto hr = parser_data->field_map(var_name);
-				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+				bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
 
@@ -597,7 +597,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
 				auto hr = parser_data->field_map(var_name);
-				bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+				bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
 
@@ -927,7 +927,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			}
 
 			cb_field_ptr hr = parser_data->field_map(var_name);
-			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+			bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in SELECT statements
 			// They are decomposed into their sub-elements
@@ -956,7 +956,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 					CobolVarType pp_type = CobolVarType::UNKNOWN;
 					int pp_size = 0, pp_scale = 0;
-					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
+					bool pp_is_varlen = parser_data->get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
 						raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 						return false;
@@ -1081,7 +1081,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 			}
 
 			cb_field_ptr hr = parser_data->field_map(var_name);
-			bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+			bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 			// Support for group items used as host variables in INSERT statements
 			// They are decomposed into their sub-elements
@@ -1117,7 +1117,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 					CobolVarType pp_type = CobolVarType::UNKNOWN;
 					int pp_size = 0, pp_scale = 0;
-					bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
+					bool pp_is_varlen = parser_data->get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 					if (pp_is_varlen) {
 						raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, p->lineno);
 						return false;
@@ -1361,7 +1361,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 				return false;
 			}
 			cb_field_ptr sv = parser_data->field_map(sv_name);
-			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
+			bool is_varlen = parser_data->get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
 			if (!is_varlen) {
@@ -1429,7 +1429,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 				return false;
 			}
 			cb_field_ptr sv = parser_data->field_map(sv_name);
-			bool is_varlen = get_actual_field_data(sv, &f_type, &f_size, &f_scale);
+			bool is_varlen = parser_data->get_actual_field_data(sv, &f_type, &f_size, &f_scale);
 			// If is_varlen is true, we are pointing to a "variable length group", which is fine.
 			// We pass the group and the runtime library will handle the "actual" data.
 			if (!is_varlen) {
@@ -1975,7 +1975,7 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 		}
 
 		cb_field_ptr hr = parser_data->field_map(var_name);
-		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+		bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		// Support for group items used as host variables in SELECT statements
 		// They are decomposed into their sub-elements
@@ -2004,7 +2004,7 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 
 				CobolVarType pp_type = CobolVarType::UNKNOWN;
 				int pp_size = 0, pp_scale = 0;
-				bool pp_is_varlen = get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
+				bool pp_is_varlen = parser_data->get_actual_field_data(pp, &pp_type, &pp_size, &pp_scale);
 				if (pp_is_varlen) {
 					raise_error("Inconsistent data for group field member: " + pp->sname, ERR_MISSING_HOSTVAR, stmt->src_abs_path, rp->lineno);
 					return false;
@@ -2072,7 +2072,7 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 		}
 
 		cb_field_ptr hr = parser_data->field_map(var_name);
-		bool is_varlen = get_actual_field_data(hr, &f_type, &f_size, &f_scale);
+		bool is_varlen = parser_data->get_actual_field_data(hr, &f_type, &f_size, &f_scale);
 
 		int flags = is_varlen ? CBL_FIELD_FLAG_VARLEN : CBL_FIELD_FLAG_NONE;
 		flags |= (hr->usage == Usage::Binary) ? CBL_FIELD_FLAG_BINARY : CBL_FIELD_FLAG_NONE;

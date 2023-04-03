@@ -2,6 +2,8 @@
 
 TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
+	main_module_driver.setParser(this);
+
 	owner = gpp;
 }
 
@@ -65,8 +67,6 @@ bool TPESQLParser::run(ITransformationStep* prev_step)
 				parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Unknown;
 
 	parser_data->job_params()->opt_preprocess_copy_files = std::get<bool>(owner->getOpt("preprocess_copy_files", false));
-
-	main_module_driver.setCaller(this);
 
 
 	int rc = main_module_driver.parse(input, parser_data);

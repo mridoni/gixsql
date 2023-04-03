@@ -78,8 +78,6 @@ gix_esql_driver::gix_esql_driver ()
 	current_field = NULL;
 	description_field = NULL;
 
-	pp_inst = nullptr;
-
 	host_reference_list = new std::vector<cb_hostreference_ptr>();
 	res_host_reference_list = new std::vector<cb_res_hostreference_ptr>();
 	sql_list = new std::vector<cb_sql_token_t>();
@@ -95,17 +93,17 @@ gix_esql_driver::~gix_esql_driver ()
 	//delete exec_list;
 	delete hostref_or_literal_list;
 }
-//
-//void gix_esql_driver::setCaller(TPESQLParser* p)
-//{
-//	pp_caller = p;
-//}
+
+void gix_esql_driver::setParser(TPESQLParser* p)
+{
+	parser = p;
+}
 
 int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLParserData> _parser_data)
 {
 	_parser_data = _parser_data;
 
-	pp_inst = pp_caller->getOwner();
+	pp_inst = parser->getOwner();
 
 	bool debug_parser_scanner = std::get<2>(pp_inst->getOpt("debug_parser_scanner", false));
 
@@ -219,7 +217,7 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 		CobolVarType f_type = CobolVarType::UNKNOWN;
 		int f_size = 0, f_scale = 0;
 		cb_field_ptr f = parser_data()->field_map(text.substr(1));
-		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
+		bool is_varlen = parser_data()->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 
 		if ((this->commandname == "INSERT" || this->commandname == "SELECT") && 
 				f_type == CobolVarType::COBOL_TYPE_GROUP && !is_varlen) {
@@ -398,6 +396,11 @@ void gix_esql_driver::put_exec_list()
 std::shared_ptr<ESQLParserData> gix_esql_driver::parser_data()
 {
 	return _parser_data;
+}
+
+GixPreProcessor* gix_esql_driver::preprocessor() const
+{
+	return pp_inst;
 }
 
 int cb_get_level(int val)

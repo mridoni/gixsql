@@ -67,14 +67,13 @@ class TPESQLProcessor;
 class TPESQLParser;
 class ESQLParserData;
 
-// Conducting the whole scanning and parsing of Calc++.
 class gix_esql_driver
 {
 public:
     gix_esql_driver ();
     virtual ~gix_esql_driver ();
 
-    //void setCaller(TPESQLParser* p);
+    void setParser(TPESQLParser* p);
 
 #pragma region Options
 
@@ -143,6 +142,7 @@ public:
 
     std::shared_ptr<ESQLParserData> parser_data();
 
+    GixPreProcessor* preprocessor() const;
 
     int startlineno;
     int endlineno;
@@ -192,13 +192,14 @@ public:
 #pragma endregion
 
 #pragma region Management
-    GixPreProcessor *pp_inst = nullptr;
-    //TPESQLParser* pp_caller = nullptr;
+
 
 #pragma endregion
 
 private:
 
     std::shared_ptr<ESQLParserData> _parser_data;
+    TPESQLParser* parser = nullptr;
+    GixPreProcessor* pp_inst = nullptr;
 
 };
