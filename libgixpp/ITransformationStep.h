@@ -26,6 +26,7 @@ USA.
 
 class ITransformationStep;
 class GixPreProcessor;
+class ESQLParserData;
 
 enum class TransformationStepDataType
 {
@@ -34,39 +35,46 @@ enum class TransformationStepDataType
 	ESQLParseData = 2
 };
 
-struct TransformationStepData {
+class TransformationStepData {
 
+public:
 	TransformationStepData() {}
-	~TransformationStepData() {}
-
-	TransformationStepDataType type = TransformationStepDataType::NotSet; 
-	union transformation_step_data {
-		constexpr transformation_step_data() {}
-		~transformation_step_data() {}
-		void* parse_data = nullptr;
-		std::string filename;
-	} data;
-
-	bool isValid() {
-		switch (type)
-		{
-			case TransformationStepDataType::Filename:
-				return !data.filename.empty();
-
-			case TransformationStepDataType::ESQLParseData:
-				return data.parse_data != nullptr;
-
-			default:
-				return false;
+	~TransformationStepData()
+	{
+		if (_type == TransformationStepDataType::Filename && _data != nullptr) {
+			free(_data);
 		}
 	}
 
-	std::string toString()
+	void setType(TransformationStepDataType t) { _type = t; }
+	void setFilename(const std::string& s) {
+		_data = strdup(s.c_str());
+	}
+
+	bool isValid() {
+		return _data != nullptr;
+	}
+
+	ESQLParserData* parserData() { return (ESQLParserData *) _data;  }
+
+	std::string filename()
 	{
-		switch (type)
+		switch (_type)
+		{
+		case TransformationStepDataType::Filename:
+			return std::string((char*)_data);
+			
+		default:
+			return string();
+		}
+	}
+
+	std::string string()
+	{
+		switch (_type)
 		{
 			case TransformationStepDataType::Filename:
-				return data.filename;
+				return std::string((char*)_data);
 
 			case TransformationStepDataType::ESQLParseData:
 				return "(binary data)";
@@ -75,6 +83,12 @@ struct TransformationStepData {
 				return "N/A";
 		}
 	}
+
+private:
+	void* _data = nullptr;
+	TransformationStepDataType _type = TransformationStepDataType::NotSet; 
+
+
 };
 
 class ITransformationStep

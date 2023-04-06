@@ -105,14 +105,14 @@ bool GixPreProcessor::process()
         return false;
     }
 
-    if (!file_exists(input->data.filename)) {
+    if (!file_exists(input->filename())) {
 		SET_PP_ERR(4, "Input file does not exist");
         return false;
     }
 
 	if (verbose) {
-		printf("ESQL: Input file: %s\n", input->toString().c_str());
-		printf("ESQL: Output file: %s\n", output->toString().c_str());
+		printf("ESQL: Input file: %s\n", input->string().c_str());
+		printf("ESQL: Output file: %s\n", output->string().c_str());
 		for (std::string cd : copy_resolver->getCopyDirs()) {
 			printf("ESQL: Copy dir: %s\n", cd.c_str());
 		}
@@ -158,8 +158,8 @@ bool GixPreProcessor::setInputFile(std::string _infile)
 	}
 
 	TransformationStepData *infile = new TransformationStepData();
-	infile->type = TransformationStepDataType::Filename;
-	infile->data.filename = _infile;
+	infile->setType(TransformationStepDataType::Filename);
+	infile->setFilename(_infile);
 	steps.at(0)->setInput(infile);
 	input = infile;
 
@@ -174,8 +174,8 @@ bool GixPreProcessor::setOutputFile(std::string _outfile)
 	}
 
 	TransformationStepData* outfile = new TransformationStepData();
-	outfile->type = TransformationStepDataType::Filename;
-	outfile->data.filename = _outfile;
+	outfile->setType(TransformationStepDataType::Filename);
+	outfile->setFilename(_outfile);
 	steps.back()->setOutput(outfile);
 	output = outfile;
 

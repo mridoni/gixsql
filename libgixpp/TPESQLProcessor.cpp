@@ -111,20 +111,25 @@ inline std::string TPESQLProcessor::get_call_id(const std::string s)
 
 TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
+	this->owner = gpp;
 	code_tag = TAG_PREFIX;
 
+}
+
+bool TPESQLProcessor::run(ITransformationStep* prev_step)
+{
 	// opt_params_style and opt_preprocess_copy_files are set in the parser stage
 
-	parser_data->job_params()->opt_emit_static_calls = std::get<bool>(gpp->getOpt("emit_static_calls", false));
-	parser_data->job_params()->opt_emit_debug_info = std::get<bool>(gpp->getOpt("emit_debug_info", false));
-	parser_data->job_params()->opt_emit_compat = std::get<bool>(gpp->getOpt("emit_compat", false));
-	parser_data->job_params()->opt_consolidated_map = std::get<bool>(gpp->getOpt("consolidated_map", false));
-	parser_data->job_params()->opt_no_output = std::get<bool>(gpp->getOpt("no_output", false));
-	parser_data->job_params()->opt_emit_map_file = std::get<bool>(gpp->getOpt("emit_map_file", false));
-	parser_data->job_params()->opt_emit_cobol85 = std::get<bool>(gpp->getOpt("emit_cobol85", false));
-	parser_data->job_params()->opt_picx_as_varchar = std::get<bool>(gpp->getOpt("picx_as_varchar", false));
+	parser_data->job_params()->opt_emit_static_calls = std::get<bool>(owner->getOpt("emit_static_calls", false));
+	parser_data->job_params()->opt_emit_debug_info = std::get<bool>(owner->getOpt("emit_debug_info", false));
+	parser_data->job_params()->opt_emit_compat = std::get<bool>(owner->getOpt("emit_compat", false));
+	parser_data->job_params()->opt_consolidated_map = std::get<bool>(owner->getOpt("consolidated_map", false));
+	parser_data->job_params()->opt_no_output = std::get<bool>(owner->getOpt("no_output", false));
+	parser_data->job_params()->opt_emit_map_file = std::get<bool>(owner->getOpt("emit_map_file", false));
+	parser_data->job_params()->opt_emit_cobol85 = std::get<bool>(owner->getOpt("emit_cobol85", false));
+	parser_data->job_params()->opt_picx_as_varchar = std::get<bool>(owner->getOpt("picx_as_varchar", false));
 
-	auto vsfxs = std::get<std::string>(gpp->getOpt("varlen_suffixes", std::string()));
+	auto vsfxs = std::get<std::string>(owner->getOpt("varlen_suffixes", std::string()));
 	if (vsfxs.empty()) {
 		parser_data->job_params()->opt_varlen_suffix_len = DEFAULT_VARLEN_SUFFIX_LENGTH;
 		parser_data->job_params()->opt_varlen_suffix_data = DEFAULT_VARLEN_SUFFIX_DATA;
@@ -135,16 +140,13 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 		parser_data->job_params()->opt_varlen_suffix_data = vsfxs.substr(p + 1);
 	}
 
-	parser_data->job_params()->opt_norec_sqlcode = std::get<int>(gpp->getOpt("no_rec_code", DEFAULT_NO_REC_CODE));
+	parser_data->job_params()->opt_norec_sqlcode = std::get<int>(owner->getOpt("no_rec_code", DEFAULT_NO_REC_CODE));
 
 	output_line = 0;
 	working_begin_line = 0;
 	working_end_line = 0;
 	current_input_line = 0;
-}
 
-bool TPESQLProcessor::run(ITransformationStep* prev_step)
-{
 	if (parser_data->job_params()->opt_params_style == ESQL_ParameterStyle::Unknown) {
 		raise_error("Unsupported or invalid parameter style", ERR_PP_PARAM_ERROR);
 		return false;

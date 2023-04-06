@@ -44,7 +44,7 @@ bool TPSourceConsolidation::run(ITransformationStep *prev_step)
 		if (prev_step->getOutputType() != TransformationStepDataType::Filename) {
 			return false;
 		}
-		input_file = prev_step->getOutput()->data.filename;
+		input_file = prev_step->getOutput()->filename();
 	}
 	
 	map_only = std::get<bool>(owner->getOpt("no_output", false));
@@ -68,8 +68,8 @@ bool TPSourceConsolidation::run(ITransformationStep *prev_step)
 		file_write_all_lines(output_file, all_lines);
 	}
 
-	output->type = TransformationStepDataType::Filename;
-	output->data.filename = output_file;
+	output->setType(TransformationStepDataType::Filename);
+	output->setFilename(output_file);
 
 	return true;
 }

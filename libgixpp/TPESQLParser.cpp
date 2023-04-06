@@ -2,8 +2,9 @@
 
 TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
-	main_module_driver.setParser(this);
+	parser_data = std::make_shared<ESQLParserData>();
 
+	main_module_driver.setParser(this);
 	owner = gpp;
 }
 

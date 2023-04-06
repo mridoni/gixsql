@@ -64,6 +64,7 @@ void ESQLParserData::paragraph_add(std::string n, srcLocation p)
 ESQLParserData::ESQLParserData()
 {
 	_exec_list = new std::vector<cb_exec_sql_stmt_ptr>();
+	_job_params = std::make_shared<ESQLJobParams>();
 }
 
 bool ESQLParserData::field_exists(const std::string& f)

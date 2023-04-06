@@ -110,12 +110,12 @@ int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLP
 	trace_scanning = debug_parser_scanner;
 	trace_parsing = debug_parser_scanner;
 
-	std::string tf = filename_change_ext(input->data.filename, "");
+	std::string tf = filename_change_ext(input->filename(), "");
 
 	filenameID = filename_get_name(tf);
-	file = input->data.filename;
+	file = input->filename();
 
-	lexer.src_location_stack.push({ filename_absolute_path(input->data.filename), 1 });
+	lexer.src_location_stack.push({ filename_absolute_path(input->filename()), 1 });
 
     scan_begin ();
     yy::gix_esql_parser parser (*this);

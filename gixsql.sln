@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31424.327
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "runtime", "runtime", "{CA214231-A8B6-4FBA-B3AE-3FE5CAF64A38}"
 EndProject
@@ -371,6 +371,7 @@ Global
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|Win32.ActiveCfg = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Debug|x64.Build.0 = Debug|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Any CPU.ActiveCfg = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Any CPU.Build.0 = Release|Any CPU
 		{DAC2EAFE-E676-4BCE-923B-7449BFABB8FB}.Release_NoRuntime|Win32.ActiveCfg = Release|Any CPU
@@ -404,7 +405,7 @@ Global
 		{EECD5583-42BB-4A10-AF3B-4DC5CF419071} = {CA214231-A8B6-4FBA-B3AE-3FE5CAF64A38}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		Qt5Version = Qt_5.14_msvc64
 		SolutionGuid = {0D846CBC-2353-409E-B512-D9DF7822A67A}
+		Qt5Version = Qt_5.14_msvc64
 	EndGlobalSection
 EndGlobal
