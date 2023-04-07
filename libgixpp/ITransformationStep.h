@@ -20,6 +20,7 @@ USA.
 
 #pragma once
 
+#include <memory>
 #include <string>
 
 #define SET_ERR(I,S) owner->err_data.err_code = I; owner->err_data.err_messages.push_back(S)
@@ -32,7 +33,7 @@ enum class TransformationStepDataType
 {
 	NotSet = 0,
 	Filename = 1,
-	ESQLParseData = 2
+	ESQLParserData = 2
 };
 
 class TransformationStepData {
@@ -41,28 +42,37 @@ public:
 	TransformationStepData() {}
 	~TransformationStepData()
 	{
-		if (_type == TransformationStepDataType::Filename && _data != nullptr) {
-			free(_data);
-		}
 	}
 
 	void setType(TransformationStepDataType t) { _type = t; }
 	void setFilename(const std::string& s) {
-		_data = strdup(s.c_str());
+		_filename = s;
+	}
+
+	void setParserData(std::shared_ptr<ESQLParserData> pd) {
+		_parser_data = pd;
 	}
 
 	bool isValid() {
-		return _data != nullptr;
+		switch (_type)
+		{
+			case TransformationStepDataType::Filename:
+				return !_filename.empty();
+
+			case TransformationStepDataType::ESQLParserData:
+			default:
+				return (_parser_data.get() != nullptr);
+		}
 	}
 
-	ESQLParserData* parserData() { return (ESQLParserData *) _data;  }
+	std::shared_ptr<ESQLParserData> parserData() { return  _parser_data;  }
 
 	std::string filename()
 	{
 		switch (_type)
 		{
 		case TransformationStepDataType::Filename:
-			return std::string((char*)_data);
+			return _filename;
 			
 		default:
 			return string();
@@ -74,9 +84,9 @@ public:
 		switch (_type)
 		{
 			case TransformationStepDataType::Filename:
-				return std::string((char*)_data);
+				return _filename;
 
-			case TransformationStepDataType::ESQLParseData:
+			case TransformationStepDataType::ESQLParserData:
 				return "(binary data)";
 
 			default:
@@ -85,10 +95,12 @@ public:
 	}
 
 private:
-	void* _data = nullptr;
-	TransformationStepDataType _type = TransformationStepDataType::NotSet; 
 
+	TransformationStepDataType _type = TransformationStepDataType::NotSet;
 
+	std::string _filename;
+	std::shared_ptr<ESQLParserData> _parser_data;
+	
 };
 
 class ITransformationStep
@@ -99,10 +111,10 @@ public:
 
 	virtual TransformationStepDataType getInputType() = 0;
 	virtual TransformationStepDataType getOutputType() = 0;
-	virtual bool run(ITransformationStep* prev_step) = 0;
+	virtual bool run(std::shared_ptr<ITransformationStep> prev_step) = 0;
 
 	virtual TransformationStepData* getInput();
-	virtual TransformationStepData* getOutput(ITransformationStep* me = nullptr);
+	virtual TransformationStepData* getOutput(std::shared_ptr<ITransformationStep> me = nullptr);
 
 	virtual void setInput(TransformationStepData *input);
 	virtual void setOutput(TransformationStepData* output);

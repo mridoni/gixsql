@@ -134,24 +134,24 @@ LOW_VALUE "LOW\-VALUE"
 "EXEC"[ \r\n]+"SQL"		{ 
 		__yy_push_state(ESQL_FUNC_STATE); 
 
-		driver.startlineno = yylineno - count_crlf(yytext);;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
-		driver.sql_list->clear();
-		driver.hostref_or_literal_list->clear();	
+		driver->startlineno = yylineno - count_crlf(yytext);;
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
+		driver->sql_list->clear();
+		driver->hostref_or_literal_list->clear();	
 		
-		driver.commandname = "";
-		driver.cursorname = "";
-		driver.sqlname = "";
-		driver.incfilename = "";
+		driver->commandname = "";
+		driver->cursorname = "";
+		driver->sqlname = "";
+		driver->incfilename = "";
 
-		driver.hostreferenceCount = 0;
-		driver.period = 0;
-		driver.cursor_hold = 0;
-		driver.command_putother = 0;
+		driver->hostreferenceCount = 0;
+		driver->period = 0;
+		driver->cursor_hold = 0;
+		driver->command_putother = 0;
 
-		if (driver.lexer.src_location_stack.size() > 0 && !driver.lexer.src_location_stack.top().is_included)
-			driver.has_esql_in_cbl_copybooks = true;
+		if (driver->lexer.src_location_stack.size() > 0 && !driver->lexer.src_location_stack.top().is_included)
+			driver->has_esql_in_cbl_copybooks = true;
 
 		return yy::gix_esql_parser::make_EXECSQL(loc);
 }
@@ -181,14 +181,14 @@ LOW_VALUE "LOW\-VALUE"
 	
 <ESQL_DBNAME_STATE>{
 	{HOSTWORD} {
-		driver.connectionid = new hostref_or_literal_t(yytext, false);
+		driver->connectionid = new hostref_or_literal_t(yytext, false);
 		__yy_pop_state();
 
 		return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
-		driver.connectionid = new hostref_or_literal_t(yytext, true);
+		driver->connectionid = new hostref_or_literal_t(yytext, true);
 		__yy_pop_state();
 
 		return __MAKE_TOKEN(yytext, loc);
@@ -202,7 +202,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-		driver.endlineno = yylineno;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -236,16 +236,16 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.period = 1;
-		driver.endlineno = yylineno;
+		driver->period = 1;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC" {
-		driver.period = 0;
-		driver.endlineno = yylineno;
+		driver->period = 0;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -271,18 +271,18 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_FUNC_STATE>{
 
 	"INCLUDE" {
-		driver.period = 0;
+		driver->period = 0;
 		int n = count_crlf(yytext);
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
 
-		driver.cursorname = "";
-		driver.sqlname = "";
-		driver.incfilename = "";
+		driver->cursorname = "";
+		driver->sqlname = "";
+		driver->incfilename = "";
 	
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
+		driver->hostreferenceCount = 0;
+		driver->command_putother = 0;
+		driver->sql_list->clear();
 
 		__yy_push_state(ESQL_INCLUDE_STATE); 
 		return yy::gix_esql_parser::make_INCLUDE(loc);
@@ -295,17 +295,17 @@ LOW_VALUE "LOW\-VALUE"
 
 	"PREPARE" {
 		__yy_push_state(ESQL_PREPARE_STATE);
-		driver.commandname = "PREPARE_STATEMENT";
-		driver.statement_name = "";
-		driver.statement_source = nullptr;
+		driver->commandname = "PREPARE_STATEMENT";
+		driver->statement_name = "";
+		driver->statement_source = nullptr;
 		return yy::gix_esql_parser::make_PREPARE(loc);
 	}
      
 	"EXECUTE" {
 		__yy_push_state(ESQL_EXECUTE_STATE);
-		driver.commandname = "EXECUTE";
-		driver.statement_name = "";
-		driver.statement_source = nullptr;
+		driver->commandname = "EXECUTE";
+		driver->statement_name = "";
+		driver->statement_source = nullptr;
 		return yy::gix_esql_parser::make_EXECUTE(yytext, loc);
 	}
       
@@ -319,10 +319,10 @@ LOW_VALUE "LOW\-VALUE"
 	"SELECT" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = yytext;
+		driver->commandname = yytext;
 
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 
 		return yy::gix_esql_parser::make_SELECT(yytext, loc);
 	}
@@ -330,10 +330,10 @@ LOW_VALUE "LOW\-VALUE"
 	"INSERT" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = yytext;
+		driver->commandname = yytext;
 					
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 
 		return yy::gix_esql_parser::make_INSERT(yytext, loc);
 	}
@@ -341,10 +341,10 @@ LOW_VALUE "LOW\-VALUE"
 	"DELETE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = yytext;
+		driver->commandname = yytext;
 					
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 
 		return yy::gix_esql_parser::make_DELETE(yytext, loc);
 	}		
@@ -352,14 +352,14 @@ LOW_VALUE "LOW\-VALUE"
 	"CONNECT"[ ]+"RESET" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "CONNECT_RESET";
+		driver->commandname = "CONNECT_RESET";
 		return yy::gix_esql_parser::make_CONNECT_RESET(loc);
 	}	
 
 	"CONNECT" {
 		__yy_push_state(ESQL_CONNECT_STATE);
 
-		driver.commandname = "CONNECT";
+		driver->commandname = "CONNECT";
 		return yy::gix_esql_parser::make_CONNECT(loc);
 	}
 
@@ -367,17 +367,17 @@ LOW_VALUE "LOW\-VALUE"
 	"DISCONNECT" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = yytext;		
+		driver->commandname = yytext;		
 		return yy::gix_esql_parser::make_DISCONNECT(yytext, loc);
 	}
 
 	"UPDATE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = yytext;
+		driver->commandname = yytext;
 					
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 					
 		return yy::gix_esql_parser::make_UPDATE(yytext, loc);
 	}	
@@ -385,112 +385,112 @@ LOW_VALUE "LOW\-VALUE"
 	"OPEN" {
 			__yy_push_state(ESQL_STATE); 
 
-    	    driver.commandname = "OPEN";
+    	    driver->commandname = "OPEN";
 			return yy::gix_esql_parser::make_OPEN(loc);
     }
 
 	"CLOSE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "CLOSE";
+		driver->commandname = "CLOSE";
 		return yy::gix_esql_parser::make_CLOSE(loc);
 	}  
             
 	"FETCH" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "FETCH";
+		driver->commandname = "FETCH";
 		return yy::gix_esql_parser::make_FETCH(loc);
 	}
       
 	"COMMIT"[ ]+"WORK"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "COMMIT";
-		driver.transaction_release = true;
+		driver->commandname = "COMMIT";
+		driver->transaction_release = true;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
 
 	"COMMIT"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "COMMIT";
-		driver.transaction_release = true;
+		driver->commandname = "COMMIT";
+		driver->transaction_release = true;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
 
 	"COMMIT"[ ]+"WORK" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "COMMIT";
-		driver.transaction_release = false;
+		driver->commandname = "COMMIT";
+		driver->transaction_release = false;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
      
 	"COMMIT" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "COMMIT";
-		driver.transaction_release = false;
+		driver->commandname = "COMMIT";
+		driver->transaction_release = false;
 		return yy::gix_esql_parser::make_COMMIT_WORK(loc);
 	}
      
 	"ROLLBACK"[ ]+"WORK"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "ROLLBACK";
-		driver.transaction_release = true;
+		driver->commandname = "ROLLBACK";
+		driver->transaction_release = true;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}
 
 	"ROLLBACK"[ ]+"WORK"+[ ]+"WITH"+[ ]+"RELEASE" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "ROLLBACK";
-		driver.transaction_release = true;
+		driver->commandname = "ROLLBACK";
+		driver->transaction_release = true;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}
 
 	"ROLLBACK"[ ]+"WORK" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "ROLLBACK";
-		driver.transaction_release = false;
+		driver->commandname = "ROLLBACK";
+		driver->transaction_release = false;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}     
 
 	"ROLLBACK" {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "ROLLBACK";
-		driver.transaction_release = false;
+		driver->commandname = "ROLLBACK";
+		driver->transaction_release = false;
 		return yy::gix_esql_parser::make_ROLLBACK_WORK(loc);
 	}     
 
 	"IGNORE" {
 		__yy_push_state(ESQL_IGNORE_STATE);
 
-		driver.commandname = "IGNORE";
-		driver.text_content = "";
-		driver.in_ignore_string = true;
+		driver->commandname = "IGNORE";
+		driver->text_content = "";
+		driver->in_ignore_string = true;
 		return yy::gix_esql_parser::make_IGNORE(loc);	
 	}
 
 	"WHENEVER" {
 		__yy_push_state(ESQL_WHENEVER_STATE);
-		driver.commandname = "WHENEVER";
+		driver->commandname = "WHENEVER";
 		return yy::gix_esql_parser::make_WHENEVER(loc);
 	}
 
 	({WORD}|{JPNWORD})+ {
 		__yy_push_state(ESQL_STATE); 
 
-		driver.commandname = "PASSTHRU";
+		driver->commandname = "PASSTHRU";
 
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 		
-		driver.command_putother = 1;
+		driver->command_putother = 1;
 		return yy::gix_esql_parser::make_OTHERFUNC(yytext, loc);
 	}
 
@@ -499,29 +499,29 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_IGNORE_STATE>{
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.endlineno = yylineno;
-		driver.in_ignore_string = false;
-		driver.period = 1;
+		driver->endlineno = yylineno;
+		driver->in_ignore_string = false;
+		driver->period = 1;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC" {
-		driver.endlineno = yylineno;
-		driver.in_ignore_string = false;
+		driver->endlineno = yylineno;
+		driver->in_ignore_string = false;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	(\r\n|\n|\t) {   
-		driver.text_content += yytext;
+		driver->text_content += yytext;
 		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
-		driver.text_content += yytext;
+		driver->text_content += yytext;
 		return __MAKE_TOKEN(yytext, loc);
 	}
 
@@ -530,17 +530,17 @@ LOW_VALUE "LOW\-VALUE"
 <ESQL_WHENEVER_STATE>{
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.endlineno = yylineno;
-		driver.in_ignore_string = false;
-		driver.period = 1;
+		driver->endlineno = yylineno;
+		driver->in_ignore_string = false;
+		driver->period = 1;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC" {
-		driver.endlineno = yylineno;
-		driver.in_ignore_string = false;
+		driver->endlineno = yylineno;
+		driver->in_ignore_string = false;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -580,12 +580,12 @@ LOW_VALUE "LOW\-VALUE"
 
 	/*
 	(\r\n|\n|\t) {   
-		driver.text_content += yytext;
+		driver->text_content += yytext;
 		return __MAKE_TOKEN(yytext, loc);	
 	}
 
 	. { 
-		driver.text_content += yytext;
+		driver->text_content += yytext;
 		return __MAKE_TOKEN(yytext, loc);
 	}
 	*/
@@ -603,16 +603,16 @@ LOW_VALUE "LOW\-VALUE"
 	"IDENTIFIED"[ \r\n]+"BY" { return yy::gix_esql_parser::make_IDENTIFIED_BY(loc); }
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.endlineno = yylineno;
-		driver.period = 1;
+		driver->endlineno = yylineno;
+		driver->period = 1;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC" {
-		driver.endlineno = yylineno;
-		driver.period = 0;
+		driver->endlineno = yylineno;
+		driver->period = 0;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -673,14 +673,14 @@ LOW_VALUE "LOW\-VALUE"
 	
 
 	"TO" {
-		if (driver.commandname == "ROLLBACK")
+		if (driver->commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_TO(loc);
 		else
 			return __MAKE_TOKEN(yytext, loc);
 	}
 	
 	"SAVEPOINT" {
-		if (driver.commandname == "ROLLBACK")
+		if (driver->commandname == "ROLLBACK")
 			return yy::gix_esql_parser::make_SAVEPOINT(loc);
 		else
 			return __MAKE_TOKEN(yytext, loc);
@@ -735,25 +735,25 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	{HOSTWORD} {
-			driver.hostlineno = yylineno;
+			driver->hostlineno = yylineno;
 			return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
 	}
 	
 	{STRVALUE} {
-			driver.hostlineno = yylineno;   
+			driver->hostlineno = yylineno;   
 			return __MAKE_TOKEN(yytext, loc);
 	}	
 
 	/*
 	{FILENAME} {
-			driver.hostlineno = yylineno;   
+			driver->hostlineno = yylineno;   
 			return __MAKE_TOKEN(yytext, loc);
 	}	
 	*/
 	
 	"END-EXEC"[ \r\n]*"." {
-			driver.period = 1;
-			driver.endlineno = yylineno;
+			driver->period = 1;
+			driver->endlineno = yylineno;
 			__yy_pop_state();	// Not an error, we pop twice
 			__yy_pop_state();
 
@@ -761,7 +761,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	"END-EXEC" {
-			driver.endlineno = yylineno;
+			driver->endlineno = yylineno;
 			__yy_pop_state();	// Not an error, we pop twice
 			__yy_pop_state();
 
@@ -779,11 +779,11 @@ LOW_VALUE "LOW\-VALUE"
 
 "COPY"[ ]+({INCFILE})[ ]*"." {
 
-    if (driver.opt_preprocess_copy_files) {
-		driver.startlineno = yylineno;
-		driver.endlineno = yylineno;
+    if (driver->opt_preprocess_copy_files) {
+		driver->startlineno = yylineno;
+		driver->endlineno = yylineno;
 		
-		driver.commandname = "INCFILE";		
+		driver->commandname = "INCFILE";		
 		
 		int p = find_last_space(yytext);
 		if (p < 0)
@@ -792,7 +792,7 @@ LOW_VALUE "LOW\-VALUE"
 		std::string tts = std::string(yytext).substr(p);
 		tts = string_chop(tts, 1);
 		
-		driver.incfilename = tts;
+		driver->incfilename = tts;
 
 		return yy::gix_esql_parser::make_COPY(loc);
 	}
@@ -803,90 +803,90 @@ LOW_VALUE "LOW\-VALUE"
 	(\r\n|\n) {   } 
 
 	"SQLCA" {
-		driver.commandname = "INCSQLCA";		
+		driver->commandname = "INCSQLCA";		
 		return yy::gix_esql_parser::make_INCLUDE_SQLCA(loc);
 	}
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.period = 1;
-		driver.endlineno = yylineno;
+		driver->period = 1;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 	
 	"END-EXEC" {
-		driver.endlineno = yylineno;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state(); 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 	
 	{INCFILE} {
-		driver.commandname = "INCFILE";		
-		driver.incfilename = yytext;
+		driver->commandname = "INCFILE";		
+		driver->incfilename = yytext;
 		return yy::gix_esql_parser::make_INCLUDE_FILE(loc);
 	}
 }
 
 "PROCEDURE"[ ]+"DIVISION"[^\.]*"." {
 
-	if (driver.data_division_section != DD_SECTION_INITIAL) {
+	if (driver->data_division_section != DD_SECTION_INITIAL) {
 		yy_pop_state();
-		switch (driver.data_division_section) {
+		switch (driver->data_division_section) {
 			case DD_SECTION_WS:
-				driver.data_division_section = DD_SECTION_INITIAL;
-				driver.commandname ="WORKING_END";
-				driver.startlineno = yylineno - 1;
-				driver.endlineno = yylineno - 1;
+				driver->data_division_section = DD_SECTION_INITIAL;
+				driver->commandname ="WORKING_END";
+				driver->startlineno = yylineno - 1;
+				driver->endlineno = yylineno - 1;
 				UNPUT_TOKEN();
 				return yy::gix_esql_parser::make_WORKINGEND(loc); 
 
 			case DD_SECTION_LL:
-				driver.data_division_section = DD_SECTION_INITIAL;
-				driver.commandname ="LOCALSTORAGE_END";
-				driver.startlineno = yylineno - 1;
-				driver.endlineno = yylineno - 1;
+				driver->data_division_section = DD_SECTION_INITIAL;
+				driver->commandname ="LOCALSTORAGE_END";
+				driver->startlineno = yylineno - 1;
+				driver->endlineno = yylineno - 1;
 				UNPUT_TOKEN();
 				return yy::gix_esql_parser::make_LOCALSTORAGEEND(loc); 
 
 			case DD_SECTION_LS:
-				driver.data_division_section = DD_SECTION_INITIAL;
-				driver.commandname ="LINKAGE_END";
-				driver.startlineno = yylineno - 1;
-				driver.endlineno = yylineno - 1;
+				driver->data_division_section = DD_SECTION_INITIAL;
+				driver->commandname ="LINKAGE_END";
+				driver->startlineno = yylineno - 1;
+				driver->endlineno = yylineno - 1;
 				UNPUT_TOKEN();
 				return yy::gix_esql_parser::make_LINKAGEEND(loc); 
 
 			case DD_SECTION_FS:
-				driver.data_division_section = DD_SECTION_INITIAL;
-				driver.commandname ="FILE_END";
-				driver.startlineno = yylineno - 1;
-				driver.endlineno = yylineno - 1;
+				driver->data_division_section = DD_SECTION_INITIAL;
+				driver->commandname ="FILE_END";
+				driver->startlineno = yylineno - 1;
+				driver->endlineno = yylineno - 1;
 				UNPUT_TOKEN();
 				return yy::gix_esql_parser::make_FILEEND(loc); 
 		}
 	}
 	
-	driver.startlineno = yylineno;
-	driver.endlineno = yylineno;
+	driver->startlineno = yylineno;
+	driver->endlineno = yylineno;
 
-	driver.startlineno -= count_crlf(yytext);
+	driver->startlineno -= count_crlf(yytext);
 
-	driver.host_reference_list->clear();
-	driver.res_host_reference_list->clear();
-	driver.cursorname = "";		
-	driver.sqlname = "";		
-	driver.incfilename = "";				
+	driver->host_reference_list->clear();
+	driver->res_host_reference_list->clear();
+	driver->cursorname = "";		
+	driver->sqlname = "";		
+	driver->incfilename = "";				
 
-	driver.commandname = "PROCEDURE_DIVISION";		
+	driver->commandname = "PROCEDURE_DIVISION";		
 
-	driver.procedure_division_started = true;
-	driver.data_division_section = DD_SECTION_INITIAL;
+	driver->procedure_division_started = true;
+	driver->data_division_section = DD_SECTION_INITIAL;
 
-	driver.hostreferenceCount = 0;
-	driver.command_putother = 0;
-	driver.sql_list->clear();
+	driver->hostreferenceCount = 0;
+	driver->command_putother = 0;
+	driver->sql_list->clear();
 
 
 	return yy::gix_esql_parser::make_PROCEDURE_DIVISION(loc);
@@ -909,10 +909,10 @@ LOW_VALUE "LOW\-VALUE"
 	
 	"SELECT" {
 
-		driver.commandname = yytext;
+		driver->commandname = yytext;
 						
-		driver.sqlnum++;
-     	driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+		driver->sqlnum++;
+     	driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 
 		return yy::gix_esql_parser::make_SELECT(yytext, loc); 
 	}
@@ -947,7 +947,7 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	{HOSTWORD} {
-		driver.hostlineno = yylineno;
+		driver->hostlineno = yylineno;
 		return yy::gix_esql_parser::make_HOSTTOKEN(yytext, loc);
 	}
 
@@ -956,15 +956,15 @@ LOW_VALUE "LOW\-VALUE"
 	}
 	
 	"END-EXEC"[ \r\n]*"." {
-		driver.period = 1;
-		driver.endlineno = yylineno;
+		driver->period = 1;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 	
 	"END-EXEC" {
-		driver.endlineno = yylineno;
+		driver->endlineno = yylineno;
 		__yy_pop_state();	// Not an error, we pop twice
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -1044,14 +1044,14 @@ LOW_VALUE "LOW\-VALUE"
 	}
 
 	"END-EXEC" {
-		driver.endlineno = yylineno;
+		driver->endlineno = yylineno;
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_END_EXEC(loc);
 	}
 
 	"END-EXEC"[ \r\n]*"." {
-		driver.period = 1;
-		driver.endlineno = yylineno;
+		driver->period = 1;
+		driver->endlineno = yylineno;
 		__yy_pop_state();
 
 		return yy::gix_esql_parser::make_END_EXEC(loc);
@@ -1066,50 +1066,50 @@ LOW_VALUE "LOW\-VALUE"
 <DATA_DIVISION_STATE>{  
 
 	"EXEC"[ ]+"SQL"[ \r\n]+"VAR" {
-        driver.startlineno = yylineno;
-        driver.endlineno = yylineno;
-		driver.host_reference_list->clear();
-        driver.res_host_reference_list->clear();     
+        driver->startlineno = yylineno;
+        driver->endlineno = yylineno;
+		driver->host_reference_list->clear();
+        driver->res_host_reference_list->clear();     
 		__yy_push_state(VAR_DECLARE_STATE);
 		return yy::gix_esql_parser::make_DECLARE_VAR(loc);
 	}	
 
     "EXEC"[ ]+"SQL"[ ]+"BEGIN"[ ]+"DECLARE"[ ]+"SECTION"[ ]+"END-EXEC"[ ]*(".")? {
-		driver.startlineno = yylineno;
-		driver.endlineno = yylineno;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
+		driver->startlineno = yylineno;
+		driver->endlineno = yylineno;
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
 
-		driver.commandname = "HOST_BEGIN";		
-		driver.cursorname = "";
-		driver.sqlname = "";
-		driver.incfilename = "";
+		driver->commandname = "HOST_BEGIN";		
+		driver->cursorname = "";
+		driver->sqlname = "";
+		driver->incfilename = "";
 
-		driver.period = yytext[strlen(yytext)-1] == '.' ? 1 : 0;
+		driver->period = yytext[strlen(yytext)-1] == '.' ? 1 : 0;
 
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
+		driver->hostreferenceCount = 0;
+		driver->command_putother = 0;
+		driver->sql_list->clear();
 
 		return yy::gix_esql_parser::make_HOSTVARIANTBEGIN(loc);
     }
 
     "EXEC"[ ]+"SQL"[ ]+"END"[ ]+"DECLARE"[ ]+"SECTION"[ ]+"END-EXEC"[ ]*(".")? {
-		driver.startlineno = yylineno;
-		driver.endlineno = yylineno;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
+		driver->startlineno = yylineno;
+		driver->endlineno = yylineno;
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
 
-		driver.commandname = "HOST_END";		
-		driver.cursorname = "";		
-		driver.sqlname = "";		
-		driver.incfilename = "";		
+		driver->commandname = "HOST_END";		
+		driver->cursorname = "";		
+		driver->sqlname = "";		
+		driver->incfilename = "";		
 
-		driver.period = yytext[strlen(yytext)-1] == '.' ? 1 : 0;
+		driver->period = yytext[strlen(yytext)-1] == '.' ? 1 : 0;
 
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
+		driver->hostreferenceCount = 0;
+		driver->command_putother = 0;
+		driver->sql_list->clear();
 
 		return yy::gix_esql_parser::make_HOSTVARIANTEND(loc);
     }
@@ -1118,51 +1118,51 @@ LOW_VALUE "LOW\-VALUE"
 	^[ ]*"LOCAL-STORAGE"[ ]+"SECTION"[ ]*"." |
 	^[ ]*"LINKAGE"[ ]+"SECTION"[ ]*"." |
 	^[ ]*"FILE"[ ]+"SECTION"[ ]*"." {
-			driver.startlineno = yylineno;
-			driver.endlineno = yylineno;
-			driver.host_reference_list->clear();
-			driver.res_host_reference_list->clear();	
-			driver.cursorname = "";
-			driver.sqlname = "";
-			driver.incfilename = "";
-			driver.hostreferenceCount = 0;
-			driver.command_putother = 0;
-			driver.sql_list->clear();
+			driver->startlineno = yylineno;
+			driver->endlineno = yylineno;
+			driver->host_reference_list->clear();
+			driver->res_host_reference_list->clear();	
+			driver->cursorname = "";
+			driver->sqlname = "";
+			driver->incfilename = "";
+			driver->hostreferenceCount = 0;
+			driver->command_putother = 0;
+			driver->sql_list->clear();
 
-			if (driver.data_division_section != DD_SECTION_INITIAL) {
-				switch (driver.data_division_section) {
+			if (driver->data_division_section != DD_SECTION_INITIAL) {
+				switch (driver->data_division_section) {
 					case DD_SECTION_WS:
-						driver.data_division_section = DD_SECTION_INITIAL;
-						driver.commandname ="WORKING_END";
-						driver.startlineno = yylineno - 1;
-						driver.endlineno = yylineno - 1;
+						driver->data_division_section = DD_SECTION_INITIAL;
+						driver->commandname ="WORKING_END";
+						driver->startlineno = yylineno - 1;
+						driver->endlineno = yylineno - 1;
 						UNPUT_TOKEN();
 						SET_AT_BOL();
 						return yy::gix_esql_parser::make_WORKINGEND(loc); 
 
 					case DD_SECTION_LL:
-						driver.data_division_section = DD_SECTION_INITIAL;
-						driver.commandname ="LOCALSTORAGE_END";
-						driver.startlineno = yylineno - 1;
-						driver.endlineno = yylineno - 1;
+						driver->data_division_section = DD_SECTION_INITIAL;
+						driver->commandname ="LOCALSTORAGE_END";
+						driver->startlineno = yylineno - 1;
+						driver->endlineno = yylineno - 1;
 						UNPUT_TOKEN();
 						SET_AT_BOL();
 						return yy::gix_esql_parser::make_LOCALSTORAGEEND(loc); 
 
 					case DD_SECTION_LS:
-						driver.data_division_section = DD_SECTION_INITIAL;
-						driver.commandname ="LINKAGE_END";
-						driver.startlineno = yylineno - 1;
-						driver.endlineno = yylineno - 1;
+						driver->data_division_section = DD_SECTION_INITIAL;
+						driver->commandname ="LINKAGE_END";
+						driver->startlineno = yylineno - 1;
+						driver->endlineno = yylineno - 1;
 						UNPUT_TOKEN();
 						SET_AT_BOL();
 						return yy::gix_esql_parser::make_LINKAGEEND(loc); 
 
 					case DD_SECTION_FS:
-						driver.data_division_section = DD_SECTION_INITIAL;
-						driver.commandname ="FILE_END";
-						driver.startlineno = yylineno - 1;
-						driver.endlineno = yylineno - 1;
+						driver->data_division_section = DD_SECTION_INITIAL;
+						driver->commandname ="FILE_END";
+						driver->startlineno = yylineno - 1;
+						driver->endlineno = yylineno - 1;
 						UNPUT_TOKEN();
 						SET_AT_BOL();
 						return yy::gix_esql_parser::make_FILEEND(loc); 
@@ -1170,26 +1170,26 @@ LOW_VALUE "LOW\-VALUE"
 			}
 
 			if (strncasecmp(yytext,"WORKING-STORAGE", 15) == 0) {
-					driver.commandname ="WORKING_BEGIN";
-					driver.data_division_section = DD_SECTION_WS;
+					driver->commandname ="WORKING_BEGIN";
+					driver->data_division_section = DD_SECTION_WS;
 					return yy::gix_esql_parser::make_WORKINGBEGIN(loc); 
 				}
 				else 
 					if (strncasecmp(yytext,"LOCAL-STORAGE", 13) == 0) {
-						driver.commandname ="LOCALSTORAGE_BEGIN";
-						driver.data_division_section = DD_SECTION_LL;
+						driver->commandname ="LOCALSTORAGE_BEGIN";
+						driver->data_division_section = DD_SECTION_LL;
 						return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
 					}
 					else 
 						if (strncasecmp(yytext,"LINKAGE", 7) == 0) {
-							driver.commandname ="LINKAGE_BEGIN";
-							driver.data_division_section = DD_SECTION_LS;
+							driver->commandname ="LINKAGE_BEGIN";
+							driver->data_division_section = DD_SECTION_LS;
 							return yy::gix_esql_parser::make_LINKAGEBEGIN(loc);
 						}
 						else 
 							if (strncasecmp(yytext,"FILE", 4) == 0) {
-								driver.commandname ="FILE_BEGIN";
-								driver.data_division_section = DD_SECTION_FS;
+								driver->commandname ="FILE_BEGIN";
+								driver->data_division_section = DD_SECTION_FS;
 								return yy::gix_esql_parser::make_FILEBEGIN(loc);
 							}		
 
@@ -1204,27 +1204,27 @@ LOW_VALUE "LOW\-VALUE"
     "COMMUNICATION"[ ]+"SECTION"[ ]*"." |
     "REPORT"[ ]+"SECTION"[ ]*"." |
     "SCREEN"[ ]+"SECTION"[ ]*"." {
-		driver.startlineno = yylineno - 1;
-		driver.endlineno = yylineno - 1;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
+		driver->startlineno = yylineno - 1;
+		driver->endlineno = yylineno - 1;
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
 		
-		driver.commandname = "WORKING_END";		
-		driver.cursorname = "";		
-		driver.sqlname = "";		
-		driver.incfilename = "";		
-		driver.data_division_section = DD_SECTION_INITIAL;
+		driver->commandname = "WORKING_END";		
+		driver->cursorname = "";		
+		driver->sqlname = "";		
+		driver->incfilename = "";		
+		driver->data_division_section = DD_SECTION_INITIAL;
 
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
-		driver.sql_list->clear();
+		driver->hostreferenceCount = 0;
+		driver->command_putother = 0;
+		driver->sql_list->clear();
    
 		__yy_pop_state();
 		return yy::gix_esql_parser::make_WORKINGEND(loc);
     }
 
 	"FD" {
-		if (driver.data_division_section == DD_SECTION_FS) {
+		if (driver->data_division_section == DD_SECTION_FS) {
 			__yy_push_state(FD_STATE);
 		}
 		return yy::gix_esql_parser::make_FD(loc);
@@ -1359,17 +1359,17 @@ LOW_VALUE "LOW\-VALUE"
     }
 
 	"SQL"[ ]+"TYPE"[ ]+"IS" {
-		driver.startlineno = yylineno;
-		driver.endlineno = yylineno;
-		driver.host_reference_list->clear();
-		driver.res_host_reference_list->clear();
+		driver->startlineno = yylineno;
+		driver->endlineno = yylineno;
+		driver->host_reference_list->clear();
+		driver->res_host_reference_list->clear();
 
-		driver.cursorname = "";		
-		driver.sqlname = "";		
-		driver.incfilename = "";		
+		driver->cursorname = "";		
+		driver->sqlname = "";		
+		driver->incfilename = "";		
 
-		driver.hostreferenceCount = 0;
-		driver.command_putother = 0;
+		driver->hostreferenceCount = 0;
+		driver->command_putother = 0;
 
 		return yy::gix_esql_parser::make_SQL_TYPE_IS(loc);
 	}
@@ -1402,8 +1402,8 @@ LOW_VALUE "LOW\-VALUE"
 	(\r\n|\n) {   }
 
 	{INCFILE}[ ]*"." {
-		driver.commandname = "INCFILE";
-		driver.incfilename = std::string(yytext) + ".";
+		driver->commandname = "INCFILE";
+		driver->incfilename = std::string(yytext) + ".";
 		__yy_pop_state();
 	    return yy::gix_esql_parser::make_COPY_FILE(loc);
 	}
@@ -1436,20 +1436,20 @@ LOW_VALUE "LOW\-VALUE"
  
 . {
 	if (strlen(yytext) == 1 && yytext[0] == '.') {
-		if (!driver.procedure_division_started && string_contains(cur_line_content, "PROGRAM-ID", true)) {
+		if (!driver->procedure_division_started && string_contains(cur_line_content, "PROGRAM-ID", true)) {
             std::string pid = string_replace_regex(cur_line_content, "PROGRAM-ID", "", true);
 			pid = trim_copy(string_replace(pid, ".", ""));
-			driver.parser_data()->set_program_id(pid);
+			driver->parser_data()->set_program_id(pid);
 		}
 		else
 			if (isParagraph(cur_line_content)) {
 				srcLocation *loc = new srcLocation();
-				loc->filename = driver.lexer.src_location_stack.top().filename;
+				loc->filename = driver->lexer.src_location_stack.top().filename;
 				loc->line = yylineno;
-				loc->is_included = driver.lexer.src_location_stack.size() > 1;
+				loc->is_included = driver->lexer.src_location_stack.size() > 1;
 				std::string paragraph_name = trim_copy(string_chop(trim_copy(cur_line_content), 1));
 			
-				driver.parser_data()->paragraph_add(paragraph_name, *loc);
+				driver->parser_data()->paragraph_add(paragraph_name, *loc);
 			}
 		}
 }
@@ -1463,7 +1463,7 @@ LOW_VALUE "LOW\-VALUE"
 %%
 
 // CHANGE: The "parts of the driver that need lexer data" have been
-// moved to gix_esql_driver.cc (where they really belong) and access the
+// moved to gix_esql_driver->cc (where they really belong) and access the
 // new lexer object via its public interface.
 
 // CHANGE: The linker will choke if there's no implementation of the

@@ -33,11 +33,11 @@ public:
 	TPSourceConsolidation(GixPreProcessor* gpp);
 
 	// Inherited via ITransformationStep
-	virtual bool run(ITransformationStep* prev_step) override;
+	virtual bool run(std::shared_ptr<ITransformationStep> prev_step) override;
 	TransformationStepDataType getInputType() override;
 	TransformationStepDataType getOutputType() override;
 
-	virtual TransformationStepData *getOutput(ITransformationStep* me = nullptr) override;
+	virtual TransformationStepData *getOutput(std::shared_ptr<ITransformationStep> me = nullptr) override;
 
 	std::map<std::string, std::string> &getSrcLineMap() const;
 	std::map<int, std::string> &getFileMap() const;

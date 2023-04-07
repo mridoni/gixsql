@@ -35,7 +35,7 @@ TPSourceConsolidation::TPSourceConsolidation(GixPreProcessor *gpp) : ITransforma
 	output_line = 0;
 }
 
-bool TPSourceConsolidation::run(ITransformationStep *prev_step)
+bool TPSourceConsolidation::run(std::shared_ptr<ITransformationStep> prev_step)
 {
 	if (!input->isValid())
 		return false;
@@ -84,7 +84,7 @@ TransformationStepDataType TPSourceConsolidation::getOutputType()
 	return TransformationStepDataType::Filename;
 }
 
-TransformationStepData *TPSourceConsolidation::getOutput(ITransformationStep *me)
+TransformationStepData *TPSourceConsolidation::getOutput(std::shared_ptr<ITransformationStep> me)
 {
 	return output;
 }

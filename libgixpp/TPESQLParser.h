@@ -11,7 +11,7 @@ class TPESQLParser : public ITransformationStep
 public:
 	TPESQLParser(GixPreProcessor* gpp);
 
-	bool run(ITransformationStep* prev_step) override;
+	bool run(std::shared_ptr<ITransformationStep> prev_step) override;
 	TransformationStepDataType getInputType() override;
 	TransformationStepDataType getOutputType() override;
 

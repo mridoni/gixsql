@@ -49,15 +49,15 @@ public:
 	void setCopyResolver(const CopyResolver *cr);
 	CopyResolver *getCopyResolver() const;
 
-	void addCustomStep(ITransformationStep *stp);
+	void addCustomStep(std::shared_ptr<ITransformationStep> stp);
 
 	ErrorData err_data;
 
 	bool process();
 	
-	void addStep(ITransformationStep *);
-	bool setInputFile(std::string infile);
-	bool setOutputFile(std::string outfile);
+	void addStep(std::shared_ptr<ITransformationStep>);
+	void setInputFile(std::string infile);
+	void setOutputFile(std::string outfile);
 
 	variant_map& getOpts() const;
 	variant getOpt(std::string id, bool b);
@@ -65,11 +65,19 @@ public:
 	variant getOpt(std::string id, int i);
 	void setOpt(std::string id, variant v);
 
+	std::shared_ptr<ITransformationStep> firstStep();
+	std::shared_ptr<ITransformationStep> lastStep();
+	bool isLastStep(std::shared_ptr<ITransformationStep>);
+	bool isFirstStep(std::shared_ptr<ITransformationStep>);
+
 private:
+	std::string _infile;
+	std::string _outfile;
+
 	TransformationStepData* input = nullptr;
 	TransformationStepData* output = nullptr;
 
-	std::vector<ITransformationStep *> steps;
+	std::vector<std::shared_ptr<ITransformationStep>> steps;
 	std::string copy_file_path;
 	std::vector<std::string> copy_dirs;
 

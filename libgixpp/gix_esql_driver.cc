@@ -99,11 +99,12 @@ void gix_esql_driver::setParser(TPESQLParser* p)
 	parser = p;
 }
 
-int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLParserData> _parser_data)
+int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLParserData> pd)
 {
-	_parser_data = _parser_data;
+	_parser_data = pd;
 
 	pp_inst = parser->getOwner();
+	_parser_data = pd;
 
 	bool debug_parser_scanner = std::get<2>(pp_inst->getOpt("debug_parser_scanner", false));
 
@@ -118,7 +119,7 @@ int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLP
 	lexer.src_location_stack.push({ filename_absolute_path(input->filename()), 1 });
 
     scan_begin ();
-    yy::gix_esql_parser parser (*this);
+    yy::gix_esql_parser parser (this);
     parser.set_debug_level (trace_parsing);
     int res = parser.parse ();
 

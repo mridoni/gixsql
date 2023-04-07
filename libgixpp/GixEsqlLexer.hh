@@ -22,7 +22,7 @@ USA.
 
 #ifndef YY_DECL
 #define YY_DECL                                                         \
-    yy::gix_esql_parser::symbol_type GixEsqlLexer::yylex(gix_esql_driver& driver)
+    yy::gix_esql_parser::symbol_type GixEsqlLexer::yylex(gix_esql_driver *driver)
 #endif
 
 // We need this for yyFlexLexer. If we don't #undef yyFlexLexer, the
@@ -58,9 +58,14 @@ public:
 
     // Provide the interface to `yylex`; `flex` will emit the
     // definition into `gix_esql_scanner.cc`:
-    yy::gix_esql_parser::symbol_type yylex(gix_esql_driver& driver);
+    //yy::gix_esql_parser::symbol_type yylex(gix_esql_driver& driver);
+    yy::gix_esql_parser::symbol_type yylex(gix_esql_driver *driver);
     
-    void setDriver(gix_esql_driver *_driver) { driver = _driver;  }
+    void setDriver(gix_esql_driver *_driver)
+    {
+	    driver = _driver;
+    }
+
     void setReservedWordsList(const std::vector<std::string> &rwl) { reserved_words_list = rwl; }
 
     int LexerInput(char *buf, int max_size);

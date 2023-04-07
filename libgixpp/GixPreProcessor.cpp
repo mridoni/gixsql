@@ -41,10 +41,10 @@ GixPreProcessor::GixPreProcessor()
 
 GixPreProcessor::~GixPreProcessor()
 {
-	for (auto step : steps) {
-		if (step)
-			delete step;
-	}
+	//for (auto step : steps) {
+	//	if (step)
+	//		delete step;
+	//}
 }
 
 //const std::stringList GixPreProcessor::getCopyDirs()
@@ -73,7 +73,7 @@ CopyResolver *GixPreProcessor::getCopyResolver() const
 //}
 
 
-void GixPreProcessor::addCustomStep(ITransformationStep *stp)
+void GixPreProcessor::addCustomStep(std::shared_ptr<ITransformationStep> stp)
 {
 	this->addStep(stp);
 }
@@ -95,7 +95,24 @@ static std::string variant_to_string(const variant &input)
 
 bool GixPreProcessor::process()
 {
-    if (input == nullptr || !input->isValid()) {
+
+	if (steps.empty()) {
+		return false;
+	}
+
+	TransformationStepData* infile = new TransformationStepData();
+	infile->setType(TransformationStepDataType::Filename);
+	infile->setFilename(_infile);
+	firstStep()->setInput(infile);
+	input = infile;
+
+	TransformationStepData* outfile = new TransformationStepData();
+	outfile->setType(TransformationStepDataType::Filename);
+	outfile->setFilename(_outfile);
+	lastStep()->setOutput(outfile);
+	output = outfile;
+
+    if (!input->isValid()) {
 		SET_PP_ERR(1, "Bad input file");
         return false;
     }
@@ -133,53 +150,37 @@ bool GixPreProcessor::process()
 
 bool GixPreProcessor::transform()
 {
-	ITransformationStep *prev_step = nullptr;
-	for (ITransformationStep *step : this->steps) {
+	std::shared_ptr<ITransformationStep> prev_step = nullptr;
+	for (std::shared_ptr<ITransformationStep> step : this->steps) {
+
+		if (step != steps.at(0))
+			step->setInput(prev_step->getOutput());
+
 		if (!step->run(prev_step)) {
 			return false;
 		}
-
+		
 		prev_step = step;
+		
 	}
 
 	return true;
 }
 
-void GixPreProcessor::addStep(ITransformationStep *s)
+void GixPreProcessor::addStep(std::shared_ptr<ITransformationStep> s)
 {
 	steps.push_back(s);
 }
 
-bool GixPreProcessor::setInputFile(std::string _infile)
+void GixPreProcessor::setInputFile(std::string i)
 {
-	if (!steps.size()) {
-		input = nullptr;
-		return false;
-	}
-
-	TransformationStepData *infile = new TransformationStepData();
-	infile->setType(TransformationStepDataType::Filename);
-	infile->setFilename(_infile);
-	steps.at(0)->setInput(infile);
-	input = infile;
-
-	return true;
+	_infile = i;
 }
 
-bool GixPreProcessor::setOutputFile(std::string _outfile)
+void GixPreProcessor::setOutputFile(std::string o)
 {
-	if (!steps.size()) {
-		output = nullptr;
-		return false;
-	}
+	_outfile = o;
 
-	TransformationStepData* outfile = new TransformationStepData();
-	outfile->setType(TransformationStepDataType::Filename);
-	outfile->setFilename(_outfile);
-	steps.back()->setOutput(outfile);
-	output = outfile;
-
-	return true;
 }
 
 variant GixPreProcessor::getOpt(std::string id, bool b)
@@ -205,4 +206,24 @@ variant_map& GixPreProcessor::getOpts() const
 void GixPreProcessor::setOpt(std::string id, variant v)
 {
 	opts[id] = v;
+}
+
+std::shared_ptr<ITransformationStep> GixPreProcessor::firstStep()
+{
+	return (steps.size() > 0) ? steps.front() : nullptr;
+}
+
+std::shared_ptr<ITransformationStep> GixPreProcessor::lastStep()
+{
+	return (steps.size() > 0) ? steps.back() : nullptr;
+}
+
+bool GixPreProcessor::isLastStep(std::shared_ptr<ITransformationStep> s)
+{
+	return s == steps.back();
+}
+
+bool GixPreProcessor::isFirstStep(std::shared_ptr<ITransformationStep> s)
+{
+	return s == steps.front();
 }

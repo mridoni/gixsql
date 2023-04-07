@@ -56,7 +56,8 @@ int main(int argc, char** argv)
 
 	GixPreProcessor gp;
 
-
+	std::shared_ptr<TPESQLParser> esql_parser;
+	std::shared_ptr<TPESQLProcessor> esql_generator;
 
 	// Do processing here
 	const auto args = argv;
@@ -159,7 +160,7 @@ int main(int argc, char** argv)
 			gp.setCopyResolver(&copy_resolver);
 
 			if (opt_consolidate->is_set())
-				gp.addStep(new TPSourceConsolidation(&gp));
+				gp.addStep(std::make_shared<TPSourceConsolidation>(&gp));
 
 
 			if (opt_esql->is_set()) {
@@ -186,8 +187,10 @@ int main(int argc, char** argv)
 					}
 				}
 
-				gp.addStep(new TPESQLParser(&gp));
-				gp.addStep(new TPESQLProcessor(&gp));
+				gp.addStep(std::make_shared<TPESQLParser>(&gp));
+
+				esql_generator = std::make_shared<TPESQLProcessor>(&gp);
+				gp.addStep(esql_generator);
 			}
 
 			gp.setOpt("emit_debug_info", opt_debug_info->is_set());

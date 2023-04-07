@@ -134,7 +134,7 @@ public:
 	cb_field_ptr field_map(std::string k);
 
 	sql_type_info_t field_sql_type_info(const std::string& n);
-	std::map<std::string, sql_type_info_t> field_sql_type_info() const;
+	const std::map<std::string, sql_type_info_t>& field_sql_type_info() const;
 
 	void field_sql_type_info_add(const std::string& n, sql_type_info_t t);
 

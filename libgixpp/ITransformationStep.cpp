@@ -35,7 +35,7 @@ TransformationStepData* ITransformationStep::getInput()
 	return input;
 }
 
-TransformationStepData* ITransformationStep::getOutput(ITransformationStep *me)
+TransformationStepData* ITransformationStep::getOutput(std::shared_ptr<ITransformationStep> me)
 {
 	return output;
 }

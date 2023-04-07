@@ -43,14 +43,16 @@ class gix_esql_driver;
 }
 
 // The parsing context.
-%param { gix_esql_driver& driver }
+//%param { gix_esql_driver& driver }
+%param { gix_esql_driver *driver }
 
 // Location tracking
 %locations
 %initial-action
 {
     // Initialize the initial location.
-    @$.begin.filename = @$.end.filename = &driver.file;
+    //@$.begin.filename = @$.end.filename = &driver->file;
+    @$.begin.filename = @$.end.filename = &driver->file;
 };
 
 // Enable tracing and verbose errors (which may be wrong!)
@@ -61,7 +63,7 @@ class gix_esql_driver;
 %code
 {
 #include "gix_esql_driver.hh"
-#define yylex driver.lexer.yylex
+#define yylex driver->lexer.yylex
 
 static std::string to_std_string(std::string *sp) { return (sp != NULL) ? *sp : "(NULL)"; }
 static std::string to_std_string(const std::string s) { return s; }
@@ -235,127 +237,127 @@ sqlvariantstates
 ;
 
 execsql_with_opt_at: EXECSQL opt_at {
-	driver.connectionid = $2;
+	driver->connectionid = $2;
 };
 
 updatesql:
 execsql_with_opt_at update token_list END_EXEC
 {
-	$$ = driver.cb_concat_text_list ($2, $3);
-	driver.put_exec_list();
+	$$ = driver->cb_concat_text_list ($2, $3);
+	driver->put_exec_list();
 }
 | execsql_with_opt_at update token_list WHERE_CURRENT_OF expr END_EXEC
 {
-	driver.cb_set_cursorname($5);
-	$$ = driver.cb_concat_text_list ($2, $3);
-	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, "WHERE CURRENT OF"));
-	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, driver.cursorname));
-	driver.put_exec_list();
+	driver->cb_set_cursorname($5);
+	$$ = driver->cb_concat_text_list ($2, $3);
+	driver->cb_concat_text_list($$, driver->cb_text_list_add(NULL, "WHERE CURRENT OF"));
+	driver->cb_concat_text_list($$, driver->cb_text_list_add(NULL, driver->cursorname));
+	driver->put_exec_list();
 }
 
 update:
-UPDATE {$$ = driver.cb_text_list_add (NULL, $1);}
+UPDATE {$$ = driver->cb_text_list_add (NULL, $1);}
 
 
 disconnectsql:
 EXECSQL disconnect ALL opt_semicolon END_EXEC
 {
-	driver.connectionid = new hostref_or_literal_t("*", true);;
-	driver.put_exec_list();
+	driver->connectionid = new hostref_or_literal_t("*", true);;
+	driver->put_exec_list();
 }
 | EXECSQL disconnect opt_dbid END_EXEC
 {
-	driver.connectionid = $3;
-	driver.put_exec_list();
+	driver->connectionid = $3;
+	driver->put_exec_list();
 }
 
 disconnect:
-DISCONNECT {$$ = driver.cb_text_list_add (NULL, $1);}
+DISCONNECT {$$ = driver->cb_text_list_add (NULL, $1);}
 
 deletesql:
 execsql_with_opt_at delete token_list END_EXEC
 {
-	$$ = driver.cb_concat_text_list ($2, $3);
-	driver.put_exec_list();
+	$$ = driver->cb_concat_text_list ($2, $3);
+	driver->put_exec_list();
 }
 
 
 delete:
-DELETE {$$ = driver.cb_text_list_add (NULL, $1);}
+DELETE {$$ = driver->cb_text_list_add (NULL, $1);}
 
 insertsql:
 execsql_with_opt_at insert token_list END_EXEC
 {
-	$$ = driver.cb_concat_text_list ($2, $3);
-	driver.put_exec_list();
+	$$ = driver->cb_concat_text_list ($2, $3);
+	driver->put_exec_list();
 }
 
 insert:
-INSERT {$$ = driver.cb_text_list_add (NULL, $1);}
-| insert INTO {$$ = driver.cb_text_list_add ($1, $2);}
+INSERT {$$ = driver->cb_text_list_add (NULL, $1);}
+| insert INTO {$$ = driver->cb_text_list_add ($1, $2);}
 
 
 rollbacksql:
 execsql_with_opt_at ROLLBACK_WORK opt_semicolon END_EXEC {
 	// The necessary fields have been populated by the lexer code
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 | execsql_with_opt_at ROLLBACK_WORK TO SAVEPOINT TOKEN opt_semicolon END_EXEC {
 	// We intercept the ROLLBACK TO SAVEPOINT and pass it back as an SQL statement
 	// of type "other" (unknown).
 
-	driver.commandname = "PASSTHRU";
-	driver.sqlnum++;
-	driver.sqlname = string_format("SQ%04d", driver.sqlnum);
-	driver.sql_list->push_back("ROLLBACK");
-	driver.sql_list->push_back("TO");
-	driver.sql_list->push_back("SAVEPOINT");
-	driver.sql_list->push_back($5);
-	driver.put_exec_list();
+	driver->commandname = "PASSTHRU";
+	driver->sqlnum++;
+	driver->sqlname = string_format("SQ%04d", driver->sqlnum);
+	driver->sql_list->push_back("ROLLBACK");
+	driver->sql_list->push_back("TO");
+	driver->sql_list->push_back("SAVEPOINT");
+	driver->sql_list->push_back($5);
+	driver->put_exec_list();
 }
 
 commitsql:
 execsql_with_opt_at COMMIT_WORK opt_semicolon END_EXEC {
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 
 
 fetchsql:
 EXECSQL unexpected_at fetch INTO res_host_references END_EXEC {
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 ;
 
 fetch:
 FETCH expr { 
-	driver.cb_set_cursorname($2);
+	driver->cb_set_cursorname($2);
 }
 ;
 
 host_references:
-host_reference {driver.cb_host_list_add (driver.host_reference_list, $1);}
+host_reference {driver->cb_host_list_add (driver->host_reference_list, $1);}
 | host_references TOKEN
-| host_references host_reference {driver.cb_host_list_add (driver.host_reference_list, $2);}
+| host_references host_reference {driver->cb_host_list_add (driver->host_reference_list, $2);}
 
 res_host_references:
-host_reference {driver.cb_res_host_list_add (driver.res_host_reference_list, $1);}
+host_reference {driver->cb_res_host_list_add (driver->res_host_reference_list, $1);}
 | res_host_references TOKEN
-| res_host_references host_reference {driver.cb_res_host_list_add (driver.res_host_reference_list, $2);}
+| res_host_references host_reference {driver->cb_res_host_list_add (driver->res_host_reference_list, $2);}
 
 closesql:
 EXECSQL unexpected_at CLOSE expr opt_semicolon END_EXEC {
-	driver.cb_set_cursorname($4);
-	driver.put_exec_list();
+	driver->cb_set_cursorname($4);
+	driver->put_exec_list();
 }
 
 opensql:
 EXECSQL unexpected_at OPEN  expr END_EXEC {
-	driver.cb_set_cursorname($4);
-	driver.put_exec_list();
+	driver->cb_set_cursorname($4);
+	driver->put_exec_list();
 }
 | EXECSQL unexpected_at OPEN expr USING host_references END_EXEC {
-	driver.cb_set_cursorname($4);
-	driver.put_exec_list();
+	driver->cb_set_cursorname($4);
+	driver->put_exec_list();
 }
 
 connectsql:
@@ -363,56 +365,56 @@ connectsql:
 // EXEC SQL CONNECT TO :db_data_source [ AS :db_conn_id ] USER :username.:opt_password [ USING password ];
 // EXEC SQL CONNECT TO :dbname         [ AS :db_conn_id ] USER :username                 USING :db_data_source IDENTIFIED BY :password
 EXECSQL CONNECT TO strliteral_or_hostref opt_connect_as USER strliteral_or_hostref opt_auth_info END_EXEC {
-	driver.conninfo = new esql_connection_info_t();
+	driver->conninfo = new esql_connection_info_t();
 
 	switch ($8->type) {
 		case 0:	// [ USING :password ] omitted
-			driver.conninfo->id = $5;
-			driver.conninfo->data_source = $4;
-			driver.conninfo->username = $7;
-			driver.conninfo->password = new hostref_or_literal_t();
-			driver.conninfo->dbname = new hostref_or_literal_t();			
+			driver->conninfo->id = $5;
+			driver->conninfo->data_source = $4;
+			driver->conninfo->username = $7;
+			driver->conninfo->password = new hostref_or_literal_t();
+			driver->conninfo->dbname = new hostref_or_literal_t();			
 			break;
 
 		case 1:	// USING :password (no IDENTIFIED BY... follows)
-			driver.conninfo->id = $5;
-			driver.conninfo->data_source = $4;
-			driver.conninfo->username = $7;
-			driver.conninfo->password = $8->t1;
-			driver.conninfo->dbname = new hostref_or_literal_t();			
+			driver->conninfo->id = $5;
+			driver->conninfo->data_source = $4;
+			driver->conninfo->username = $7;
+			driver->conninfo->password = $8->t1;
+			driver->conninfo->dbname = new hostref_or_literal_t();			
 			break;
 
 		case 2:	// USING :db_data_source IDENTIFIED BY :password
-			driver.conninfo->id = $5;
-			driver.conninfo->data_source = $8->t1;
-			driver.conninfo->username = $7;
-			driver.conninfo->password = $8->t2;
-			driver.conninfo->dbname = $4;			
+			driver->conninfo->id = $5;
+			driver->conninfo->data_source = $8->t1;
+			driver->conninfo->username = $7;
+			driver->conninfo->password = $8->t2;
+			driver->conninfo->dbname = $4;			
 			break;
 
 	}
 
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 // mode 3/4: EXEC SQL CONNECT :username IDENTIFIED BY :password [ AT :db_conn_id ] [ USING :db_data_source] (mode 4 is unsupported)
 | EXECSQL CONNECT strliteral_or_hostref IDENTIFIED_BY strliteral_or_hostref opt_at opt_using END_EXEC {
 	if (!$7->is_set) {
-		driver.warning(@$, "Unsupported connection mode, data source information not provided. Connection will fail."); 
+		driver->warning(@$, "Unsupported connection mode, data source information not provided. Connection will fail."); 
 	}
 	
-	driver.conninfo = new esql_connection_info_t();
-	driver.conninfo->id = $6;
-	driver.conninfo->data_source = $7;
-	driver.conninfo->username = $3;
-	driver.conninfo->password = $5;
-	driver.put_exec_list();
+	driver->conninfo = new esql_connection_info_t();
+	driver->conninfo->id = $6;
+	driver->conninfo->data_source = $7;
+	driver->conninfo->username = $3;
+	driver->conninfo->password = $5;
+	driver->put_exec_list();
 
 }
 // mode 5: EXEC SQL CONNECT USING :db_data_source (credentials must be embedded to be able to connect)
 | EXECSQL CONNECT USING strliteral_or_hostref END_EXEC {
-	driver.conninfo = new esql_connection_info_t();
-	driver.conninfo->data_source = $4;
-	driver.put_exec_list();
+	driver->conninfo = new esql_connection_info_t();
+	driver->conninfo->data_source = $4;
+	driver->put_exec_list();
 }
 ;
 
@@ -455,13 +457,13 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 
 	// We do NOT set FLAG_EMIT_VAR
 
-	if (!driver.parser_data()->field_exists(var_name)) {
-		std::string src_file = driver.lexer.src_location_stack.top().filename;
-		std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
-		driver.parser_data()->field_sql_type_info_add(var_name, d);
+	if (!driver->parser_data()->field_exists(var_name)) {
+		std::string src_file = driver->lexer.src_location_stack.top().filename;
+		std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver->startlineno, driver->endlineno, src_file);
+		driver->parser_data()->field_sql_type_info_add(var_name, d);
 	}
 	else {
-		x = driver.parser_data()->field_map(var_name);
+		x = driver->parser_data()->field_map(var_name);
 		if (IS_VARLEN(sql_type) && !IS_BINARY(sql_type)) {
 			type_info = encode_sql_type_info(sql_type, precision, scale, flags | FLAG_PICX_AS_VARCHAR);
 		}
@@ -478,9 +480,9 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 		// x->picnsize = precision;
 		// x->scale = scale;
 
-		driver.cb_set_commandname("DECLARE_VAR");
-		driver.cb_host_list_add (driver.host_reference_list, x->sname);
-		driver.put_exec_list(); 
+		driver->cb_set_commandname("DECLARE_VAR");
+		driver->cb_host_list_add (driver->host_reference_list, x->sname);
+		driver->put_exec_list(); 
 		
 		// This will be rewritten by the preprocessor, so
 		// we comment out the original variable definition
@@ -489,7 +491,7 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 		stmt->src_file = x->defined_at_source_file;
 		stmt->startLine = x->defined_at_source_line;
 		stmt->endLine = x->defined_at_source_line;
-		driver.parser_data()->exec_list()->push_back(stmt);
+		driver->parser_data()->exec_list()->push_back(stmt);
 	}
 }
 ;
@@ -513,7 +515,7 @@ AT dbid { $$ = $2; }
 
 unexpected_at:
 AT dbid {  
-	driver.warning(@$, "AT DB-NAME is not allowed for CURSOR access, always used from CURSOR DECLARE"); 
+	driver->warning(@$, "AT DB-NAME is not allowed for CURSOR access, always used from CURSOR DECLARE"); 
 }
 | %empty { /* everything fine */ }
 ;
@@ -530,16 +532,16 @@ TOKEN { $$ = new hostref_or_literal_t($1, true); }
 
 resetsql: 
 EXECSQL CONNECT_RESET opt_dbid END_EXEC { 
-	driver.connectionid = $3;
-	driver.put_exec_list();
+	driver->connectionid = $3;
+	driver->put_exec_list();
 }
 ;
 
 othersql:
 execsql_with_opt_at OTHERFUNC opt_othersql_tokens END_EXEC {
-	driver.commandname = "PASSTHRU";
-	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
-	driver.put_exec_list();
+	driver->commandname = "PASSTHRU";
+	$$ = driver->cb_concat_text_list(driver->cb_text_list_add(NULL, $2), $3);
+	driver->put_exec_list();
 }
 ;
 
@@ -552,38 +554,38 @@ opt_othersql_tokens:
 ;
 
 othersql_token:
-host_reference  { $$ = driver.cb_host_list_add (driver.host_reference_list, $1); }
+host_reference  { $$ = driver->cb_host_list_add (driver->host_reference_list, $1); }
 |TOKEN			{ $$ = $1; }
 ;
 
 incfile:
 EXECSQL INCLUDE INCLUDE_FILE END_EXEC{
-	driver.put_exec_list();
-	driver.lexer.pushNewFile(driver.incfilename, &driver, true, true);
+	driver->put_exec_list();
+	driver->lexer.pushNewFile(driver->incfilename, driver, true, true);
 }
 | COPY { 
-	driver.put_exec_list(); 
+	driver->put_exec_list(); 
 
-	driver.lexer.pushNewFile(driver.incfilename, &driver, true, false);
+	driver->lexer.pushNewFile(driver->incfilename, driver, true, false);
 }
 
 includesql:
 EXECSQL INCLUDE INCLUDE_SQLCA END_EXEC{
-	driver.put_exec_list();
-	driver.lexer.pushNewFile("SQLCA", &driver, true, true);
+	driver->put_exec_list();
+	driver->lexer.pushNewFile("SQLCA", driver, true, true);
 }
 
 selectintosql:
 execsql_with_opt_at SELECT token_list opt_into_clause FROM token_list END_EXEC  {
 	auto a = $3;
-	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
-	driver.cb_concat_text_list($$, driver.cb_text_list_add(NULL, "FROM"));
-	driver.cb_concat_text_list($$, $6);
-	driver.put_exec_list();
+	$$ = driver->cb_concat_text_list(driver->cb_text_list_add(NULL, $2), $3);
+	driver->cb_concat_text_list($$, driver->cb_text_list_add(NULL, "FROM"));
+	driver->cb_concat_text_list($$, $6);
+	driver->put_exec_list();
 }
 | execsql_with_opt_at SELECT token_list opt_into_clause END_EXEC  {
-	$$ = driver.cb_concat_text_list(driver.cb_text_list_add(NULL, $2), $3);
-	driver.put_exec_list();
+	$$ = driver->cb_concat_text_list(driver->cb_text_list_add(NULL, $2), $3);
+	driver->put_exec_list();
 };
 
 opt_into_clause:
@@ -600,18 +602,18 @@ execsql_with_opt_at error END_EXEC
 
 declaresql:
 execsql_with_opt_at DECLARE sql_declaration {
-	//driver.put_exec_list();
+	//driver->put_exec_list();
 }
 ;
 
 sql_declaration:
-  TOKEN statement_declaration END_EXEC	{ driver.declared_statements.push_back($1); }
+  TOKEN statement_declaration END_EXEC	{ driver->declared_statements.push_back($1); }
 | TOKEN cursor_declaration END_EXEC	{ 
-	driver.cb_set_cursorname($1); 
-	if (!driver.procedure_division_started)
- 		driver.put_startup_exec_list(); 
+	driver->cb_set_cursorname($1); 
+	if (!driver->procedure_division_started)
+ 		driver->put_startup_exec_list(); 
 	else
-		driver.put_exec_list();	
+		driver->put_exec_list();	
 }
 | TOKEN table_declaration END_EXEC		{ }
 ;
@@ -628,24 +630,24 @@ cursor_declaration_from_select
 ;
 
 cursor_declaration_from_select:
-CURSOR opt_with_hold FOR select { driver.cb_set_cursor_hold($2); }
+CURSOR opt_with_hold FOR select { driver->cb_set_cursor_hold($2); }
 ;
 
 cursor_declaration_from_prepared_stmt:
 CURSOR opt_with_hold FOR strliteral_or_hostref { 
-	driver.cb_set_cursor_hold($2); 
-	driver.statement_source = $4;
-	driver.commandname = "SELECT";
-	driver.sql_list->push_back("@" + unquote($4->name));
-	driver.sqlnum++;
-	driver.sqlname = string_format("SQ%04d", driver.sqlnum);
+	driver->cb_set_cursor_hold($2); 
+	driver->statement_source = $4;
+	driver->commandname = "SELECT";
+	driver->sql_list->push_back("@" + unquote($4->name));
+	driver->sqlnum++;
+	driver->sqlname = string_format("SQ%04d", driver->sqlnum);
 }
 ;
 
 table_declaration:
 TABLE token_list {
- 	driver.cb_set_commandname("DECLARE_TABLE");
- 	driver.put_exec_list(); 
+ 	driver->cb_set_commandname("DECLARE_TABLE");
+ 	driver->put_exec_list(); 
 }
 ;
 
@@ -657,44 +659,44 @@ opt_with_hold:
 preparesql:
 execsql_with_opt_at PREPARE TOKEN FROM strliteral_or_hostref END_EXEC {
 
-	driver.cb_set_commandname("PREPARE_STATEMENT");
-	driver.statement_name = $3;
+	driver->cb_set_commandname("PREPARE_STATEMENT");
+	driver->statement_name = $3;
 
 	if ($5->is_literal) {
-		driver.sql_list->push_back(unquote($5->name));
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
-		driver.statement_source = nullptr;
+		driver->sql_list->push_back(unquote($5->name));
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
+		driver->statement_source = nullptr;
 	}
 	else {
-		driver.statement_source = $5;
-		driver.sql_list->clear();
+		driver->statement_source = $5;
+		driver->sql_list->clear();
 	}
 
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 ;
 
 executesql:
 execsql_with_opt_at EXECUTE IMMEDIATE strliteral_or_hostref END_EXEC {
-	driver.commandname = "EXECUTE_IMMEDIATE";
+	driver->commandname = "EXECUTE_IMMEDIATE";
 
 	if ($4->is_literal) {
-		driver.sql_list->push_back(unquote($4->name));
-		driver.sqlnum++;
-		driver.sqlname = string_format("SQ%04d", driver.sqlnum);
-		driver.statement_source = nullptr;
+		driver->sql_list->push_back(unquote($4->name));
+		driver->sqlnum++;
+		driver->sqlname = string_format("SQ%04d", driver->sqlnum);
+		driver->statement_source = nullptr;
 	}
 	else {
-		driver.statement_source = $4;
-		driver.sql_list->clear();
+		driver->statement_source = $4;
+		driver->sql_list->clear();
 	}
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 | execsql_with_opt_at EXECUTE TOKEN opt_into_hostref_list opt_using_hostref_list END_EXEC {
-	driver.commandname = "EXECUTE_PREPARED";
-	driver.statement_name = $3;
-	driver.put_exec_list();
+	driver->commandname = "EXECUTE_PREPARED";
+	driver->statement_name = $3;
+	driver->put_exec_list();
 
 	
 }
@@ -714,30 +716,30 @@ opt_into_hostref_list:
 ignoresql:
 EXECSQL IGNORE token_list END_EXEC
 {
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 ;
 
 wheneversql:
 EXECSQL WHENEVER whenever_clause whenever_action END_EXEC
 {
-	driver.whenever_data = new esql_whenever_data_t();
-	driver.whenever_data->clause = $3;
+	driver->whenever_data = new esql_whenever_data_t();
+	driver->whenever_data->clause = $3;
 	if ($4.empty()) {
-		driver.whenever_data->action = WHENEVER_ACTION_CONTINUE;
+		driver->whenever_data->action = WHENEVER_ACTION_CONTINUE;
 	}
 	else {
 		if (starts_with ($4, "@@")) {
-			driver.whenever_data->action = WHENEVER_ACTION_PERFORM;
-			driver.whenever_data->host_label = $4.substr(2);
+			driver->whenever_data->action = WHENEVER_ACTION_PERFORM;
+			driver->whenever_data->host_label = $4.substr(2);
 		}
 		else {
-			driver.whenever_data->action = WHENEVER_ACTION_GOTO;
-			driver.whenever_data->host_label = $4;		
+			driver->whenever_data->action = WHENEVER_ACTION_GOTO;
+			driver->whenever_data->host_label = $4;		
 		}
 	}
 
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 ;
 
@@ -765,14 +767,14 @@ CONTINUE			{ $$ = "";			 }
 
 
 select:
-SELECT token_list{ $$ = driver.cb_concat_text_list (driver.cb_text_list_add (NULL, $1), $2);}
+SELECT token_list{ $$ = driver->cb_concat_text_list (driver->cb_text_list_add (NULL, $1), $2);}
 ;
 
 token_list:
-expr				{      $$ = driver.cb_text_list_add (NULL, $1);}
-| token_list expr	{      $$ = driver.cb_text_list_add ($1, $2);}
+expr				{      $$ = driver->cb_text_list_add (NULL, $1);}
+| token_list expr	{      $$ = driver->cb_text_list_add ($1, $2);}
 | token_list host_reference   {
-	$$ = driver.cb_text_list_add ($1, driver.cb_host_list_add (driver.host_reference_list, $2));
+	$$ = driver->cb_text_list_add ($1, driver->cb_host_list_add (driver->host_reference_list, $2));
 }
 
 host_reference:
@@ -792,37 +794,37 @@ expr: TOKEN { $$ = $1; }
 ;
 
 sqlvariantstates: WORKINGBEGIN {
-	driver.current_field = NULL;
-	driver.description_field = NULL;
-	driver.put_exec_list();
+	driver->current_field = NULL;
+	driver->description_field = NULL;
+	driver->put_exec_list();
 }
 sqlvariantstate_list
 WORKINGEND {
 	// check host_variable
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 |LINKAGEBEGIN {
-	driver.current_field = NULL;
-	driver.description_field = NULL;
-	driver.put_exec_list();
+	driver->current_field = NULL;
+	driver->description_field = NULL;
+	driver->put_exec_list();
 }
 sqlvariantstate_list
 LINKAGEEND {
 	// check host_variable
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 |FILEBEGIN  {
-	driver.current_field = NULL;
-	driver.description_field = NULL;
-	driver.put_exec_list();
+	driver->current_field = NULL;
+	driver->description_field = NULL;
+	driver->put_exec_list();
 }
 sqlvariantstate_list
 FILEEND {
 	// check host_variable
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 |PROCEDURE_DIVISION {
-	driver.put_exec_list();
+	driver->put_exec_list();
 }
 ;
 
@@ -838,8 +840,8 @@ sqlvariantstate_list:
 |sqlvariantstate_list includesql
 |sqlvariantstate_list declaresql
 |sqlvariantstate_list sqlvariantstate PERIOD
-|sqlvariantstate_list HOSTVARIANTBEGIN { driver.put_exec_list(); }
-|sqlvariantstate_list HOSTVARIANTEND { driver.put_exec_list(); }
+|sqlvariantstate_list HOSTVARIANTBEGIN { driver->put_exec_list(); }
+|sqlvariantstate_list HOSTVARIANTEND { driver->put_exec_list(); }
 |sqlvariantstate_list ignoresql
 |sqlvariantstate_list declaresqlvar
 ;
@@ -848,11 +850,11 @@ sqlvariantstate:
 NUMERIC WORD opt_sql_type_def {
 	cb_field_ptr x;
 
-	x =  driver.cb_build_field_tree( $1, $2 , driver.current_field);
+	x =  driver->cb_build_field_tree( $1, $2 , driver->current_field);
 	if(x != NULL)
 	{
 		if( x->level != 78)
-			driver.current_field = x;
+			driver->current_field = x;
 
 		if ($3 != 0) {
 
@@ -873,28 +875,28 @@ NUMERIC WORD opt_sql_type_def {
 			x->picnsize = precision;
 			x->scale = scale;
 			
-			driver.cb_set_commandname("DECLARE_VAR");
-			driver.cb_host_list_add (driver.host_reference_list, x->sname);
-			driver.put_exec_list(); 
+			driver->cb_set_commandname("DECLARE_VAR");
+			driver->cb_host_list_add (driver->host_reference_list, x->sname);
+			driver->put_exec_list(); 
 		}
 	}
 }
 data_description_clause_sequence
 {
-	if (driver.description_field == NULL)
-		driver.description_field = driver.current_field;
+	if (driver->description_field == NULL)
+		driver->description_field = driver->current_field;
 }
 |NUMERIC {
 	cb_field_ptr x;
 
-	x =  driver.cb_build_field_tree( $1, "" , driver.current_field); // regist dummy name
+	x =  driver->cb_build_field_tree( $1, "" , driver->current_field); // regist dummy name
 	if( x != NULL){
 	}
 }
 data_description_clause_sequence
 {
-	if (driver.description_field == NULL)
-		driver.description_field = driver.current_field;
+	if (driver->description_field == NULL)
+		driver->description_field = driver->current_field;
 }
 ;
 
@@ -931,7 +933,7 @@ picture_clause
 ;
 
 picture_clause:
-PICTURE         {  driver.build_picture( $1,driver.current_field);  }
+PICTURE         {  driver->build_picture( $1,driver->current_field);  }
 ;
 
 usage_clause:
@@ -940,19 +942,19 @@ usage
 ;
 
 usage:
-COMP				{ driver.current_field->usage = Usage::Binary;  }
-| BINARY			{ driver.current_field->usage = Usage::Binary;  }
-| COMP_1			{ driver.current_field->usage = Usage::Float;   }
-| COMP_2			{ driver.current_field->usage = Usage::Double;  }
-| COMP_3			{ driver.current_field->usage = Usage::Packed;  }
-| COMP_5			{ driver.current_field->usage = Usage::NativeBinary;  }
-| WORD              { driver.current_field->usage = Usage::None;    }
+COMP				{ driver->current_field->usage = Usage::Binary;  }
+| BINARY			{ driver->current_field->usage = Usage::Binary;  }
+| COMP_1			{ driver->current_field->usage = Usage::Float;   }
+| COMP_2			{ driver->current_field->usage = Usage::Double;  }
+| COMP_3			{ driver->current_field->usage = Usage::Packed;  }
+| COMP_5			{ driver->current_field->usage = Usage::NativeBinary;  }
+| WORD              { driver->current_field->usage = Usage::None;    }
 | varusage
 ;
 
 varusage:
 varusage_type {
-	auto x = driver.current_field;
+	auto x = driver->current_field;
 
 	uint64_t type_info = encode_sql_type_info($1, (uint32_t)x->picnsize, 0, FLAG_EMIT_VAR);
 
@@ -966,14 +968,14 @@ varusage_type {
 	// x->picnsize = precision;
 	// x->scale = scale;
 			
-	driver.cb_set_commandname("DECLARE_VAR");
-	driver.cb_host_list_add (driver.host_reference_list, x->sname);
-	driver.put_exec_list(); 
+	driver->cb_set_commandname("DECLARE_VAR");
+	driver->cb_host_list_add (driver->host_reference_list, x->sname);
+	driver->put_exec_list(); 
 
 	// We need to store the variable data, so we can fix it up before the output source is generated
-	std::string src_file = driver.lexer.src_location_stack.top().filename;
-	std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver.startlineno, driver.endlineno, src_file);
-	driver.parser_data()->field_sql_type_info_add(x->sname, d);
+	std::string src_file = driver->lexer.src_location_stack.top().filename;
+	std::tuple<uint64_t, int, int, std::string> d = std::make_tuple(type_info, driver->startlineno, driver->endlineno, src_file);
+	driver->parser_data()->field_sql_type_info_add(x->sname, d);
 }
 ;
 
@@ -991,7 +993,7 @@ NUMERIC {}
 sign_clause:
 _sign_is LEADING flag_separate
 {
-	driver.current_field->sign_leading = SIGN_LEADING;
+	driver->current_field->sign_leading = SIGN_LEADING;
 }
 | _sign_is TRAILING flag_separate
 {
@@ -1005,7 +1007,7 @@ _sign_is:	 SIGN  {}
 
 flag_separate:
 %empty 
-| SEPARATE { driver.current_field->separate = SIGN_SEPARATE; }
+| SEPARATE { driver->current_field->separate = SIGN_SEPARATE; }
 ;
 
 occurs_clause:
@@ -1075,6 +1077,6 @@ _all:       %empty | ALL;
 // Register errors to the driver:
 void yy::gix_esql_parser::error (const location_type& l, const std::string& m)
 {
-    driver.error(l, m, ERR_SYNTAX_ERROR);
+    driver->error(l, m, ERR_SYNTAX_ERROR);
 }
 

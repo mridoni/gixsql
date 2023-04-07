@@ -61,10 +61,10 @@ public:
 	std::vector<PreprocessedBlockInfo*> getPreprocessedBlocks();
 
 	// Inherited via ITransformationStep
-	virtual bool run(ITransformationStep *prev_step) override;
+	virtual bool run(std::shared_ptr<ITransformationStep> prev_step) override;
 	TransformationStepDataType getInputType() override;
 	TransformationStepDataType getOutputType() override;
-	virtual TransformationStepData* getOutput(ITransformationStep *me = nullptr) override;
+	virtual TransformationStepData* getOutput(std::shared_ptr<ITransformationStep> me = nullptr) override;
 
 
 private:

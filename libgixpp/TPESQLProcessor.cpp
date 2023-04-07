@@ -116,9 +116,11 @@ TPESQLProcessor::TPESQLProcessor(GixPreProcessor* gpp) : ITransformationStep(gpp
 
 }
 
-bool TPESQLProcessor::run(ITransformationStep* prev_step)
+bool TPESQLProcessor::run(std::shared_ptr<ITransformationStep> prev_step)
 {
 	// opt_params_style and opt_preprocess_copy_files are set in the parser stage
+
+	parser_data = this->getInput()->parserData();
 
 	parser_data->job_params()->opt_emit_static_calls = std::get<bool>(owner->getOpt("emit_static_calls", false));
 	parser_data->job_params()->opt_emit_debug_info = std::get<bool>(owner->getOpt("emit_debug_info", false));
@@ -165,7 +167,7 @@ bool TPESQLProcessor::run(ITransformationStep* prev_step)
 
 TransformationStepDataType TPESQLProcessor::getInputType()
 {
-	return TransformationStepDataType::ESQLParseData;
+	return TransformationStepDataType::ESQLParserData;
 }
 
 TransformationStepDataType TPESQLProcessor::getOutputType()
@@ -173,7 +175,7 @@ TransformationStepDataType TPESQLProcessor::getOutputType()
 	return TransformationStepDataType::Filename;
 }
 
-TransformationStepData *TPESQLProcessor::getOutput(ITransformationStep* me)
+TransformationStepData *TPESQLProcessor::getOutput(std::shared_ptr<ITransformationStep> me)
 {
 	return output;
 }
@@ -183,6 +185,8 @@ int TPESQLProcessor::outputESQL()
 	working_begin_line = 0;
 	working_end_line = 0;
 
+	input_file = owner->firstStep()->getInput()->filename();
+	output_file = owner->lastStep()->getOutput()->filename();
 
 	if (output_file.empty()) {
 		std::string f = filename_change_ext(input_file, ".cbsql");

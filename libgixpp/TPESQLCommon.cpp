@@ -21,7 +21,7 @@ std::tuple<uint64_t, int, int, std::string> ESQLParserData::field_sql_type_info(
 	return _field_sql_type_info[n];
 }
 
-std::map<std::string, sql_type_info_t> ESQLParserData::field_sql_type_info() const
+const std::map<std::string, sql_type_info_t>& ESQLParserData::field_sql_type_info() const
 {
 	return _field_sql_type_info;
 }

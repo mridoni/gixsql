@@ -8,7 +8,7 @@ TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 	owner = gpp;
 }
 
-bool TPESQLParser::run(ITransformationStep* prev_step)
+bool TPESQLParser::run(std::shared_ptr<ITransformationStep> prev_step)
 {
 	if (!input->isValid()) {
 		if (!prev_step || prev_step->getOutput())
@@ -71,6 +71,12 @@ bool TPESQLParser::run(ITransformationStep* prev_step)
 
 
 	int rc = main_module_driver.parse(input, parser_data);
+	if (rc == 0) {
+		output = new TransformationStepData();
+		output->setType(TransformationStepDataType::ESQLParserData);
+		output->setParserData(parser_data);
+	}
+	return rc == 0;
 }
 
 TransformationStepDataType TPESQLParser::getInputType()
@@ -80,5 +86,5 @@ TransformationStepDataType TPESQLParser::getInputType()
 
 TransformationStepDataType TPESQLParser::getOutputType()
 {
-	return TransformationStepDataType::ESQLParseData;
+	return TransformationStepDataType::ESQLParserData;
 }
