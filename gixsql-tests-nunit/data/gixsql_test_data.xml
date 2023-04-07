@@ -3437,6 +3437,7 @@
 			</cobol-sources>
 
 			<data-sources count="1" />
+			<data-source-options data-source-index="1" value="sslmode=require" />
 			<pre-run-sql-file data-source-index="1">dbdata.sql</pre-run-sql-file>
 
 			<environment>

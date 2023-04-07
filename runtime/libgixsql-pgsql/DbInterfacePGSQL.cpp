@@ -154,7 +154,6 @@ int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 	};
 
 	auto opts = _conn_info->getOptions();
-	opts["sslmode"] = "disable";
 	for (std::string supported_libpq_opt : supported_libpq_opts) {
 		if (opts.find(supported_libpq_opt) != opts.end())
 			connection_params[supported_libpq_opt] = opts[supported_libpq_opt];
