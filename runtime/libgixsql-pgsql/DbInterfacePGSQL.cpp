@@ -45,7 +45,22 @@ struct PGresult_deleter {
 	  	PQclear(ptr);
     }
 };
+
+struct PGConnectionParamArray_deleter
+{
+	int size;
+    void operator()(char **ptr) {
+
+		for (int i = 0; i < size; i++)
+			if (ptr[i])
+				free(ptr[i]);
+
+    	delete[] ptr;
+    }	
+};
+
 using PGresultPtr = std::unique_ptr<PGresult, PGresult_deleter>;
+using PGConnectionParamArray = std::unique_ptr<char*[], PGConnectionParamArray_deleter>;
 
 class pgsqlParamArray {
 
@@ -115,7 +130,6 @@ int DbInterfacePGSQL::init(const std::shared_ptr<spdlog::logger>& _logger)
 int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::shared_ptr<IConnectionOptions> _conn_opts)
 {
 	PGconn* conn;
-	std::string connstr;
 
 	lib_logger->trace(FMT_FILE_FUNC "PGSQL::connect - autocommit: {:d}, encoding: {}", __FILE__, __func__, (int)_conn_opts->autocommit, _conn_opts->client_encoding);
 
@@ -126,15 +140,45 @@ int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 	last_error = "";
 	last_state = "";
 
-	connstr = "dbname=" + (_conn_info->getDbName().empty() ? "''" : _conn_info->getDbName()) + " " +
-		"host=" + (_conn_info->getHost().empty() ? "''" : _conn_info->getHost()) + " " +
-		"port=" + (_conn_info->getPort() == 0 ? "''" : std::to_string(_conn_info->getPort())) + " " +
-		"user=" + (_conn_info->getUsername().empty() ? "''" : _conn_info->getUsername()) + " " +
-		"password=" + (_conn_info->getPassword().empty() ? "''" : _conn_info->getPassword());
+	std::map<std::string, std::string> connection_params;
 
-	lib_logger->trace("libpq - connection string: [{}]", connstr);
+	connection_params["dbname"] = _conn_info->getDbName().empty() ? "" : _conn_info->getDbName();
+	connection_params["host"] = _conn_info->getHost().empty() ? "" : _conn_info->getHost();
+	connection_params["port"] = _conn_info->getPort() == 0 ? "" : std::to_string(_conn_info->getPort());
+	connection_params["user"] = _conn_info->getUsername().empty() ? "" : _conn_info->getUsername();
+	connection_params["password"] = _conn_info->getPassword().empty() ? "" : _conn_info->getPassword();
 
-	conn = PQconnectdb(connstr.c_str());
+	std::vector<std::string> supported_libpq_opts = {
+		"hostaddr", "connect_timeout", "application_name", "keepalives", "keepalives_idle", "keepalives_interval", "keepalives_count", "sslmode",
+		"requiressl", "sslcert", "sslkey", "sslrootcert", "sslcrl", "krbsrvname", "gsslib", "service"
+	};
+
+	auto opts = _conn_info->getOptions();
+	opts["sslmode"] = "disable";
+	for (std::string supported_libpq_opt : supported_libpq_opts) {
+		if (opts.find(supported_libpq_opt) != opts.end())
+			connection_params[supported_libpq_opt] = opts[supported_libpq_opt];
+	}
+
+	//std::unique_ptr<const char* []> libpq_opt_keys = std::make_unique<const char* []>(connection_params.size() + 1);
+	//std::unique_ptr<const char* []> libpq_opt_vals = std::make_unique<const char* []>(connection_params.size() + 1);
+
+	int szParams = (int)connection_params.size() + 1;
+	PGConnectionParamArray libpq_opt_keys(new char* [connection_params.size() + 1], PGConnectionParamArray_deleter{ szParams });
+	PGConnectionParamArray libpq_opt_vals(new char* [connection_params.size() + 1], PGConnectionParamArray_deleter{ szParams });
+
+	int i = 0;
+	for (auto it = connection_params.begin(); it != connection_params.end(); ++it) 
+	{
+		libpq_opt_keys[i] = strdup(it->first.c_str());
+		libpq_opt_vals[i] = strdup(it->second.c_str());
+		lib_logger->trace("libpq - connection parameter ({}): [{}] => [{}]", i, it->first, it->second);
+		i++;
+	}
+	libpq_opt_keys[connection_params.size()] = nullptr;
+	libpq_opt_vals[connection_params.size()] = nullptr;
+
+	conn = PQconnectdbParams(libpq_opt_keys.get(), libpq_opt_vals.get(), 0);
 
 	if (conn == NULL) {
 		last_error = "Connection failed";
@@ -159,7 +203,7 @@ int DbInterfacePGSQL::connect(std::shared_ptr<IDataSourceInfo> _conn_info, std::
 		}
 	}
 
-	auto opts = _conn_info->getOptions();
+
 	if (opts.find("default_schema") != opts.end()) {
 		std::string default_schema = opts["default_schema"];
 		if (!default_schema.empty()) {

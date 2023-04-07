@@ -3425,6 +3425,36 @@
 			</expected-output>
 		</test>
 
+		<test name="TSQL043A" enabled="true" applies-to="pgsql">
+			<description>SSL connection</description>
+			<issue-coverage>#000</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL043A.cbl" deps="EMPREC.cpy" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<pre-run-sql-file data-source-index="1">dbdata.sql</pre-run-sql-file>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}" />
+				<variable key="DATASRC_PWD" value="${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>CONNECT SQLCODE: +0000000000</line>
+				<line>SELECT SQLCODE : +0000000000</line>
+				<line>RES: 003</line>
+			</expected-output>
+		</test>
 
 	</tests>
 </test-data>
