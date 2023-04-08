@@ -77,7 +77,8 @@ namespace gixsql_tests
         public static void SaveResource(string resourceName, string outfile)
         {
             var assembly = Assembly.GetExecutingAssembly();
-            using (Stream fs = assembly.GetManifestResourceStream("gixsql_tests_nunit.data." + resourceName)) {
+            using (Stream fs = assembly.GetManifestResourceStream("gixsql_tests_nunit.data." + resourceName.Replace("/", ".")))
+            {
                 using (FileStream o = new FileStream(outfile, FileMode.Create))  {
                     fs.CopyTo(o);
                     fs.Flush();

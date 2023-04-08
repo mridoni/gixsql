@@ -3433,11 +3433,11 @@
 			<compiler-type>all</compiler-type>
 
 			<cobol-sources>
-				<src name="TSQL043A.cbl" deps="EMPREC.cpy" />
+				<src name="TSQL043A.cbl" deps="EMPREC.cpy,ssl/pgsql-test.crt,ssl/pgsql-test.key,ssl/root-ca.crt" />
 			</cobol-sources>
 
 			<data-sources count="1" />
-			<data-source-options data-source-index="1" value="sslmode=require" />
+			<data-source-options data-source-index="1" value="sslmode=require&amp;sslcert=pgsql-test.crt&amp;sslkey=pgsql-test.key&amp;sslrootcert=root-ca.crt" />
 			<pre-run-sql-file data-source-index="1">dbdata.sql</pre-run-sql-file>
 
 			<environment>

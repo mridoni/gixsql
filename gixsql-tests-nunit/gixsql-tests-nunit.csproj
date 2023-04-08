@@ -112,6 +112,11 @@
     <EmbeddedResource Include="data\dbdata-oracle.sql" />
     <EmbeddedResource Include="data\dbdata.sql" />
     <EmbeddedResource Include="data\EMPREC.cpy" />
+    <EmbeddedResource Include="data\ssl\pgsql-test.crt" />
+    <EmbeddedResource Include="data\ssl\pgsql-test.csr" />
+    <EmbeddedResource Include="data\ssl\pgsql-test.key" />
+    <EmbeddedResource Include="data\ssl\root-ca.crt" />
+    <EmbeddedResource Include="data\ssl\root-ca.key" />
     <EmbeddedResource Include="data\TSQL043A.cbl" />
     <EmbeddedResource Include="data\TSQL042A.cbl" />
     <EmbeddedResource Include="data\TSQL001A.cbl" />

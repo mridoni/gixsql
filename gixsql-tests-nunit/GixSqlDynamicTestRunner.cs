@@ -64,7 +64,8 @@ namespace gixsql_tests
             {
                 foreach (string d in l)
                 {
-                    Utils.SaveResource(d, Path.Combine(TestTempDir, d));
+                    string outfile = Path.GetFileName(d);
+                    Utils.SaveResource(d, Path.Combine(TestTempDir, outfile));
                 }
             }
 
