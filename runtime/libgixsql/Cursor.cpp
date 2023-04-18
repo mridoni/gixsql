@@ -178,12 +178,28 @@ std::vector<CobolVarType> Cursor::getParameterTypes()
 	return param_types;
 }
 
+static bool is_signed_numeric(CobolVarType t)
+{
+	return t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TS || 
+		   t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_TC || 
+		   t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LS || 
+		   t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_LC || 
+		   t == CobolVarType::COBOL_TYPE_SIGNED_BINARY    || 
+		   t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD;	
+}
+
 std::vector<unsigned long> Cursor::getParameterLengths()
 {
 	std::vector<unsigned long> param_lengths;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
-		param_lengths.push_back(parameter_list.at(i)->getLength());
+		unsigned long l = parameter_list.at(i)->getLength();
+		CobolVarType t = parameter_list.at(i)->getType();
+		if (is_signed_numeric(t)) {
+			l += 1;
+		}
+
+		param_lengths.push_back(l);
 	}
 	return param_lengths;
 }

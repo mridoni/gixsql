@@ -451,6 +451,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 	for (int i = 0; i < nParams; i++) {
 		int sql_type = cobol2odbctype(paramTypes[i], paramFlags[i]);
 		int c_type = CBL_FIELD_IS_BINARY(paramFlags[i]) ? SQL_C_BINARY : SQL_C_CHAR;
+		unsigned long plen = paramLengths.at(i);
 
 		lengths[i] = paramLengths[i];
 
@@ -464,7 +465,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 				10,
 				0,
 				(SQLPOINTER)paramValues.at(i).data(),
-				(SQLLEN)paramLengths.at(i),
+				(SQLLEN)plen,
 				&lengths[i]);
 		}
 		else
