@@ -4,7 +4,7 @@
     <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=sqlite://D:/gix_tmp_test/test_sqlite_1.db
+DATASRC=pgsql://localhost/testdb1
 DATASRC_USR=test
 DATASRC_PWD=test
 GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-mysql-msvc.log
@@ -13,14 +13,14 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL043A.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64
-DATASRC=pgsql://192.168.1.85/testdb1?sslmode=require&amp;sslcert=C:\Users\marchetto\Desktop\Progetti\gix\pgsql-ssl\pgsql-test.crt&amp;sslkey=C:\Users\marchetto\Desktop\Progetti\gix\pgsql-ssl\pgsql-test.key&amp;sslrootcert=C:\Users\marchetto\Desktop\Progetti\gix\pgsql-ssl\root-ca.crt
-DATASRC_USR=test
+DATASRC=pgsql://192.168.1.85/testdb1
+DATASRC_USR=test.test
 DATASRC_PWD=test
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL043A-x64-pgsql-msvc.log
+GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-pgsql-msvc.log
 GIXSQL_LOG_LEVEL=trace
 GIXSQL_FIXUP_PARAMS=on
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>

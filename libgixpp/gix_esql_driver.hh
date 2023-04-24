@@ -80,7 +80,6 @@ public:
     // We only have here the flags connected to parsing, other flags
     // are handled in the code generation module
     bool opt_preprocess_copy_files;
-    ESQL_ParameterStyle opt_params_style;
 
 #pragma endregion
 

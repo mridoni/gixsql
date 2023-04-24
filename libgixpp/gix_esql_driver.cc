@@ -55,8 +55,7 @@ gix_esql_driver::gix_esql_driver ()
     : trace_scanning (DEBUG_PARSER), trace_parsing (DEBUG_PARSER)
 {
 	lexer.setDriver(this);
-	
-	opt_params_style = ESQL_ParameterStyle::DollarPrefix;
+
 	opt_preprocess_copy_files = false;	// if true, copybooks outside EXEC SQL INCLUDE... are preprocessed
 	has_esql_in_cbl_copybooks = false;
 
@@ -235,7 +234,7 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 
 	int hostno = cb_search_list(text);
 
-	switch (opt_params_style) {
+	switch (parser_data()->job_params()->opt_params_style) {
 		case ESQL_ParameterStyle::DollarPrefix:
 			return "$" + std::to_string(hostno);
 
@@ -304,7 +303,7 @@ void gix_esql_driver::cb_res_host_list_add(std::vector<cb_res_hostreference_ptr>
 int
 gix_esql_driver::cb_search_list(std::string text)
 {
-	if (opt_params_style != ESQL_ParameterStyle::Anonymous) {
+	if (parser_data()->job_params()->opt_params_style != ESQL_ParameterStyle::Anonymous) {
 		for (auto it = host_reference_list->begin(); it != host_reference_list->end(); ++it) {
 			if ((*it)->hostreference == text)
 				return (*it)->hostno;
