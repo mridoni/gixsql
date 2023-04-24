@@ -46,7 +46,7 @@ public:
 	const std_binary_data& getDbData();
 	CobolVarType getType();
 	unsigned long getLength();
-	unsigned long getDbDataLength();
+	unsigned long getDisplayLength();
 	uint32_t getFlags();
 
 	bool isVarLen();

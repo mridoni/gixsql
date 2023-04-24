@@ -775,7 +775,7 @@ unsigned long SqlVar::getLength()
 	return length;
 }
 
-unsigned long SqlVar::getDbDataLength()
+unsigned long SqlVar::getDisplayLength()
 {
 	return db_data_len;
 }

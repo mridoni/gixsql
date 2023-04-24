@@ -193,7 +193,7 @@ std::vector<unsigned long> Cursor::getParameterLengths()
 	std::vector<unsigned long> param_lengths;
 
 	for (int i = 0; i < parameter_list.size(); i++) {
-		param_lengths.push_back(parameter_list.at(i)->getLength());
+		param_lengths.push_back(parameter_list.at(i)->getDisplayLength());
 	}
 	return param_lengths;
 }

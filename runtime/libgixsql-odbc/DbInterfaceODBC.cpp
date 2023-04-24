@@ -464,7 +464,7 @@ int DbInterfaceODBC::_odbc_exec_params(std::shared_ptr<ICursor> crsr, const std:
 				10,
 				0,
 				(SQLPOINTER)paramValues.at(i).data(),
-				(SQLLEN)paramLengths.at(i); ,
+				(SQLLEN)paramLengths.at(i),
 				&lengths[i]);
 		}
 		else

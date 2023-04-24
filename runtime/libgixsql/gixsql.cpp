@@ -369,7 +369,7 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 		SqlVar* v = *it;
 		param_types.push_back(v->getType());
 		param_values.push_back(v->getDbData());
-		param_lengths.push_back(!v->isDbNull() ? v->getDbDataLength() : DB_NULL);
+		param_lengths.push_back(!v->isDbNull() ? v->getDisplayLength() : DB_NULL);
 		param_flags.push_back(v->getFlags());
 	}
 
@@ -433,7 +433,7 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	for (it = _current_sql_var_list.begin(); it != _current_sql_var_list.end(); it++) {
 		param_values.push_back((*it)->getDbData());
 		param_types.push_back((*it)->getType());
-		param_lengths.push_back((*it)->getDbDataLength());
+		param_lengths.push_back((*it)->getDisplayLength());
 		param_flags.push_back((*it)->getFlags());
 	}
 
