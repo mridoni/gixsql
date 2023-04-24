@@ -632,6 +632,8 @@ The PostgreSQL driver has specific options that can be added to the connection s
 - `default_schema`: used to set the default schema(s), maps directly to PostgreSQL's `search_path`
 - `decode_binary` : binary (`bytea`) fields are decoded when their data is read into a COBOL field. The default is `on`. If, for any reason, you want to preserve the original encoding, set it to `off` in the connection string. Since encoded binary data takes more space, in this case you should make sure that your data fields are large enough to accommodate the data being read.
 
+Starting from version v1.0.20b the PostgreSQL driver supports SSL connections. You can configure the SSL connection proerties by using the SSL-related connection parameters [listed here](postgresql.org/docs/current/libpq-connect.html#LIBPQ-PARAMKEYWORDS).
+
 ### ODBC
 A lot of features in the ODBC driver depend in turn on the underlying driver (MySQL ODBC Connector, psqlODBC, etc.) and on its settings. Tests have usually been conducted using the latest versions of the available ODBC drivers (e.g. 13.x for PostgreSQL).
 
