@@ -1,3 +1,7 @@
+=== v1.0.20b ======================================================
+- Added SSL connection support for PostgreSQL
+- Preprocessor components have been refactored, parser and generator are now two different modules
+
 === v1.0.20a ======================================================
 - Standard COBOL NULL indicators are supported for all drivers
 
