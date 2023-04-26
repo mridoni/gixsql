@@ -2,10 +2,10 @@
 
 noinst_LIBRARIES = libgixpp.a
 libgixpp_a_SOURCES = ESQLCall.cpp  FileData.cpp  GixEsqlLexer.cpp  GixPreProcessor.cpp  ITransformationStep.cpp  \
-		MapFileReader.cpp  MapFileWriter.cpp  TPESQLProcessing.cpp  TPSourceConsolidation.cpp gix_esql_driver.cc \
-		gix_esql_parser.yy gix_esql_scanner.ll ESQLCall.h ESQLDefinitions.h FileData.h gix_esql_driver.hh \
+		MapFileReader.cpp  MapFileWriter.cpp  TPESQLProcessor.cpp TPESQLParser.cpp TPSourceConsolidation.cpp gix_esql_driver.cc \
+		gix_esql_parser.yy gix_esql_scanner.ll ESQLCall.h ESQLDefinitions.h FileData.h gix_esql_driver.hh TPESQLCommon.h TPESQLCommon.cpp \
 		GixEsqlLexer.hh gix_esql_parser.hh GixPreProcessor.h ITransformationStep.h libgixpp_global.h libgixpp.h \
-		location.hh MapFileReader.h MapFileWriter.h TPESQLProcessing.h ../build-tools/grammar-tools/FlexLexer.h \
+		location.hh MapFileReader.h MapFileWriter.h TPESQLProcessor.h TPESQLParser.h ../build-tools/grammar-tools/FlexLexer.h \
 		TPSourceConsolidation.h ../libcpputils/libcpputils.h ../libcpputils/CopyResolver.h \
         $(top_srcdir)/common/cobol_var_types.h $(top_srcdir)/common/varlen_defs.h $(top_srcdir)/common/cobol_var_flags.h
 

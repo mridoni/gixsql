@@ -5,12 +5,13 @@
 		<gixsql-install-base>/home/marchetto/gixsql/dist</gixsql-install-base>
 		<keep-temps>1</keep-temps>
 		<verbose>0</verbose>
-		<test-filter></test-filter>
-		<dbtype-filter></dbtype-filter>
-		<mem-check>valgrind --log-file=valgrind-${testid}.txt --leak-check=full</mem-check>
+		<test-filter>TSQL042A</test-filter>
+		<dbtype-filter>odbc</dbtype-filter>
+		<mem-check>valgrind --log-file=valgrind-${testid}-${arch}-${dbtype}.txt --leak-check=full --suppressions=/home/marchetto/gixsql/suppressions.txt</mem-check>
 		<temp-dir>/tmp/gixsql-test</temp-dir>
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
+			<variable key="LD_LIBRARY_PATH" value="/opt/instantclient_21_7" />
 		</environment>
 	</global>
 
@@ -47,6 +48,7 @@
 
 		<data-source-client type="oracle" architecture="x64">
 			<environment>
+				<variable key="LD_LIBRARY_PATH" value="/opt/instantclient_21_7" />
 			</environment>
 			<provider value="Oracle.ManagedDataAccess.Client" />
 			<additional-preprocess-params value="-z c" />
@@ -103,7 +105,7 @@
 		</data-source>
         
 		<data-source type="oracle" index="1">
-			<hostname>localhost</hostname>
+			<hostname>192.168.56.135</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test1</username>
@@ -111,7 +113,7 @@
 			<options></options>
 		</data-source>
 		<data-source type="oracle" index="2">
-			<hostname>localhost</hostname>
+			<hostname>192.168.56.135</hostname>
 			<port>1521</port>
 			<dbname>orcl</dbname>
 			<username>test2</username>
