@@ -640,7 +640,12 @@ int DbInterfacePGSQL::cursor_open(const std::shared_ptr<ICursor>& crsr)
 	}
 
 	// execute query
-	int rc = _pgsql_exec_params(crsr, full_query, crsr->getParameterTypes(), crsr->getParameterValues(), crsr->getParameterLengths(), crsr->getParameterFlags());
+
+	auto param_vals = crsr->getParameterValues();
+	auto param_types = crsr->getParameterTypes();
+	auto param_lengths = crsr->getParameterLengths();	// will be used for binary data, currently ignored
+	auto param_formats = crsr->getParameterFlags();
+	int rc = _pgsql_exec_params(crsr, full_query, param_types, param_vals, param_lengths, param_formats);
 
 	return (rc == DBERR_NO_ERROR) ? DBERR_NO_ERROR : DBERR_OPEN_CURSOR_FAILED;
 }

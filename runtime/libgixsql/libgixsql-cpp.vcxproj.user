@@ -17,7 +17,7 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
     <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin;D:\oracle\instantclient_21_6_x64
-DATASRC=pgsql://192.168.1.85/testdb1
+DATASRC=pgsql://localhost/testdb1?native_cursors=off
 DATASRC_USR=test.test
 DATASRC_PWD=test
 GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-pgsql-msvc.log

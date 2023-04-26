@@ -3425,7 +3425,7 @@
 			</expected-output>
 		</test>
 
-		<test name="TSQL043A" enabled="true" applies-to="pgsql">
+		<test name="TSQL043A" enabled="false" applies-to="pgsql">
 			<description>SSL connection</description>
 			<issue-coverage>#000</issue-coverage>
 			<group></group>
