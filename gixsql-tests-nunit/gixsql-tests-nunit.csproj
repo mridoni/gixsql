@@ -202,7 +202,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.80" />
+    <PackageReference Include="Oracle.ManagedDataAccess.Core" Version="3.21.100" />
     <PackageReference Include="SharpZipLib" Version="1.4.1" />
     <PackageReference Include="System.Data.Odbc" Version="7.0.0" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.116" />
