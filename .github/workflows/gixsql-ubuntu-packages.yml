@@ -34,11 +34,15 @@ jobs:
           repository: 'mridoni/gixsql'
           ref: ${{ env.GIXSQL_BRANCH }}
     
-    - uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-          packages: build-essential libmysqlclient-dev libpq-dev unixodbc-dev=2.3.7 unixodbc=2.3.7 odbcinst1debian2=2.3.7 odbcinst=2.3.7 flex libspdlog-dev libfmt-dev
-          version: 1.0
+#    - uses: awalsh128/cache-apt-pkgs-action@latest
+#      with:
+#          packages: build-essential libmysqlclient-dev libpq-dev unixodbc-dev=2.3.7 unixodbc=2.3.7 odbcinst1debian2=2.3.7 odbcinst=2.3.7 flex libspdlog-dev libfmt-dev
+#          version: 1.0
 
+    - name: Install packages
+      run: |
+          apt-get install -y --allow-downgrades build-essential libmysqlclient-dev libpq-dev unixodbc-dev=2.3.7 unixodbc=2.3.7 odbcinst1debian2=2.3.7 odbcinst=2.3.7 flex libspdlog-dev libfmt-dev
+          
     - name: Build GixSQL
       working-directory: ${{env.GITHUB_WORKSPACE}}
       run: |
