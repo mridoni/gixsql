@@ -175,7 +175,7 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 
 }
 
-  /*
+   /*
 "EXEC"[ \r\n]+"SQL"		{ 
 		__yy_push_state(ESQL_FUNC_STATE); 
 
