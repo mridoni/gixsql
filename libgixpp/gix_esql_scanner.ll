@@ -164,11 +164,11 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 	}
 	else {
 		if (subsystem == "CICS") {
-	
+			return yy::gix_esql_parser::make_TOKEN(subsystem, loc);	
 		}
 		else {
 			if (subsystem == "DLI") {
-	
+				return yy::gix_esql_parser::make_TOKEN(subsystem, loc);	
 			}
 		}
 	}
