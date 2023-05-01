@@ -136,7 +136,7 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 "EXEC"[ \r\n]+({SUBSYSTEM}) {
 
 	std::string t = yytext;
-	std::string subsystem = t.substr(t.find_last_of(" ") + 1);
+	std::string subsystem = t.substr(t.find_last_of(" \r\n") + 1);
 
 	if (subsystem == "SQL") {
 		__yy_push_state(ESQL_FUNC_STATE); 
