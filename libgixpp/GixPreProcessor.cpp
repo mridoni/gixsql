@@ -45,17 +45,13 @@ GixPreProcessor::~GixPreProcessor()
 	//	if (step)
 	//		delete step;
 	//}
+
+	if (input)
+		delete input;
+
+	if (output)
+		delete output;
 }
-
-//const std::stringList GixPreProcessor::getCopyDirs()
-//{
-//	return copy_dirs;
-//}
-
-//void GixPreProcessor::setCopyDirs(std::string cdl)
-//{
-//	copy_dirs = cdl.string_split(QDir::listSeparator());
-//}
 
 void GixPreProcessor::setCopyResolver(const CopyResolver *cr)
 {
@@ -181,6 +177,16 @@ void GixPreProcessor::setOutputFile(std::string o)
 {
 	_outfile = o;
 
+}
+
+std::string GixPreProcessor::getInputFile()
+{
+	return input->filename();
+}
+
+std::string GixPreProcessor::getOutputFile()
+{
+	return output->filename();
 }
 
 variant GixPreProcessor::getOpt(std::string id, bool b)

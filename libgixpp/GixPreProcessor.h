@@ -59,6 +59,9 @@ public:
 	void setInputFile(std::string infile);
 	void setOutputFile(std::string outfile);
 
+	std::string getInputFile();
+	std::string getOutputFile();
+
 	variant_map& getOpts() const;
 	variant getOpt(std::string id, bool b);
 	variant getOpt(std::string id, std::string s);
