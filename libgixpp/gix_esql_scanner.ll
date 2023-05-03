@@ -84,7 +84,7 @@ static yy::location loc;
 // This should be maintained
 #if defined (_DEBUG) && defined (VERBOSE)
 const char *GixEsqlLexer::yy_state_descs[NUM_YY_STATES] = { "INITIAL", "PICTURE_STATE", "DATA_DIVISION_STATE", "ESQL_FUNC_STATE", "ESQL_INCLUDE_STATE", 
-													"ESQL_SELECT_STATE", "ESQL_STATE", "INCLUDE_STATE", "FD_STATE", "ESQL_DBNAME_STATE", "VAR_DECLARE_STATE", 
+													"ESQL_SELECT_STATE", "ESQL_STATE", /* "INCLUDE_STATE", */ "FD_STATE", "ESQL_DBNAME_STATE", "VAR_DECLARE_STATE", 
 													"ESQL_PREPARE_STATE", "ESQL_DECLARE_STATE", "ESQL_EXECUTE_STATE", "ESQL_CONNECT_STATE", "ESQL_IGNORE_STATE", "ESQL_WHENEVER_STATE"  };
 #endif
 
@@ -108,7 +108,8 @@ yy::gix_esql_parser::symbol_type __MAKE_TOKEN(char *s, yy::location loc);
 
 %s PICTURE_STATE DATA_DIVISION_STATE
 
-%x ESQL_FUNC_STATE ESQL_INCLUDE_STATE ESQL_SELECT_STATE ESQL_STATE INCLUDE_STATE FD_STATE ESQL_DBNAME_STATE VAR_DECLARE_STATE ESQL_PREPARE_STATE ESQL_DECLARE_STATE ESQL_EXECUTE_STATE ESQL_CONNECT_STATE ESQL_IGNORE_STATE ESQL_WHENEVER_STATE
+/* %x ESQL_FUNC_STATE ESQL_INCLUDE_STATE ESQL_SELECT_STATE ESQL_STATE INCLUDE_STATE FD_STATE ESQL_DBNAME_STATE VAR_DECLARE_STATE ESQL_PREPARE_STATE ESQL_DECLARE_STATE ESQL_EXECUTE_STATE ESQL_CONNECT_STATE ESQL_IGNORE_STATE ESQL_WHENEVER_STATE */
+%x ESQL_FUNC_STATE ESQL_INCLUDE_STATE ESQL_SELECT_STATE ESQL_STATE FD_STATE ESQL_DBNAME_STATE VAR_DECLARE_STATE ESQL_PREPARE_STATE ESQL_DECLARE_STATE ESQL_EXECUTE_STATE ESQL_CONNECT_STATE ESQL_IGNORE_STATE ESQL_WHENEVER_STATE
 
 JPNWORD [\xA0-\xDF]|([\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC])
 DIGIT [0-9]
@@ -128,10 +129,16 @@ HOSTTOKEN_WITH_NULL_IND ":"([A-Za-z\-0-9_]+)":"([A-Za-z\-0-9_]+)
 HOSTWORD ":"([A-Za-z\-0-9_]*([\xA0-\xDF]|([\x81-\x9F\xE0-\xFC][\x40-\x7E\x80-\xFC]))*[A-Za-z\-0-9_]*)
 INT_CONSTANT {digit}+
 LOW_VALUE "LOW\-VALUE"
+SUBSYSTEM "SQL"|"CICS"|"DLI"
 
 %%
 
-"EXEC"[ \r\n]+"SQL"		{ 
+"EXEC"[ \r\n]+({SUBSYSTEM}) {
+
+	std::string t = yytext;
+	std::string subsystem = t.substr(t.find_last_of(" \r\n") + 1);
+
+	if (subsystem == "SQL") {
 		__yy_push_state(ESQL_FUNC_STATE); 
 
 		driver->startlineno = yylineno - count_crlf(yytext);;
@@ -153,9 +160,24 @@ LOW_VALUE "LOW\-VALUE"
 		if (driver->lexer.src_location_stack.size() > 0 && !driver->lexer.src_location_stack.top().is_included)
 			driver->has_esql_in_cbl_copybooks = true;
 
-		return yy::gix_esql_parser::make_EXECSQL(loc);
+		return yy::gix_esql_parser::make_EXECSQL(loc);	
+	}
+	else {
+		if (subsystem == "CICS") {
+			return yy::gix_esql_parser::make_TOKEN(subsystem, loc);	
+		}
+		else {
+			if (subsystem == "DLI") {
+				return yy::gix_esql_parser::make_TOKEN(subsystem, loc);	
+			}
+		}
+	}
+
 }
 
+"EJECT" {
+	// Ignore, we put it here so it takes priority
+}
 
 "DATA"[ ]+"DIVISION"[ ]*"." {
 	__yy_push_state(DATA_DIVISION_STATE);
@@ -1398,18 +1420,6 @@ LOW_VALUE "LOW\-VALUE"
 	. {}
 }
 
-<INCLUDE_STATE>{
-	(\r\n|\n) {   }
-
-	{INCFILE}[ ]*"." {
-		driver->commandname = "INCFILE";
-		driver->incfilename = std::string(yytext) + ".";
-		__yy_pop_state();
-	    return yy::gix_esql_parser::make_COPY_FILE(loc);
-	}
-}
-
-
 <PICTURE_STATE>{
   "IS" {
 	/* ignore */
@@ -1424,6 +1434,8 @@ LOW_VALUE "LOW\-VALUE"
 }
 
 	/* default rules */
+
+
 
 <*>(\r\n|\n) {
 	
