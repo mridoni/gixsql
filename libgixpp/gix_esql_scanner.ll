@@ -175,32 +175,9 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 
 }
 
-   /*
-"EXEC"[ \r\n]+"SQL"		{ 
-		__yy_push_state(ESQL_FUNC_STATE); 
-
-		driver->startlineno = yylineno - count_crlf(yytext);;
-		driver->host_reference_list->clear();
-		driver->res_host_reference_list->clear();
-		driver->sql_list->clear();
-		driver->hostref_or_literal_list->clear();	
-		
-		driver->commandname = "";
-		driver->cursorname = "";
-		driver->sqlname = "";
-		driver->incfilename = "";
-
-		driver->hostreferenceCount = 0;
-		driver->period = 0;
-		driver->cursor_hold = 0;
-		driver->command_putother = 0;
-
-		if (driver->lexer.src_location_stack.size() > 0 && !driver->lexer.src_location_stack.top().is_included)
-			driver->has_esql_in_cbl_copybooks = true;
-
-		return yy::gix_esql_parser::make_EXECSQL(loc);
+"EJECT" {
+	// Ignore, we put it here so it takes priority
 }
-  */
 
 "DATA"[ ]+"DIVISION"[ ]*"." {
 	__yy_push_state(DATA_DIVISION_STATE);
@@ -1443,19 +1420,6 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 	. {}
 }
 
- /*
-<INCLUDE_STATE>{
-	(\r\n|\n) {   }
-
-	{INCFILE}[ ]*"." {
-		driver->commandname = "INCFILE";
-		driver->incfilename = std::string(yytext) + ".";
-		__yy_pop_state();
-	    return yy::gix_esql_parser::make_COPY_FILE(loc);
-	}
-}
- */
-
 <PICTURE_STATE>{
   "IS" {
 	/* ignore */
@@ -1470,6 +1434,8 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 }
 
 	/* default rules */
+
+
 
 <*>(\r\n|\n) {
 	
