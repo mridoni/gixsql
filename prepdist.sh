@@ -29,7 +29,7 @@ EOF
 
 rm -f $SCRIPT_DIR/extra_files.mk && touch $SCRIPT_DIR/extra_files.mk
 
-echo "DOC_FILES = doc/README" >> $SCRIPT_DIR/extra_files.mk
+echo "DOC_FILES = doc/README LICENSE" >> $SCRIPT_DIR/extra_files.mk
 echo "" >> $SCRIPT_DIR/extra_files.mk
 echo "EXAMPLES_FILES = \\"  >> $SCRIPT_DIR/extra_files.mk
 
