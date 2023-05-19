@@ -51,6 +51,17 @@
 #endif
 #endif
 
+// This is a temporary fix to disable format security for a couple of functions in this file
+#ifdef __GNUC__
+# pragma GCC diagnostic push
+# ifndef __clang__ 
+#  pragma GCC diagnostic ignored "-Wformat-security"
+# else
+#  pragma clang diagnostic ignored "-Wformat-security"
+# endif 
+#endif 
+
+
 extern char type_tc_negative_final_number[];
 
 void insert_decimal_point(char *, int, int);
