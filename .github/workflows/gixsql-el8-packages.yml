@@ -1,0 +1,116 @@
+name: gixsql-el-packages
+
+on:
+  workflow_dispatch
+  
+#  push:
+#    branches: [ "main" ]
+#  pull_request:
+#    branches: [ "main" ]
+
+env:
+  GIXSQLMAJ: 1
+  GIXSQLMIN: 0
+  GIXSQLREL: 20b
+  GIX_REVISION: ${{ github.run_attempt }}
+  GIXSQL_BRANCH: ${{ github.ref_name }}
+  INSTALL_PREFIX: usr
+
+permissions:
+  contents: read
+
+jobs:
+
+  el-8-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:8.7
+
+    steps:
+    
+    - name: Build
+      env:
+        DIST: el8
+        ARCH: x86_64
+      run: |
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        export WORKSPACE=$(pwd)
+        yum -y install epel-release
+        yum repolist
+        yum install -y gcc gcc-c++ make automake autoconf libtool pkg-config postgresql-devel mariadb-devel unixODBC-devel flex spdlog-devel fmt-devel git wget diffutils rpmdevtools rpmlint
+        wget https://ftp.gnu.org/gnu/bison/bison-3.7.6.tar.gz -O bison-3.7.6.tar.gz
+        tar xzf bison-3.7.6.tar.gz
+        pushd bison-3.7.6
+        ./configure --prefix=/usr
+        make && make install    
+        popd
+        DEBUG=1 rpmdev-setuptree
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} gixsql
+        pushd gixsql
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
+        make -j$(nproc) distcheck
+        popd
+        cp -v ./gixsql/gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}.tar.gz $HOME/rpmbuild/SOURCES/
+        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $HOME/rpmbuild/SPECS/gixsql.spec
+        rpmbuild -bb $HOME/rpmbuild/SPECS/gixsql.spec
+        
+    - name: Archive production artifacts
+      env:
+          DIST: el8
+          ARCH: x86_64
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.${{ env.ARCH }}
+        path: |
+          /github/home/rpmbuild/RPMS/${{ env.ARCH }}/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.${{ env.ARCH }}.rpm
+
+  el-8-src:
+    runs-on: ubuntu-latest
+    container:
+      image: almalinux:8.7
+
+    steps:
+    
+    - name: Build
+      env:
+        DIST: el8
+      run: |
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        export WORKSPACE=$(pwd)
+        yum -y install epel-release
+        yum repolist
+        yum install -y gcc gcc-c++ make automake autoconf libtool pkg-config postgresql-devel mariadb-devel unixODBC-devel flex spdlog-devel fmt-devel git wget diffutils rpmdevtools rpmlint
+        wget https://ftp.gnu.org/gnu/bison/bison-3.7.6.tar.gz -O bison-3.7.6.tar.gz
+        tar xzf bison-3.7.6.tar.gz
+        pushd bison-3.7.6
+        ./configure --prefix=/usr
+        make && make install    
+        popd
+        DEBUG=1 rpmdev-setuptree
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} gixsql
+        pushd gixsql
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
+        make -j$(nproc) distcheck
+        popd
+        cp -v ./gixsql/gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}.tar.gz $HOME/rpmbuild/SOURCES/
+        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $HOME/rpmbuild/SPECS/gixsql.spec
+        rpmbuild -bs $HOME/rpmbuild/SPECS/gixsql.spec
+        
+    - name: Archive production artifacts (source)
+      env:
+          DIST: el8
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-1.${{ env.DIST }}.src
+        path: |
+          /github/home/rpmbuild/SRPMS/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.src.rpm
