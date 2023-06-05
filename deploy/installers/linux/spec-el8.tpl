@@ -1,6 +1,6 @@
 Name:           gixsql
 Version:        #GIXSQLMAJ#.#GIXSQLMIN#.#GIXSQLREL#
-Release:        1%{?dist}
+Release:        2%{?dist}
 Summary:        GixSQL is an ESQL preprocessor for GnuCOBOL
 
 License:        GPL-3.0-or-later AND LGPL-3.0-or-later
