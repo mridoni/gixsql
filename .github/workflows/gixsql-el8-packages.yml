@@ -15,6 +15,7 @@ env:
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   INSTALL_PREFIX: usr
+  PKGVER: 2
 
 permissions:
   contents: read
@@ -38,6 +39,7 @@ jobs:
         yum -y install epel-release
         yum repolist
         yum install -y gcc gcc-c++ make automake autoconf libtool pkg-config postgresql-devel mariadb-devel unixODBC-devel flex spdlog-devel fmt-devel git wget diffutils rpmdevtools rpmlint
+        gcc -v
         wget https://ftp.gnu.org/gnu/bison/bison-3.7.6.tar.gz -O bison-3.7.6.tar.gz
         tar xzf bison-3.7.6.tar.gz
         pushd bison-3.7.6
@@ -56,7 +58,10 @@ jobs:
         make -j$(nproc) distcheck
         popd
         cp -v ./gixsql/gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}.tar.gz $HOME/rpmbuild/SOURCES/
-        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $HOME/rpmbuild/SPECS/gixsql.spec
+        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" | sed "s/#PKGVER#/${{ env.PKGVER }}/g" > $HOME/rpmbuild/SPECS/gixsql.spec
+        echo "==== $HOME/rpmbuild/SPECS/gixsql.spec ===="
+        cat $HOME/rpmbuild/SPECS/gixsql.spec
+        echo "===="
         rpmbuild -bb $HOME/rpmbuild/SPECS/gixsql.spec
         
     - name: Archive production artifacts
@@ -65,9 +70,9 @@ jobs:
           ARCH: x86_64
       uses: actions/upload-artifact@v3
       with:
-        name: gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.${{ env.ARCH }}
+        name: gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.PKGVER }}.${{ env.DIST }}.${{ env.ARCH }}
         path: |
-          /github/home/rpmbuild/RPMS/${{ env.ARCH }}/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.${{ env.ARCH }}.rpm
+          /github/home/rpmbuild/RPMS/${{ env.ARCH }}/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.PKGVER }}.${{ env.DIST }}.${{ env.ARCH }}.rpm
 
   el-8-src:
     runs-on: ubuntu-latest
@@ -103,7 +108,7 @@ jobs:
         make -j$(nproc) distcheck
         popd
         cp -v ./gixsql/gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}.tar.gz $HOME/rpmbuild/SOURCES/
-        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" > $HOME/rpmbuild/SPECS/gixsql.spec
+        cat ./gixsql/deploy/installers/linux/spec-${DIST}.tpl |  sed "s/#GIXSQLMAJ#/$GIXSQLMAJ/g" | sed "s/#GIXSQLMIN#/$GIXSQLMIN/g" | sed "s/#GIXSQLREL#/$GIXSQLREL/g" | sed "s/#GIX_REVISION#/$GIX_REVISION/g" | sed "s/#PKGVER#/${{ env.PKGVER }}/g" > $HOME/rpmbuild/SPECS/gixsql.spec
         rpmbuild -bs $HOME/rpmbuild/SPECS/gixsql.spec
         
     - name: Archive production artifacts (source)
@@ -111,6 +116,6 @@ jobs:
           DIST: el8
       uses: actions/upload-artifact@v3
       with:
-        name: gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-1.${{ env.DIST }}.src
+        name: gixsql-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.PKGVER }}.${{ env.DIST }}.src
         path: |
-          /github/home/rpmbuild/SRPMS/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-1.${{ env.DIST }}.src.rpm
+          /github/home/rpmbuild/SRPMS/gixsql-${{ env.GIXSQLMAJ }}.${{ env.GIXSQLMIN }}.${{ env.GIXSQLREL }}-${{ env.PKGVER }}.${{ env.DIST }}.src.rpm
