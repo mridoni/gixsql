@@ -21,7 +21,7 @@ GixSQL is an ESQL preprocessor and a series of runtime libraries to enable GnuCO
 chmod 755 $RPM_BUILD_ROOT/prepbuild.sh && $RPM_BUILD_ROOT/prepbuild.sh
 chmod 755 $RPM_BUILD_ROOT/prepdist.sh && $RPM_BUILD_ROOT/prepdist.sh
 %configure
-%make_build
+%make_build CXXFLAGS="-DNDEBUG"
 
 
 %install
