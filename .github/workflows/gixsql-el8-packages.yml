@@ -15,7 +15,7 @@ env:
   GIX_REVISION: ${{ github.run_attempt }}
   GIXSQL_BRANCH: ${{ github.ref_name }}
   INSTALL_PREFIX: usr
-  PKGVER: 2
+  PKGVER: 3
 
 permissions:
   contents: read
