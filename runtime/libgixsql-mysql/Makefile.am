@@ -5,6 +5,6 @@ libgixsql_mysql_la_SOURCES = DbInterfaceManagerMySQL.cpp  DbInterfaceMySQL.cpp  
 
 libgixsql_mysql_la_CXXFLAGS = $(MYSQL_CFLAGS) $(MARIADB_CFLAGS) -I$(top_srcdir)/common -I$(top_srcdir)/runtime/libgixsql -std=c++17 -DSPDLOG_FMT_EXTERNAL -DNDEBUG
 libgixsql_mysql_la_LIBADD = $(MYSQL_LIBS) $(MARIADB_LIBS)
-libgixsql_mysql_la_LDFLAGS = -lfmt -no-undefined -avoid-version
+libgixsql_mysql_la_LDFLAGS = -lfmt -lstdc++fs -no-undefined -avoid-version
 
 

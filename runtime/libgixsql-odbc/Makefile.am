@@ -11,4 +11,4 @@ libgixsql_odbc_la_CXXFLAGS = $(ODBC_CFLAGS) -I$(top_srcdir)/common -I$(top_srcdi
 libgixsql_odbc_la_LIBADD = $(ODBC_LIBS) 
 endif
 
-libgixsql_odbc_la_LDFLAGS = -lfmt -no-undefined -avoid-version
+libgixsql_odbc_la_LDFLAGS = -lfmt -lstdc++fs -no-undefined -avoid-version
