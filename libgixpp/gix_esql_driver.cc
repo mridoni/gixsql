@@ -560,6 +560,12 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 
 int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 {
+	if (pic == NULL || str.length() > 50) {
+		/* arbitrary limit; note on implementation limits: COBOL85 (30),
+  		   COBOL2002 and most others (50), COBOL2014 (63), GC (255) */
+		return 0;
+	}
+	
 	const char *p = str.c_str();
 
 	int			i;
@@ -573,10 +579,6 @@ int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 	int digits = 0;
 	int scale = 0;
 	int allocated = 0;
-
-	if (str.length() > 50) {
-		return 0;
-	}
 
 	for (; *p; p++) {
 		n = 1;
