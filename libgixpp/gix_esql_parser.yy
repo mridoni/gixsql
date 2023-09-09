@@ -155,7 +155,9 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token COMP_5			"COMP-5"
 %token COMP
 %token<uint64_t> CHAR
+%token<uint64_t> CHARF
 %token<uint64_t> VARCHAR
+%token<uint64_t> VARCHAR2
 %token<uint64_t> BINARY
 %token<uint64_t> VARBINARY
 %token<uint64_t> FLOAT
@@ -493,6 +495,10 @@ DECLARE_VAR TOKEN IS sql_type END_EXEC {
 		stmt->endLine = x->defined_at_source_line;
 		driver->parser_data()->exec_list()->push_back(stmt);
 	}
+}
+| DECLARE_VAR error END_EXEC
+{
+	yyerrok;
 }
 ;
 
@@ -911,7 +917,13 @@ sql_type:
   BINARY	{ $$ = (TYPE_SQL_BINARY << 60) + $1; }
 | VARBINARY { $$ = (TYPE_SQL_VARBINARY << 60) + $1; }
 | CHAR		{ $$ = (TYPE_SQL_CHAR << 60) + $1; }
+| CHARF		{ $$ = (TYPE_SQL_CHAR << 60) + $1;
+		driver->warning(@$, "Unsupported SQL TYPE, will handle CHARF as CHAR."); 
+}
 | VARCHAR	{ $$ = (TYPE_SQL_VARCHAR << 60) + $1; }
+| VARCHAR2{ $$ = (TYPE_SQL_VARCHAR << 60) + $1;
+		driver->warning(@$, "Unsupported SQL TYPE, will handle VARCHAR2 as VARCHAR."); 
+}
 | INTEGER  	{ $$ = (TYPE_SQL_INT << 60) + $1; }
 | FLOAT   	{ $$ = (TYPE_SQL_FLOAT << 60) + $1; }
 | DECIMAL  	{ $$ = (TYPE_SQL_DECIMAL << 60) + $1; }
