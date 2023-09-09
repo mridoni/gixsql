@@ -55,15 +55,19 @@
 #include "Logger.h"
 
 #include "spdlog/sinks/null_sink.h"
+#include "spdlog/sinks/rotating_file_sink.h"
 
 #include "cobol_var_types.h"
+#include "GlobalEnv.h"
 
 #define FAIL_ON_ERROR(_rc, _st, _dbi, _err) if (_rc != DBERR_NO_ERROR) { \
 										setStatus(_st, _dbi, _err); \
 										return RESULT_FAILED; \
 								   }
 
-#define CHECK_LIB_INIT() if (!__lib_initialized) lib_initialize();
+#define CHECK_LIB_INIT() if (!__lib_initialized) gixsql_initialize();
+
+bool __lib_initialized = false;
 
 struct query_info {
 	char* pname;  // default
@@ -73,7 +77,7 @@ struct query_info {
 
 static ConnectionManager connection_manager;
 static CursorManager cursor_manager;
-static bool __lib_initialized = false;
+
 
 static void sqlca_initialize(struct sqlca_t*);
 static int setStatus(struct sqlca_t* st, std::shared_ptr<IDbInterface> dbi, int err);
@@ -95,9 +99,11 @@ static int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection
 
 static std::string get_hostref_or_literal(void* data, int connection_id_tl);
 
-static bool lib_initialize();
+static bool gixsql_initialize();
 
-int __norec_sqlcode = GIXSQL_DEFAULT_NO_REC_CODE;
+//int __norec_sqlcode = GIXSQL_DEFAULT_NO_REC_CODE;
+
+GlobalEnv* __global_env;
 
 static void
 sqlca_initialize(struct sqlca_t* sqlca)
@@ -154,7 +160,7 @@ GIXSQLConnect(struct sqlca_t* st, void* d_data_source, int data_source_tl, void*
 	}
 
 	std::string dbtype = data_source->getDbType();
-	std::shared_ptr<IDbInterface> dbi = DbInterfaceFactory::getInterface(dbtype, gixsql_logger);
+	std::shared_ptr<IDbInterface> dbi = DbInterfaceFactory::getInterface(dbtype, __global_env, gixsql_logger);
 	if (dbi == NULL) {
 		spdlog::error("Cannot initialize driver library, aborting, DB type is [{}]", dbtype);
 		setStatus(st, NULL, DBERR_CONN_INVALID_DBTYPE);
@@ -206,7 +212,7 @@ int _gixsqlConnectReset(struct sqlca_t* st, const std::string& connection_id)
 	std::shared_ptr<IDbInterface> dbi = conn->getDbInterface();
 	int rc = dbi->reset();
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CONN_RESET_FAILED)
-	int dbi_uc = dbi.use_count();
+		int dbi_uc = dbi.use_count();
 	int cc = conn.use_count();
 	conn->setDbInterface(nullptr);
 	conn->setOpened(false);
@@ -316,7 +322,7 @@ static int _gixsqlExec(const std::shared_ptr<IConnection>& conn, struct sqlca_t*
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -352,7 +358,7 @@ GIXSQLExecParams(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 		return RESULT_FAILED;
 	}
 
-	
+
 	return _gixsqlExecParams(conn, st, _query, nParams);
 }
 
@@ -387,11 +393,11 @@ static int _gixsqlExecParams(const std::shared_ptr<IConnection>& conn, struct sq
 	rc = dbi->exec_params(query, param_types, param_values, param_lengths, param_flags);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
-int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl, char* stmt_name, int nParams, std::shared_ptr<IDbInterface>&  r_dbi)
+int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl, char* stmt_name, int nParams, std::shared_ptr<IDbInterface>& r_dbi)
 {
 	CHECK_LIB_INIT();
 
@@ -442,11 +448,11 @@ int _gixsqlExecPrepared(sqlca_t* st, void* d_connection_id, int connection_id_tl
 	if (!dbi)
 		FAIL_ON_ERROR(1, st, dbi, DBERR_SQL_ERROR)
 
-	rc = dbi->exec_prepared(stmt_name, param_types, param_values, param_lengths, param_flags);
+		rc = dbi->exec_prepared(stmt_name, param_types, param_values, param_lengths, param_flags);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_SQL_ERROR)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
-	
+		setStatus(st, NULL, DBERR_NO_ERROR);
+
 	r_dbi = dbi;
 	return RESULT_SUCCESS;
 }
@@ -507,7 +513,7 @@ LIBGIXSQL_API int GIXSQLExecPreparedInto(sqlca_t* st, void* d_connection_id, int
 	uint64_t datalen = 0;
 	int sqlcode = 0;
 	bool has_invalid_column_data = false;
-	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + __global_env->varlen_length_sz() + 1;
 
 	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
@@ -755,8 +761,8 @@ GIXSQLCursorOpen(struct sqlca_t* st, char* cname)
 	rc = dbi->cursor_open(cursor);
 	cursor->setOpened(rc == DBERR_NO_ERROR);
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_OPEN_CURSOR_FAILED)
-	
-	setStatus(st, NULL, DBERR_NO_ERROR);
+
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -797,7 +803,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 	}
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_FETCH_ROW_FAILED)
 
-	int nResParams = _res_sql_var_list.size();
+		int nResParams = _res_sql_var_list.size();
 	int nfields = dbi->get_num_fields(cursor);
 	if (nfields != nResParams) {
 		spdlog::error("ResParams({}) and fields({}) are different", nResParams, nfields);
@@ -805,7 +811,7 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 		return RESULT_FAILED;
 	}
 
-	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + __global_env->varlen_length_sz() + 1;
 	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	std::vector<SqlVar*>::iterator it;
 	int i = 0;
@@ -878,7 +884,7 @@ GIXSQLCursorClose(struct sqlca_t* st, char* cname)
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_CLOSE_CURSOR_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -988,7 +994,7 @@ GIXSQLExecSelectIntoOne(struct sqlca_t* st, void* d_connection_id, int connectio
 	uint64_t datalen = 0;
 	int sqlcode = 0;
 	bool has_invalid_column_data = false;
-	uint64_t bsize = _res_sql_var_list.getMaxLength() + VARLEN_LENGTH_SZ + 1;
+	uint64_t bsize = _res_sql_var_list.getMaxLength() + __global_env->varlen_length_sz() + 1;
 	std::unique_ptr<char[]> buffer = std::make_unique<char[]>(bsize);
 	for (int i = 0; i < _res_sql_var_list.size(); i++) {
 		SqlVar* v = _res_sql_var_list.at(i);
@@ -1042,7 +1048,7 @@ GIXSQLDisconnect(struct sqlca_t* st, void* d_connection_id, int connection_id_tl
 
 	FAIL_ON_ERROR(rc, st, dbi, DBERR_DISCONNECT_FAILED)
 
-	setStatus(st, NULL, DBERR_NO_ERROR);
+		setStatus(st, NULL, DBERR_NO_ERROR);
 	return RESULT_SUCCESS;
 }
 
@@ -1334,7 +1340,7 @@ static int setStatus(struct sqlca_t* st, std::shared_ptr<IDbInterface> dbi, int 
 	}
 
 	if (err == DBERR_NO_DATA)
-		st->sqlcode = __norec_sqlcode;
+		st->sqlcode = __global_env->norec_sqlcode();
 
 	return RESULT_SUCCESS;
 }
@@ -1421,14 +1427,15 @@ std::string get_hostref_or_literal(void* data, int l)
 	}
 
 	// variable-length fields (negative length)
-	void* actual_data = (char*)data + VARLEN_LENGTH_SZ;
-	VARLEN_LENGTH_T* len_addr = (VARLEN_LENGTH_T*)data;
-	int actual_len = (*len_addr);
+	void* actual_data = (char*)data + __global_env->varlen_length_sz();
+	//VARLEN_LENGTH_T* len_addr = (VARLEN_LENGTH_T*)data;
+	//int actual_len = (*len_addr);
+	int actual_len = __global_env->varlen_length_sz_short() ? (*((uint16_t*)data)) : (*((uint32_t*)data));
 
 	// Should we check the actual length against the defined length?
 	//...
 
-	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
+	std::string t = std::string((char*)actual_data, (-l) - __global_env->varlen_length_sz());
 	return t;
 }
 
@@ -1496,17 +1503,88 @@ bool get_log_truncation_flag() {
 			return DEFAULT_GIXSQL_LOG_TRUNC;
 }
 
-void setup_no_rec_code()
+bool get_log_rotation_flag() {
+	char* c = getenv("GIXSQL_LOG_ROTATE");
+	if (!c) {
+		return DEFAULT_GIXSQL_LOG_ROTATE;
+	}
+
+	std::string s = to_lower(c);
+	if (s == "on" || s == "1") {
+		return true;
+	}
+	else
+		if (s == "off" || s == "0") {
+			return false;
+		}
+		else
+			return DEFAULT_GIXSQL_LOG_ROTATE;
+}
+
+void get_log_rotation_parameters(unsigned long* max_size, int* max_files, bool *rotate_on_open)
 {
-	char* c = getenv("GIXSQL_NOREC_CODE");
-	if (c) {
-		int i = atoi(c);
-		if (i != 0 && i >= -999999999 && i <= 999999999) {
-			__norec_sqlcode = i;
-			spdlog::info("GixSQL: \"no record found\" code set to {})", __norec_sqlcode);
+	char* c = getenv("GIXSQL_LOG_ROTATE_MAX_SIZE");
+	if (!c) {
+		*max_size = DEFAULT_GIXSQL_LOG_ROTATE_MAX_SIZE;
+	}
+	else {
+		char suffix = DEFAULT_GIXSQL_LOG_SIZE_SUFFIX;
+		if (strlen(c) > 1 && (c[strlen(c) - 1] == 'B' || c[strlen(c) - 1] == 'K' || c[strlen(c) - 1] == 'M' || c[strlen(c) - 1] == 'G')) {
+			suffix = c[strlen(c) - 1];
+			c[strlen(c) - 1] = '\0';
 		}
 
+		int multiplier = 1024 * 1024;
+		switch (suffix)
+		{
+			case 'B':
+				multiplier = 1;
+				break;
+
+			case 'K':
+				multiplier = 1024;
+				break;
+
+			case 'M':
+				multiplier = 1024 * 1024;
+				break;
+
+			case 'G':
+				multiplier = 1024 * 1024 * 1024;
+				break;
+		}
+
+		*max_size = atoi(c) ? atoi(c) * multiplier : DEFAULT_GIXSQL_LOG_ROTATE_MAX_SIZE;
 	}
+
+	// ***
+
+	c = getenv("GIXSQL_LOG_ROTATE_MAX_FILES");
+	if (!c) {
+		*max_files = DEFAULT_GIXSQL_LOG_ROTATE_MAX_FILES;
+	}
+	else {
+		*max_files = atoi(c) ? atoi(c) : DEFAULT_GIXSQL_LOG_ROTATE_MAX_FILES;
+	}
+
+	// ***
+
+	c = getenv("GIXSQL_LOG_ROTATE_ON_OPEN");
+	if (!c) {
+		*rotate_on_open = DEFAULT_GIXSQL_LOG_ROTATE_ON_OPEN;
+	}
+
+	std::string s = to_lower(c);
+	if (s == "on" || s == "1") {
+		*rotate_on_open = true;
+	}
+	else
+		if (s == "off" || s == "0") {
+			*rotate_on_open = false;
+		}
+		else
+			*rotate_on_open = DEFAULT_GIXSQL_LOG_ROTATE_ON_OPEN;
+
 }
 
 static bool is_signed_numeric(CobolVarType t)
@@ -1519,13 +1597,15 @@ static bool is_signed_numeric(CobolVarType t)
 		t == CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD;
 }
 
-static bool lib_initialize()
+static bool gixsql_initialize()
 {
 	int pid = getpid();
 
 	spdlog::sink_ptr gixsql_std_sink;
 
 	bool truncate_log = get_log_truncation_flag();
+	bool rotate_log = get_log_rotation_flag();
+
 	spdlog::level::level_enum level = get_log_level();
 	if (level == spdlog::level::off) {
 		gixsql_std_sink = std::make_shared<spdlog::sinks::null_sink_st>();
@@ -1536,10 +1616,19 @@ static bool lib_initialize()
 			filename = string_replace(filename, "$$", std::to_string(pid));
 		}
 
-		gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, truncate_log);
+		if (!rotate_log) {
+			gixsql_std_sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(filename, truncate_log);
+		}
+		else
+		{
+			unsigned long rotate_max_size;
+			int rotate_max_files;
+			bool rotate_on_open;
+			get_log_rotation_parameters(&rotate_max_size, &rotate_max_files, &rotate_on_open);
+			gixsql_std_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(filename, rotate_max_size, rotate_max_files, rotate_on_open);
+		}
 	}
 
-	//gixsql_logger = std::make_shared<spdlog::logger>("libgixsql", gixsql_std_sink);
 	gixsql_logger = std::shared_ptr<spdlog::logger>(new spdlog::logger("libgixsql", gixsql_std_sink), [](spdlog::logger* p) {
 		if (p != nullptr) {
 			p->info("Terminating logger");
@@ -1555,20 +1644,18 @@ static bool lib_initialize()
 	spdlog::set_level(level);
 	spdlog::info("GixSQL logger started (PID: {})", pid);
 
-	// customize default values
-	setup_no_rec_code();
+	__global_env = new GlobalEnv();
 
 	__lib_initialized = true;
 
 	return true;
 }
 
-#if 0
+#if 1
 void gixsql_shutdown()
 {
-	fprintf(stderr, "shutting down\n");
-	connection_manager.clear();
-	cursor_manager.clear();
-	DbInterfaceFactory::clear();
+	//connection_manager.clear();
+	//cursor_manager.clear();
+	//DbInterfaceFactory::clear();
 }
 #endif

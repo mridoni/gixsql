@@ -186,6 +186,8 @@ struct cb_field_t;
 
 typedef cb_field_t *cb_field_ptr;
 
+#ifndef DATA_SECTION_TYPE
+#define DATA_SECTION_TYPE
 enum class DataSectionType
 {
 	Unknown = 0,
@@ -194,6 +196,7 @@ enum class DataSectionType
 	LinkageSection,
 	FileSection
 };
+#endif
 
 struct cb_field_t
 {
@@ -241,7 +244,9 @@ struct connect_to_info_t
 #define _GIXPP_BLOCK_
 
 enum class PreprocessedBlockType {
-	ESQL = 1
+	ESQL = 1,
+	CICS = 2,
+	DLI = 3
 };
 
 struct PreprocessedBlockInfo {
@@ -258,6 +263,7 @@ struct PreprocessedBlockInfo {
 	int pp_gen_end_line = 0;
 	
 	PreprocessedBlockType type;
+
 	std::string command;
 };
 

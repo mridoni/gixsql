@@ -71,7 +71,7 @@ public:
 	DbInterfaceMySQL();
 	~DbInterfaceMySQL();
 
-	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
+	virtual int init(const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger) override;
 	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;
@@ -99,6 +99,7 @@ public:
 	virtual bool getIndexes(std::string schema, std::string tabl, std::vector<IndexInfo*>& idxs) override;
 
 private:
+
 	MYSQL* connaddr = nullptr;
 
 	std::shared_ptr<IDataSourceInfo> data_source_info;

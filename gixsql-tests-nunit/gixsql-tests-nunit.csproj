@@ -35,6 +35,7 @@
     <None Remove="data\TSQL005A.cbl" />
     <None Remove="data\TSQL005B.cbl" />
     <None Remove="data\TSQL005C.cbl" />
+    <None Remove="data\TSQL005D.cbl" />
     <None Remove="data\TSQL006A.cbl" />
     <None Remove="data\TSQL006B.cbl" />
     <None Remove="data\TSQL006C.cbl" />
@@ -117,6 +118,7 @@
     <EmbeddedResource Include="data\ssl\pgsql-test.key" />
     <EmbeddedResource Include="data\ssl\root-ca.crt" />
     <EmbeddedResource Include="data\ssl\root-ca.key" />
+    <EmbeddedResource Include="data\TSQL005D.cbl" />
     <EmbeddedResource Include="data\TSQL043A.cbl" />
     <EmbeddedResource Include="data\TSQL042A.cbl" />
     <EmbeddedResource Include="data\TSQL001A.cbl" />

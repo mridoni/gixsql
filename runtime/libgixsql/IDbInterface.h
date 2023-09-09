@@ -33,6 +33,7 @@ USA.
 #include "IDbManagerInterface.h"
 #include "IResultSetContextData.h"
 #include "cobol_var_types.h"
+#include "GlobalEnv.h"
 
 using std_binary_data = std::vector<unsigned char>;
 
@@ -126,7 +127,7 @@ class IDbInterface
 public:
 	virtual ~IDbInterface() { }
 
-	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) = 0;
+	virtual int init(const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger) = 0;
 	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) = 0;
 	virtual int reset() = 0;
 	virtual int terminate_connection() = 0;
@@ -162,6 +163,7 @@ public:
 protected:
 
 	std::shared_ptr<spdlog::logger> lib_logger;
+	GlobalEnv *global_env = nullptr;
 
 private:
 	void *native_lib_ptr = nullptr;	

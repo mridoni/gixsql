@@ -72,7 +72,7 @@ public:
 	DbInterfaceODBC();
 	~DbInterfaceODBC();
 
-	virtual int init(const std::shared_ptr<spdlog::logger>& _logger) override;
+	virtual int init(const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger) override;
 	virtual int connect(std::shared_ptr<IDataSourceInfo>, std::shared_ptr<IConnectionOptions>) override;
 	virtual int reset() override;
 	virtual int terminate_connection() override;

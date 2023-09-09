@@ -51,6 +51,11 @@ void ESQLParserData::set_program_id(std::string id)
 	_program_id = id;
 }
 
+std::string ESQLParserData::parsed_filename() const
+{
+	return _parsed_filename;
+}
+
 std::map<std::string, srcLocation>& ESQLParserData::paragraphs()
 {
 	return _paragraphs;
@@ -296,15 +301,44 @@ bool ESQLParserData::get_actual_field_data(cb_field_ptr f, CobolVarType* type, i
 
 		if (f_actual) {
 			gethostvarianttype(f_actual, type);
-			*size = f_actual->picnsize + VARLEN_LENGTH_SZ;
+			*size = f_actual->picnsize + (this->job_params()->opt_varying_len_sz_short ? S_VARLEN_LENGTH_SZ : L_VARLEN_LENGTH_SZ);
 			*scale = f_actual->scale;
 		}
 		else {
 			*type = CobolVarType::COBOL_TYPE_ALPHANUMERIC;
-			*size = f->picnsize + VARLEN_LENGTH_SZ;
+			*size = f->picnsize + this->job_params()->opt_varying_len_sz_short ? S_VARLEN_LENGTH_SZ : L_VARLEN_LENGTH_SZ;
 			*scale = f->scale;
 		}
 
 	}
 	return is_varlen;
+}
+
+void ESQLParserData::addFileDependency(std::string f, std::string d)
+{
+	std::filesystem::path path(f);
+	std::filesystem::path canonicalPath = std::filesystem::weakly_canonical(path);
+	std::string npath = canonicalPath.make_preferred().string();
+
+	std::shared_ptr<std::vector<std::string>> l;
+	if (_file_deps.find(npath) != _file_deps.end()) {
+		l = _file_deps[npath];
+	}
+	else
+	{
+		l = std::make_shared<std::vector<std::string>>();
+		_file_deps[npath] = l;
+	}
+
+	l->push_back(d);
+}
+
+const std::map<std::string, std::shared_ptr<std::vector<std::string>>>& ESQLParserData::getFileDependencies()
+{
+	return _file_deps;
+}
+
+void ESQLParserData::set_parsed_filename(const std::string& filename)
+{
+	_parsed_filename = filename;
 }

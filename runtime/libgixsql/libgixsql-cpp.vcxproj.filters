@@ -39,6 +39,7 @@
     </ClCompile>
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="IConnectionOptions.cpp" />
+    <ClCompile Include="GlobalEnv.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Connection.h">
@@ -104,6 +105,7 @@
     <ClInclude Include="custom_formatters.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="GlobalEnv.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="cpp.hint" />

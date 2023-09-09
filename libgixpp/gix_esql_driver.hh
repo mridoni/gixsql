@@ -74,14 +74,7 @@ public:
     virtual ~gix_esql_driver ();
 
     void setParser(TPESQLParser* p);
-
-#pragma region Options
-
-    // We only have here the flags connected to parsing, other flags
-    // are handled in the code generation module
-    bool opt_preprocess_copy_files;
-
-#pragma endregion
+    TPESQLParser* getParser();
 
 #pragma region Parse/Scanner stuff
     int result;
@@ -141,6 +134,7 @@ public:
 
     std::shared_ptr<ESQLParserData> parser_data();
 
+
     GixPreProcessor* preprocessor() const;
 
     int startlineno;
@@ -190,8 +184,9 @@ public:
 
 #pragma endregion
 
-#pragma region Management
+#pragma region Misc
 
+    std::string try_resolve_included_file(const std::string& f);
 
 #pragma endregion
 
@@ -200,5 +195,6 @@ private:
     std::shared_ptr<ESQLParserData> _parser_data;
     TPESQLParser* parser = nullptr;
     GixPreProcessor* pp_inst = nullptr;
+
 
 };

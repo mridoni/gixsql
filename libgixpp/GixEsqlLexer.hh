@@ -39,93 +39,97 @@ USA.
 
 struct srcLocation
 {
-    std::string filename;
-    int line;
-    bool is_included;
+	std::string filename;
+	int line;
+	bool is_included;
 };
 
 class GixEsqlLexer : public yyFlexLexer {
 public:
-    // Use the superclass's constructor:
-    //using yyFlexLexer::yyFlexLexer;
+	// Use the superclass's constructor:
+	//using yyFlexLexer::yyFlexLexer;
 
-    GixEsqlLexer() : yyFlexLexer()
-    {
-        driver = nullptr;
-    }
+	GixEsqlLexer() : yyFlexLexer()
+	{
+		driver = nullptr;
+	}
 
-    gix_esql_driver *driver;
+	gix_esql_driver* driver;
 
-    // Provide the interface to `yylex`; `flex` will emit the
-    // definition into `gix_esql_scanner.cc`:
-    //yy::gix_esql_parser::symbol_type yylex(gix_esql_driver& driver);
-    yy::gix_esql_parser::symbol_type yylex(gix_esql_driver *driver);
-    
-    void setDriver(gix_esql_driver *_driver)
-    {
-	    driver = _driver;
-    }
+	// Provide the interface to `yylex`; `flex` will emit the
+	// definition into `gix_esql_scanner.cc`:
+	//yy::gix_esql_parser::symbol_type yylex(gix_esql_driver& driver);
+	yy::gix_esql_parser::symbol_type yylex(gix_esql_driver* driver);
 
-    void setReservedWordsList(const std::vector<std::string> &rwl) { reserved_words_list = rwl; }
+	void setDriver(gix_esql_driver* _driver)
+	{
+		driver = _driver;
+	}
 
-    int LexerInput(char *buf, int max_size);
+	void setReservedWordsList(const std::vector<std::string>& rwl) { reserved_words_list = rwl; }
 
-    void push_state(int s) { this->yy_push_state(s); }
 
-    void pushNewFile(const std::string file_name, gix_esql_driver *driver, bool resolve_as_copy, bool is_included);
+	int LexerInput(char* buf, int max_size);
 
-    std::stack<srcLocation> src_location_stack;
+	void push_state(int s) { this->yy_push_state(s); }
 
-    int getLineNo() { return yylineno;  }
+	void pushNewFile(const std::string file_name, gix_esql_driver* driver, bool resolve_as_copy, bool is_included);
 
-    std::string cur_line_content;
+	std::stack<srcLocation> src_location_stack;
+
+	int getLineNo() { return yylineno; }
+
+	std::string cur_line_content;
 
 
 
 
 private:
-    bool isParagraph(const std::string &text);
+	bool isParagraph(const std::string& text);
 
-    std::vector<std::string> reserved_words_list;
+	std::vector<std::string> reserved_words_list;
 
-    bool is_current_cmd_dml();
-    bool is_current_cmd_select();
-    bool is_current_cmd_passthru();
+	bool is_current_cmd_dml();
+	bool is_current_cmd_select();
+	bool is_current_cmd_passthru();
+
+	bool is_continued_line(char* buff, char* quote_char, std::string& pline);
+	bool append_continuation_line(std::string& string, char quote_char, char* buff, bool* is_terminal);
 
 #if defined (_DEBUG) && defined (VERBOSE)
 
-    #define __YY_START (((yy_start) - 1) / 2)
+#define __YY_START (((yy_start) - 1) / 2)
 
-    const char *yy_state_desc(int i)
-    {
-        if (i >= 0 && i < NUM_YY_STATES) {
-            return yy_state_descs[i];
-        }
+	const char* yy_state_desc(int i)
+	{
+		if (i >= 0 && i < NUM_YY_STATES) {
+			return yy_state_descs[i];
+		}
 
-        return "(UNKNOWN_STATE)";
-    }
+		return "(UNKNOWN_STATE)";
+	}
 
-    void __yy_push_state(int newstate)
-    {
-        cur_token_list.clear();
-        int oldstate = __YY_START;
-        yy_push_state(newstate);
-        fprintf(stderr, "%04d =============>>> PUSHING STATE %s -> %s\n", yylineno, yy_state_desc(oldstate), yy_state_desc(newstate));
-    }
+	void __yy_push_state(int newstate)
+	{
+		cur_token_list.clear();
+		int oldstate = __YY_START;
+		yy_push_state(newstate);
+		fprintf(stderr, "%04d =============>>> PUSHING STATE %s -> %s\n", yylineno, yy_state_desc(oldstate), yy_state_desc(newstate));
+	}
 
-    void __yy_pop_state()
-    {
-        //int oldstate = (!yy_start_stack) ? 0 : yy_top_state();
-        int oldstate = __YY_START;
-        yy_pop_state();
-        //int newstate = (!yy_start_stack) ? 0 : yy_top_state();
-        int newstate = __YY_START;
-        fprintf(stderr, "%04d =============<<< POPPING STATE: %s -> %s\n", yylineno, yy_state_desc(oldstate), yy_state_desc(newstate));
-    }
+	void __yy_pop_state()
+	{
+		//int oldstate = (!yy_start_stack) ? 0 : yy_top_state();
+		int oldstate = __YY_START;
+		yy_pop_state();
+		//int newstate = (!yy_start_stack) ? 0 : yy_top_state();
+		int newstate = __YY_START;
+		fprintf(stderr, "%04d =============<<< POPPING STATE: %s -> %s\n", yylineno, yy_state_desc(oldstate), yy_state_desc(newstate));
+	}
 
-    static const int NUM_YY_STATES = 17;
-    static const char *yy_state_descs[NUM_YY_STATES];
-    
+	static const int NUM_YY_STATES = 17;
+	static const char* yy_state_descs[NUM_YY_STATES];
+
 #else
 #define __yy_push_state(s) { yy_push_state(s); cur_token_list.clear(); }
 #define __yy_pop_state() { yy_pop_state(); cur_token_list.clear(); }

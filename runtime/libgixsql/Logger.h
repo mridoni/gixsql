@@ -26,9 +26,14 @@
 #include "spdlog/sinks/basic_file_sink.h"
 
 
-#define FMT_FILE_FUNC				"{}>{}: "
-#define DEFAULT_GIXSQL_LOG_FILE		"gixsql.log"
-#define DEFAULT_GIXSQL_LOG_LEVEL	spdlog::level::err
-#define DEFAULT_GIXSQL_LOG_TRUNC	false
+#define FMT_FILE_FUNC							"{}>{}: "
+#define DEFAULT_GIXSQL_LOG_FILE					"gixsql.log"
+#define DEFAULT_GIXSQL_LOG_LEVEL				spdlog::level::err
+#define DEFAULT_GIXSQL_LOG_TRUNC				false
+#define DEFAULT_GIXSQL_LOG_ROTATE				false
+#define DEFAULT_GIXSQL_LOG_ROTATE_MAX_SIZE		10
+#define DEFAULT_GIXSQL_LOG_ROTATE_MAX_FILES		5
+#define DEFAULT_GIXSQL_LOG_SIZE_SUFFIX			'M'
+#define DEFAULT_GIXSQL_LOG_ROTATE_ON_OPEN		true
 
 extern std::shared_ptr<spdlog::logger> gixsql_logger;

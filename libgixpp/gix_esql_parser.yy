@@ -561,11 +561,14 @@ host_reference  { $$ = driver->cb_host_list_add (driver->host_reference_list, $1
 incfile:
 EXECSQL INCLUDE INCLUDE_FILE END_EXEC{
 	driver->put_exec_list();
+	std::string resolved_file = driver->try_resolve_included_file(driver->incfilename);
+	driver->parser_data()->addFileDependency(driver->file, resolved_file);
 	driver->lexer.pushNewFile(driver->incfilename, driver, true, true);
 }
 | COPY { 
 	driver->put_exec_list(); 
-
+	std::string resolved_file = driver->try_resolve_included_file(driver->incfilename);
+	driver->parser_data()->addFileDependency(driver->file, resolved_file);
 	driver->lexer.pushNewFile(driver->incfilename, driver, true, false);
 }
 

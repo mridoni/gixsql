@@ -37,6 +37,7 @@ GixPreProcessor::GixPreProcessor()
 	verbose_debug = false;
 
 	err_data.err_code = 0;
+	temp_file_path = std::filesystem::temp_directory_path().string();
 }
 
 GixPreProcessor::~GixPreProcessor()
@@ -232,4 +233,14 @@ bool GixPreProcessor::isLastStep(std::shared_ptr<ITransformationStep> s)
 bool GixPreProcessor::isFirstStep(std::shared_ptr<ITransformationStep> s)
 {
 	return s == steps.front();
+}
+
+void GixPreProcessor::setTempPath(std::string t)
+{
+	temp_file_path = t;
+}
+
+std::string GixPreProcessor::getTempPath()
+{
+	return temp_file_path;
 }

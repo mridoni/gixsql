@@ -56,7 +56,6 @@ gix_esql_driver::gix_esql_driver ()
 {
 	lexer.setDriver(this);
 
-	opt_preprocess_copy_files = false;	// if true, copybooks outside EXEC SQL INCLUDE... are preprocessed
 	has_esql_in_cbl_copybooks = false;
 
 	currenthostno = 0;
@@ -98,6 +97,11 @@ void gix_esql_driver::setParser(TPESQLParser* p)
 	parser = p;
 }
 
+TPESQLParser* gix_esql_driver::getParser()
+{
+	return parser;
+}
+
 int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLParserData> pd)
 {
 	_parser_data = pd;
@@ -115,6 +119,7 @@ int gix_esql_driver::parse (TransformationStepData *input, std::shared_ptr<ESQLP
 	filenameID = filename_get_name(tf);
 	file = input->filename();
 
+	_parser_data->set_parsed_filename(input->filename());
 	lexer.src_location_stack.push({ filename_absolute_path(input->filename()), 1 });
 
     scan_begin ();
@@ -250,10 +255,10 @@ std::string gix_esql_driver::cb_host_list_add(std::vector<cb_hostreference_ptr> 
 //std::string gix_esql_driver::cb_host_list_add_force(std::vector<cb_hostreference_ptr> *list, std::string text)
 //{
 //	// Handle placeholders for group items passed as host variables
-//	if (parser_data()->field_exists(text.substr(1))) {
+//	if (_parser_data()->field_exists(text.substr(1))) {
 //		CobolVarType f_type = CobolVarType::UNKNOWN;
 //		int f_size = 0, f_scale = 0;
-//		cb_field_ptr f = parser_data()->field_map(text.substr(1));
+//		cb_field_ptr f = _parser_data()->field_map(text.substr(1));
 //		bool is_varlen = pp_caller->get_actual_field_data(f, &f_type, &f_size, &f_scale);
 //
 //		if ((this->commandname == "INSERT" || this->commandname == "SELECT") &&
@@ -401,6 +406,16 @@ std::shared_ptr<ESQLParserData> gix_esql_driver::parser_data()
 GixPreProcessor* gix_esql_driver::preprocessor() const
 {
 	return pp_inst;
+}
+
+std::string gix_esql_driver::try_resolve_included_file(const std::string& f)
+{
+	std::string resolved;
+	GixPreProcessor *gp = this->getParser()->getOwner();
+	if (!gp->getCopyResolver()->resolveCopyFile(f, resolved))
+		return std::string();
+
+	return resolved;
 }
 
 int cb_get_level(int val)

@@ -801,7 +801,7 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 
 "COPY"[ ]+({INCFILE})[ ]*"." {
 
-    if (driver->opt_preprocess_copy_files) {
+    if (driver->parser_data()->job_params()->opt_preprocess_copy_files) {
 		driver->startlineno = yylineno;
 		driver->endlineno = yylineno;
 		
@@ -1449,8 +1449,9 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 . {
 	if (strlen(yytext) == 1 && yytext[0] == '.') {
 		if (!driver->procedure_division_started && string_contains(cur_line_content, "PROGRAM-ID", true)) {
-            std::string pid = string_replace_regex(cur_line_content, "PROGRAM-ID", "", true);
-			pid = trim_copy(string_replace(pid, ".", ""));
+            std::string pid = string_replace_regex(cur_line_content, "^.*PROGRAM-ID\\.", "", true);
+            pid = string_replace_regex(pid, "\\..*$", "", true);
+			pid = trim_copy(pid);
 			driver->parser_data()->set_program_id(pid);
 		}
 		else

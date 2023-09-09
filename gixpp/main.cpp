@@ -45,6 +45,8 @@ USA.
 
 #define GIXPP_VER VERSION
 
+#define DEFAULT_VARYING_LEN_SZ "4"
+
 using namespace popl;
 
 bool is_alias(const std::string& f, std::string& ext);
@@ -77,7 +79,7 @@ int main(int argc, char** argv)
 	auto opt_esql = options.add<Switch>("e", "esql", "preprocess for ESQL");
 	auto opt_esql_preprocess_copy = options.add<Switch>("p", "esql-preprocess-copy", "ESQL: preprocess all included COPY files");
 	auto opt_esql_copy_exts = options.add<Value<std::string>>("E", "esql-copy-exts", "ESQL: copy files extension list (comma-separated)");
-	auto opt_esql_param_style = options.add<Value<std::string>>("z", "param-style", "ESQL: generated parameters style (=a|d|c", "d");
+	auto opt_esql_param_style = options.add<Value<std::string>>("z", "param-style", "ESQL: generated parameters style (=a|d|c)", "d");
 	auto opt_esql_static_calls = options.add<Switch>("S", "esql-static-calls", "ESQL: emit static calls");
 	auto opt_debug_info = options.add<Switch>("g", "debug-info", "generate debug info");
 	auto opt_consolidate = options.add<Switch>("c", "consolidate", "consolidate source to single-file");
@@ -88,6 +90,7 @@ int main(int argc, char** argv)
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
 	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
 	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
+	auto opt_varying_len_sz = options.add<Value<std::string>>("N", "varying-length-size", "size of the length indicator fields for VARYING fields(=2|4))", DEFAULT_VARYING_LEN_SZ);
 	auto opt_picx_as_varchar = options.add<Value<std::string>>("P", "picx-as", "text field options (=char|charf|varchar)", "char");
 	auto opt_no_rec_code = options.add<Value<std::string>>("", "no-rec-code", "custom code for \"no record\" condition(=nnn)");
 
@@ -129,7 +132,6 @@ int main(int argc, char** argv)
 
 			if (opt_picx_as_varchar->is_set() && opt_picx_as_varchar->value() != "char" && opt_picx_as_varchar->value() != "charf" && opt_picx_as_varchar->value() != "varchar") {
 				std::cout << options << std::endl;
-				fprintf(stderr, "ERROR: picx argument must be \"charf\" or \"varchar\"\n");
 				fprintf(stderr, "ERROR: -P/--picx-as argument must be one of \"char\", \"charf\", \"varchar\"\n");
 				return 1;
 			}
@@ -142,6 +144,12 @@ int main(int argc, char** argv)
 					fprintf(stderr, "ERROR: please enter suffixes as --varying=LEN,ARR\n");
 					return 1;
 				}
+			}
+
+			if (opt_varying_len_sz->is_set() && opt_varying_len_sz->value() != "2" && opt_varying_len_sz->value() != "4") {
+				std::cout << options << std::endl;
+				fprintf(stderr, "ERROR: -N/--varying-length-size argument must be one of \"2\", \"4\"\n");
+				return 1;
 			}
 
 			CopyResolver copy_resolver(filename_get_dir(filename_absolute_path(opt_infile->value())));
@@ -175,6 +183,9 @@ int main(int argc, char** argv)
 				gp.setOpt("emit_cobol85", opt_emit_cobol85->is_set());
 				gp.setOpt("picx_as_varchar", to_lower(opt_picx_as_varchar->value()) == "varchar");
 				gp.setOpt("debug_parser_scanner", opt_parser_scanner_debug->is_set());
+
+				std::string vls = opt_varying_len_sz->value_or(DEFAULT_VARYING_LEN_SZ);
+				gp.setOpt("varying_len_sz_short", (vls == "2"));
 
 				if (opt_esql_copy_exts->is_set())
 					copy_resolver.setExtensions(string_split(opt_esql_copy_exts->value(), ","));

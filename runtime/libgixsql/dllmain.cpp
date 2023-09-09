@@ -22,8 +22,9 @@
 
 #include <stdio.h>
 
-#if 0
+#if 1
 extern void gixsql_shutdown();
+extern bool __lib_initialized;
 
 #ifdef __linux__
 void __attribute__ ((destructor)) some_name_unload(void)
@@ -45,8 +46,9 @@ BOOL WINAPI DllMain(
     switch (fdwReason)
     {
     case DLL_PROCESS_DETACH:
-        fprintf(stderr, "--- terminating libgixsql\n");    
-        gixsql_shutdown();
+        if (__lib_initialized) {
+	        gixsql_shutdown();
+	    }
         break;
     }
     return TRUE;  // Successful DLL_PROCESS_ATTACH.

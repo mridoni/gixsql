@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include "varlen_defs.h"
+//#include "varlen_defs.h"
 #include "cobol_var_types.h"
 
 using std_binary_data = std::vector<unsigned char>;

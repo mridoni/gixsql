@@ -64,10 +64,14 @@
        100-MAIN.
 
            MOVE 1 TO IDX.
-           MOVE 'INSERT INTO TAB_A (KEY01, COL1, COL2)
-      -          ' VALUES ($1, $2, $3)' TO STMT-1
+           MOVE 'INSERT INTO TAB_A 
+      -         ' (KEY01, COL1, COL2)
+      -         ' VALUES 
+      -         ' ($1, $2, $3)' TO STMT-1.
 
-           EXEC SQL AT :DBS PREPARE ST1 FROM :STMT-1 END-EXEC.
+           EXEC SQL AT :DBS 
+                PREPARE ST1 
+                   FROM :STMT-1 END-EXEC.
            DISPLAY 'PREPARE(1) SQLCODE: ' SQLCODE.
            IF SQLCODE <> 0 THEN
               GO TO 100-EXIT

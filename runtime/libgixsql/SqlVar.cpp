@@ -29,6 +29,7 @@
 #include "utils.h"
 #include "Logger.h"
 #include "custom_formatters.h"
+#include "GlobalEnv.h"
 
 #define assertm(exp, msg) assert(((void)msg, exp))
 
@@ -66,6 +67,8 @@ const char SqlVar::_decimal_point = [] {
 
 //void rtrim(char* const s);
 int get_trimmed_length(char* const s, int l);
+
+extern GlobalEnv* __global_env;
 
 SqlVar::SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, void *_addr, void* _ind_addr)
 {
@@ -270,9 +273,12 @@ void SqlVar::createRealData()
 				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			}
 			else {
-				void* actual_addr = (char*)addr + VARLEN_LENGTH_SZ;
-				VARLEN_LENGTH_T *len_addr = (VARLEN_LENGTH_T *)addr;
-				int actual_len = (*len_addr);
+				void* actual_addr = (char*)addr + __global_env->varlen_length_sz();
+
+				//VARLEN_LENGTH_T *len_addr = (VARLEN_LENGTH_T *)addr;
+				//int actual_len = (*len_addr);
+				int actual_len = __global_env->varlen_length_sz_short() ? (*((uint16_t*)addr)) : (*((uint32_t*)addr));
+
 				memcpy(db_data_buffer.data(), (char*)actual_addr, actual_len);
 				db_data_len = actual_len;
 				spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
@@ -631,8 +637,8 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 				}
 			}
 			else {
-				void* actual_addr = (uint8_t*)addr + VARLEN_LENGTH_SZ;
-				int actual_len = length - VARLEN_LENGTH_SZ;
+				void* actual_addr = (uint8_t*)addr + __global_env->varlen_length_sz();
+				int actual_len = length - __global_env->varlen_length_sz();
 				if (datalen >= actual_len) {
 					memcpy(actual_addr, retstr, actual_len);
 				}
@@ -641,9 +647,18 @@ void SqlVar::createCobolData(char *retstr, int datalen, int *sqlcode)
 					memset(actual_addr, pad_char, actual_len);
 					memcpy(actual_addr, retstr, datalen);
 				}
-				VARLEN_LENGTH_T* fld_len_addr = (VARLEN_LENGTH_T *)addr;
-				//*fld_len_addr = VARLEN_BSWAP((VARLEN_LENGTH_T) datalen);
-				*fld_len_addr = ((VARLEN_LENGTH_T) datalen);
+
+				//VARLEN_LENGTH_T* fld_len_addr = (VARLEN_LENGTH_T *)addr;
+				//*fld_len_addr = ((VARLEN_LENGTH_T) datalen);
+
+				if (__global_env->varlen_length_sz_short()) {
+					uint16_t* fld_len_addr = (uint16_t*)addr;
+					*fld_len_addr = ((uint16_t)datalen);
+				}
+				else {
+					uint32_t* fld_len_addr = (uint32_t*)addr;
+					*fld_len_addr = ((uint32_t)datalen);
+				}
 			}
 			break;
 

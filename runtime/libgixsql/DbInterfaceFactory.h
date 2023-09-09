@@ -65,8 +65,8 @@ class DbInterfaceFactory
 {
 public:
 
-	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(int, const std::shared_ptr<spdlog::logger>& _logger);
-	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(std::string, const std::shared_ptr<spdlog::logger>& _logger);
+	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(int, const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger);
+	static LIBGIXSQL_API std::shared_ptr<IDbInterface> getInterface(std::string, const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger);
 
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(int);
 	static LIBGIXSQL_API IDbManagerInterface* getManagerInterface(std::string);
@@ -77,6 +77,6 @@ public:
 
 private:
 
-	static std::shared_ptr<IDbInterface> load_dblib(const char *);
+	static std::shared_ptr<IDbInterface> load_dblib(const GlobalEnv* genv, const char *);
 };
 

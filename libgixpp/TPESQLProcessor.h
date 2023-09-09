@@ -58,8 +58,6 @@ public:
 	std::map<std::string, srcLocation> getParagraphs();
 	std::map<std::string,  std::vector<std::string>> getFileDependencies();
 
-	std::vector<PreprocessedBlockInfo*> getPreprocessedBlocks();
-
 	// Inherited via ITransformationStep
 	virtual bool run(std::shared_ptr<ITransformationStep> prev_step) override;
 	TransformationStepDataType getInputType() override;
@@ -84,7 +82,7 @@ private:
 	std::map<uint64_t, uint64_t> b_in_to_out;
 	std::map<uint64_t, uint64_t> b_out_to_in;
 
-	std::vector<PreprocessedBlockInfo*> preprocessed_blocks;
+	//std::vector<PreprocessedBlockInfo*> preprocessed_blocks;
 	std::map<cb_exec_sql_stmt_ptr, std::tuple<int, int>> generated_blocks;
 
 	int outputESQL();

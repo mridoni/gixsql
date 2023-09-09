@@ -15,6 +15,11 @@
 
 		<environment>
 			<variable key="GIXSQL_FIXUP_PARAMS" value="on" />
+			<!--<variable key="GIXSQL_VARYING_LEN_SZ_SHORT" value="1" />-->
+			<!--<variable key="GIXSQL_LOG_ROTATE" value="1" />-->
+			<!--<variable key="GIXSQL_LOG_ROTATE_MAX_SIZE" value="1K" />-->
+			<!--<variable key="GIXSQL_LOG_ROTATE_MAX_FILES" value="100" />-->
+			<!--<variable key="GIXSQL_LOG_ROTATE_ON_OPEN" value="1" />-->
 		</environment>
 	</global>
 

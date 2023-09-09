@@ -234,6 +234,8 @@
 			<compile value="true" />
 			<run value="true" />
 
+			<additional-preprocess-params value="-N 2" />
+
 			<expected-output>
 				<line>employee #: [+0123]</line>
 				<line>last name : [Doe       ]</line>
@@ -516,6 +518,59 @@
 				<line>CFLD(2) : [@{PAYLOAD}                                                                    ]</line>
 				<line>VCFLD(3): [@{PAYLOAD}]</line>
 				<line>CFLD(3) : [@{PAYLOAD}                                                                    ]</line>
+			</expected-output>
+		</test>
+
+		<test name="TSQL005D" enabled="true">
+			<description>BINARY/VARBINARY data types</description>
+			<issue-coverage>#000</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL005D.cbl" />
+			</cobol-sources>
+
+			<generate-payload id=":p1" type="byte-sequence" length="80" start="33" />
+			<generate-payload id=":p2" type="byte-sequence" length="80" start="33" />
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">bintest</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1" type="pgsql">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="oracle">create table bintest (bfld RAW(100), vbfld LONG RAW, cfld char(100), vcfld varchar(100), num1 number(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="mysql">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" type="sqlite">create table bintest (bfld binary(100), vbfld varbinary(100), cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" type="odbc" comment="For ODBC, we assume PostgreSQL to be the underlying DBMS">create table bintest (bfld bytea, vbfld bytea, cfld char(100), vcfld varchar(100), num1 numeric(4,2))</pre-run-sql-statement>
+
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="pgsql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="oracle">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="sqlite">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (:p1, :p2, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="mysql">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1" params=":p1,:p2" type="odbc">insert into bintest (bfld, vbfld, cfld, vcfld, num1) values (?, ?, 'ABCDEFGHIJK', 'ABCDEFGHIJK', 12.34)</pre-run-sql-statement>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>DIGIT1 : +0033</line>
+				<line>DIGIT2 : +0034</line>
+				<line>DIGIT83: +0000</line>
+				<line>{{SW}}BFLD        : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop</line>
+				<line>BFLD LENGTH: 100</line>
+				<line>VBFLD-ARR  : [!"#$%&amp;'()*+,-./0123456789:;&lt;=&gt;?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\]^_`abcdefghijklmnop]</line>
+				<line>VBFLD-LEN: 0000000080</line>
+				<line>CFLD        : [ABCDEFGHIJK                                                                                         ]</line>
+				<line>CFLD LENGTH: 100</line>
+				<line>VCFLD-ARR  : [ABCDEFGHIJK]</line>
+				<line>VCFLD-LEN: 0000000011</line>
 			</expected-output>
 		</test>
 
@@ -2044,8 +2099,8 @@
 
 			<expected-output>
 				<line>SET APPLICATION_NAME TO "Identifier1 Identifier2 Identifier3"</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'               )</line>
-				<line>SELECT MAX(CID) FROM TAB00 WHERE               VCFLD1 NOT IN (               'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,               ' DDDD' ,'  EEEEEEEE    '               )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE                 VCFLD1 NOT IN (                                   'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE' )</line>
+				<line>SELECT MAX(CID) FROM TAB00 WHERE                  VCFLD1 NOT IN (                                   'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,             ' DDDD' ,'  EEEEEEEE    '                         )</line>
 			</expected-output>
 
 			<expected-preprocessed-file-content>

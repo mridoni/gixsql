@@ -73,6 +73,9 @@ public:
 	bool isLastStep(std::shared_ptr<ITransformationStep>);
 	bool isFirstStep(std::shared_ptr<ITransformationStep>);
 
+	void setTempPath(std::string t);
+	std::string getTempPath();
+
 private:
 	std::string _infile;
 	std::string _outfile;
@@ -82,6 +85,7 @@ private:
 
 	std::vector<std::shared_ptr<ITransformationStep>> steps;
 	std::string copy_file_path;
+	std::string temp_file_path;
 	std::vector<std::string> copy_dirs;
 
 	variant_map opts;

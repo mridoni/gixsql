@@ -25,14 +25,13 @@ USA.
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
-#include "varlen_defs.h"
+//#include "varlen_defs.h"
 
 #define DEFAULT_CURSOR_ARRAYSIZE	100
 
 dpiContext* DbInterfaceOracle::odpi_global_context = nullptr;
 int DbInterfaceOracle::odpi_global_context_usage_count = 0;
 
-static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string odpi_fixup_parameters(const std::string& sql);
 
 DbInterfaceOracle::DbInterfaceOracle()
@@ -61,7 +60,7 @@ DbInterfaceOracle::~DbInterfaceOracle()
 	}
 }
 
-int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
+int DbInterfaceOracle::init(const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger)
 {
 	char bfr[1024];
 	dpiErrorInfo info;
@@ -76,6 +75,8 @@ int DbInterfaceOracle::init(const std::shared_ptr<spdlog::logger>& _logger)
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-oracle", lib_sink);
 	lib_logger->set_level(_logger->level());
 	lib_logger->info("libgixsql-oracle logger started");
+
+	global_env = const_cast<GlobalEnv*>(genv);
 
 	if (!odpi_global_context) {
 		if (dpiContext_createWithParams(DPI_MAJOR_VERSION, DPI_MINOR_VERSION, NULL, &odpi_global_context, &info) < 0) {
@@ -620,7 +621,7 @@ bool DbInterfaceOracle::is_cursor_from_prepared_statement(const std::shared_ptr<
 
 	if (squery.size() == 0) {
 		cursor->getQuerySource(&src_addr, &src_len);
-		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
+		squery = global_env->get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
 	trim(squery);
@@ -685,7 +686,7 @@ int DbInterfaceOracle::cursor_open(const std::shared_ptr<ICursor>& cursor)
 
 	if (squery.size() == 0) {
 		cursor->getQuerySource(&src_addr, &src_len);
-		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
+		squery = global_env->get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
 	std::shared_ptr<OdpiStatementData> prepared_stmt_data;
@@ -1095,31 +1096,6 @@ void OdpiStatementData::cleanup()
 
 	params_count = 0;
 	coldata_count = 0;
-}
-
-static std::string __get_trimmed_hostref_or_literal(void* data, int l)
-{
-	if (!data)
-		return std::string();
-
-	if (!l)
-		return std::string((char*)data);
-
-	if (l > 0) {
-		std::string s = std::string((char*)data, l);
-		return trim_copy(s);
-	}
-
-	// variable-length fields (negative length)
-	void* actual_data = (char*)data + VARLEN_LENGTH_SZ;
-	VARLEN_LENGTH_T* len_addr = (VARLEN_LENGTH_T*)data;
-	int actual_len = (*len_addr);
-
-	// Should we check the actual length against the defined length?
-	//...
-
-	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
-	return trim_copy(t);
 }
 
 static std::string odpi_fixup_parameters(const std::string& sql)

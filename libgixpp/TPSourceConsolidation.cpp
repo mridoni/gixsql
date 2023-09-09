@@ -40,6 +40,8 @@ bool TPSourceConsolidation::run(std::shared_ptr<ITransformationStep> prev_step)
 	if (!input->isValid())
 		return false;
 
+	input_file = input->filename();
+
 	if (input_file.empty()) {
 		if (prev_step->getOutputType() != TransformationStepDataType::Filename) {
 			return false;
@@ -52,7 +54,7 @@ bool TPSourceConsolidation::run(std::shared_ptr<ITransformationStep> prev_step)
 	if (!map_only) {
 		if (output_file.empty()) {
 			std::string f = filename_change_ext(input_file, ".cblpp");
-			f = std::filesystem::temp_directory_path().string() + PATH_SEPARATOR + std::filesystem::path(f).filename().string();
+			f = owner->getTempPath() + PATH_SEPARATOR + std::filesystem::path(f).filename().string();
 			output_file = f;
 		}
 
@@ -68,6 +70,7 @@ bool TPSourceConsolidation::run(std::shared_ptr<ITransformationStep> prev_step)
 		file_write_all_lines(output_file, all_lines);
 	}
 
+	output = new TransformationStepData();
 	output->setType(TransformationStepDataType::Filename);
 	output->setFilename(output_file);
 

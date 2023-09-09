@@ -15,10 +15,15 @@ public:
 	TransformationStepDataType getInputType() override;
 	TransformationStepDataType getOutputType() override;
 
+	std::vector<std::shared_ptr<PreprocessedBlockInfo>>& _preprocessed_blocks() const;
+
+	std::shared_ptr<ESQLParserData> parser_data();
+
 private:
 
-	std::shared_ptr<ESQLParserData> parser_data;
-
+	std::shared_ptr<ESQLParserData> _parser_data;
 	gix_esql_driver main_module_driver;
+
+	void add_preprocessed_blocks();
 };
 

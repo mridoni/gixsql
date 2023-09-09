@@ -117,8 +117,6 @@ static struct sqlca_t sqlca_init =
 
 #define GIXSQL_CLIENT_ENCODING_DEFAULT ""
 
-#define GIXSQL_DEFAULT_NO_REC_CODE 100
-
 #if defined(_WIN32) || defined(_WIN64)
 #define LIBGIXSQL_API __declspec(dllexport)   
 #else  

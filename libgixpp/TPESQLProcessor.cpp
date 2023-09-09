@@ -130,6 +130,7 @@ bool TPESQLProcessor::run(std::shared_ptr<ITransformationStep> prev_step)
 	parser_data->job_params()->opt_emit_map_file = std::get<bool>(owner->getOpt("emit_map_file", false));
 	parser_data->job_params()->opt_emit_cobol85 = std::get<bool>(owner->getOpt("emit_cobol85", false));
 	parser_data->job_params()->opt_picx_as_varchar = std::get<bool>(owner->getOpt("picx_as_varchar", false));
+	parser_data->job_params()->opt_varying_len_sz_short = std::get<bool>(owner->getOpt("varying_len_sz_short", false));
 
 	auto vsfxs = std::get<std::string>(owner->getOpt("varlen_suffixes", std::string()));
 	if (vsfxs.empty()) {
@@ -185,7 +186,7 @@ int TPESQLProcessor::outputESQL()
 	working_begin_line = 0;
 	working_end_line = 0;
 
-	input_file = owner->firstStep()->getInput()->filename();
+	input_file = this->parser_data->parsed_filename();
 	output_file = owner->lastStep()->getOutput()->filename();
 
 	if (output_file.empty()) {
@@ -1207,8 +1208,8 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 		}
 
 		cb_field_ptr var = parser_data->field_map(var_name);
-		if (var->level != 1) {
-			raise_error(string_format("Invalid level for SQL variable, it is %02d, should be 01", var->level), ERR_INVALID_LEVEL, var->defined_at_source_file, var->defined_at_source_line);
+		if (var->level == 49 || var->level == 77) {
+			raise_error(string_format("Invalid level for SQL variable (%02d)", var->level), ERR_INVALID_LEVEL, var->defined_at_source_file, var->defined_at_source_line);
 			return false;
 		}
 
@@ -1254,11 +1255,11 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 
 			if (HAS_FLAG_EMIT_VAR(flags)) {
 				if (!var->is_varlen) {
-					put_output_line(AREA_B_CPREFIX + string_format("01 %s PIC X(%d).", var->sname, cbl_int_part_len));
+					put_output_line(AREA_B_CPREFIX + string_format("%02d %s PIC X(%d).", var->level, var->sname, cbl_int_part_len));
 
 					cb_field_ptr fdata = new cb_field_t();
 					fdata->sql_type = sql_type;
-					fdata->level = 1;
+					fdata->level = var->level;
 					fdata->sname = var->sname;
 					fdata->pictype = var->pictype != -1 ? var->pictype : (IS_NUMERIC(var->sql_type) ? PIC_NUMERIC : PIC_ALPHANUMERIC);
 					fdata->usage = var->usage;
@@ -1268,8 +1269,9 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					parser_data->add_to_field_map(fdata->sname, fdata);
 				}
 				else {
-					put_output_line(AREA_B_CPREFIX + string_format("01 %s.", var->sname));
-					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, parser_data->job_params()->opt_varlen_suffix_len, VARLEN_LENGTH_PIC));
+					std::string vlp = parser_data->job_params()->opt_varying_len_sz_short ? S_VARLEN_LENGTH_PIC : L_VARLEN_LENGTH_PIC;
+					put_output_line(AREA_B_CPREFIX + string_format("%02d %s.", var->level, var->sname));
+					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC %s.", var->sname, parser_data->job_params()->opt_varlen_suffix_len, vlp));
 					put_output_line(AREA_B_CPREFIX + string_format("    49 %s-%s PIC X(%d).", var->sname, parser_data->job_params()->opt_varlen_suffix_data, cbl_int_part_len));
 
 					cb_field_ptr flength = new cb_field_t();
@@ -1277,7 +1279,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					flength->sname = var->sname + "-" + parser_data->job_params()->opt_varlen_suffix_len;
 					flength->pictype = PIC_NUMERIC;
 					flength->usage = var->usage;
-					flength->picnsize = VARLEN_PIC_SZ;
+					flength->picnsize = parser_data->job_params()->opt_varying_len_sz_short ? S_VARLEN_PIC_SZ : L_VARLEN_PIC_SZ;
 					flength->parent = var;
 					var->children = flength;
 
@@ -2110,8 +2112,9 @@ bool TPESQLProcessor::put_host_parameters(const cb_exec_sql_stmt_ptr stmt)
 void TPESQLProcessor::add_preprocessed_blocks()
 {
 	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
+	parser_data->_preprocessed_blocks.clear();
 	for (auto e : *p) {
-		PreprocessedBlockInfo* bi = new PreprocessedBlockInfo();
+		std::shared_ptr<PreprocessedBlockInfo> bi = std::make_shared<PreprocessedBlockInfo>();
 		bi->type = PreprocessedBlockType::ESQL;
 		bi->command = e->commandName;
 
@@ -2122,12 +2125,10 @@ void TPESQLProcessor::add_preprocessed_blocks()
 		auto in_out_start_key = std::to_string(bi->orig_start_line) + "@" + bi->orig_source_file;
 		auto in_out_end_key = std::to_string(bi->orig_end_line) + "@" + bi->orig_source_file;
 		if (in_to_out.find(in_out_start_key) == in_to_out.end() || in_to_out.find(in_out_end_key) == in_to_out.end()) {
-			delete bi;
 			continue;
 		}
 
 		if (generated_blocks.find(e) == generated_blocks.end()) {
-			delete bi;
 			continue;
 		}
 
@@ -2145,7 +2146,7 @@ void TPESQLProcessor::add_preprocessed_blocks()
 		bi->pp_gen_start_line = std::get<0>(gb);
 		bi->pp_gen_end_line = std::get<1>(gb);
 
-		preprocessed_blocks.push_back(bi);
+		parser_data->_preprocessed_blocks.push_back(bi);
 	}
 
 }
@@ -2307,10 +2308,10 @@ std::map<std::string, std::vector<std::string>> TPESQLProcessor::getFileDependen
 	return file_dependencies;
 }
 
-std::vector<PreprocessedBlockInfo*> TPESQLProcessor::getPreprocessedBlocks()
-{
-	return preprocessed_blocks;
-}
+//std::vector<PreprocessedBlockInfo*> TPESQLProcessor::getPreprocessedBlocks()
+//{
+//	return preprocessed_blocks;
+//}
 
 bool check_sql_type_compatibility(uint64_t type_info, cb_field_ptr var)
 {

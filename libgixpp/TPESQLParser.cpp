@@ -2,7 +2,7 @@
 
 TPESQLParser::TPESQLParser(GixPreProcessor* gpp) : ITransformationStep(gpp)
 {
-	parser_data = std::make_shared<ESQLParserData>();
+	_parser_data = std::make_shared<ESQLParserData>();
 
 	main_module_driver.setParser(this);
 	owner = gpp;
@@ -57,24 +57,24 @@ bool TPESQLParser::run(std::shared_ptr<ITransformationStep> prev_step)
 
 	std::string ps = std::get<std::string>(owner->getOpt("params_style", std::string("d")));
 	if (ps == "d")
-		parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::DollarPrefix;
+		_parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::DollarPrefix;
 	else
 		if (ps == "c")
-			parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::ColonPrefix;
+			_parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::ColonPrefix;
 		else
 			if (ps == "a")
-				parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Anonymous;
+				_parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Anonymous;
 			else
-				parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Unknown;
+				_parser_data->job_params()->opt_params_style = ESQL_ParameterStyle::Unknown;
 
-	parser_data->job_params()->opt_preprocess_copy_files = std::get<bool>(owner->getOpt("preprocess_copy_files", false));
+	_parser_data->job_params()->opt_preprocess_copy_files = std::get<bool>(owner->getOpt("preprocess_copy_files", false));
 
 
-	int rc = main_module_driver.parse(input, parser_data);
+	int rc = main_module_driver.parse(input, _parser_data);
 	if (rc == 0) {
 		output = new TransformationStepData();
 		output->setType(TransformationStepDataType::ESQLParserData);
-		output->setParserData(parser_data);
+		output->setParserData(_parser_data);
 	}
 	return rc == 0;
 }
@@ -87,4 +87,32 @@ TransformationStepDataType TPESQLParser::getInputType()
 TransformationStepDataType TPESQLParser::getOutputType()
 {
 	return TransformationStepDataType::ESQLParserData;
+}
+
+std::vector<std::shared_ptr<PreprocessedBlockInfo>>& TPESQLParser::_preprocessed_blocks() const
+{
+	return _parser_data->_preprocessed_blocks;
+}
+
+std::shared_ptr<ESQLParserData> TPESQLParser::parser_data()
+{
+	return _parser_data;
+}
+
+void TPESQLParser::add_preprocessed_blocks()
+{
+	std::vector<cb_exec_sql_stmt_ptr>* p = _parser_data->exec_list();
+	for (auto e : *p) {
+		std::shared_ptr <PreprocessedBlockInfo> bi = std::make_shared<PreprocessedBlockInfo>();
+
+		bi->module_name = _parser_data->program_id();
+		bi->type = PreprocessedBlockType::ESQL;
+		bi->command = e->commandName;
+
+		bi->orig_source_file = e->src_file;
+		bi->orig_start_line = e->startLine;
+		bi->orig_end_line = e->endLine;
+
+		_parser_data->_preprocessed_blocks.push_back(bi);
+	}
 }

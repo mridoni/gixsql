@@ -118,12 +118,16 @@ struct ESQLJobParams
 	bool opt_emit_cobol85;
 	bool opt_picx_as_varchar;
 	int opt_norec_sqlcode = 100;
+	bool opt_varying_len_sz_short = false;
 	std::string opt_varlen_suffix_len;
 	std::string opt_varlen_suffix_data;
 };
 
 class ESQLParserData
 {
+	friend class TPESQLParser;
+	friend class TPESQLProcessor;
+
 public:
 
 	ESQLParserData();
@@ -144,10 +148,18 @@ public:
 	std::string program_id();
 	void set_program_id(std::string id);
 
+	// This might NOT be the original source file (e.g. if we are consolidating)
+	std::string parsed_filename() const;
+	void set_parsed_filename(const std::string& filename);
+
 	std::map<std::string, srcLocation>& paragraphs();
 	void paragraph_add(std::string, srcLocation p);
 
 	bool get_actual_field_data(cb_field_ptr f, CobolVarType* type, int* size, int* scale);
+
+	void addFileDependency(std::string f, std::string d);
+	const std::map<std::string, std::shared_ptr<std::vector<std::string>>>& getFileDependencies();
+	
 
 private:
 	std::map<std::string, std::tuple<uint64_t, int, int, std::string>> _field_sql_type_info;
@@ -159,6 +171,11 @@ private:
 	std::map<std::string, cb_field_ptr> _field_map;
 
 	std::shared_ptr<ESQLJobParams> _job_params;
+	std::vector<std::shared_ptr<PreprocessedBlockInfo>> _preprocessed_blocks;
+
+	std::map<std::string, std::shared_ptr<std::vector<std::string>>> _file_deps;
+
+	std::string _parsed_filename;
 
 };
 

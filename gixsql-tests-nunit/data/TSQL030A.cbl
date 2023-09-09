@@ -121,9 +121,9 @@
            EXEC SQL PREPARE ST1
                 FROM
                     "SELECT MAX(CID) FROM TAB00 WHERE
-      -              VCFLD1 NOT IN (
-      -              'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'
-      -              )"
+      -             "VCFLD1 NOT IN (
+      -             "'AAAAA' ,'BBBBBB' ,'CCCCCCCC' ,'DDDD' ,'EEEEEEEE'
+      -             ")"
            END-EXEC.
            IF SQLCODE <> 0 THEN
               DISPLAY 'PREPARE-1 SQLCODE. ' SQLCODE
@@ -134,10 +134,10 @@
            EXEC SQL PREPARE ST2
                 FROM
                     "SELECT MAX(CID) FROM TAB00 WHERE
-      -              VCFLD1 NOT IN (
-      -              'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,
-      -              ' DDDD' ,'  EEEEEEEE    '
-      -              )"
+      -             " VCFLD1 NOT IN (
+      -             " 'AAAAA ' ,'BBBBBB  ' ,'CCCCCCCC   ' ,
+      -             " ' DDDD' ,'  EEEEEEEE    '
+      -             " )"
            END-EXEC.
            IF SQLCODE <> 0 THEN
               DISPLAY 'PREPARE-1 SQLCODE. ' SQLCODE

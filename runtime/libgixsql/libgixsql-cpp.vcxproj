@@ -504,6 +504,7 @@
     <ClCompile Include="Connection.cpp" />
     <ClCompile Include="ConnectionManager.cpp" />
     <ClCompile Include="CursorManager.cpp" />
+    <ClCompile Include="GlobalEnv.cpp" />
     <ClCompile Include="DbInterfaceFactory.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="gixsql.cpp" />
@@ -520,6 +521,7 @@
     <ClInclude Include="Connection.h" />
     <ClInclude Include="ConnectionManager.h" />
     <ClInclude Include="CursorManager.h" />
+    <ClInclude Include="GlobalEnv.h" />
     <ClInclude Include="DbInterfaceFactory.h" />
     <ClInclude Include="default_driver.h" />
     <ClInclude Include="IConnection.h" />

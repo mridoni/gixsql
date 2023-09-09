@@ -56,45 +56,45 @@ std::string GetLastErrorAsString()
 }
 #endif
 
-std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(int type, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(int type, const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger)
 {
 	switch (type) {
 		case DB_PGSQL:
-			return load_dblib("pgsql");
+			return load_dblib(genv, "pgsql");
 
 		case DB_ODBC:
-			return load_dblib("odbc");
+			return load_dblib(genv, "odbc");
 
 		case DB_MYSQL:
-			return load_dblib("mysql");
+			return load_dblib(genv, "mysql");
 
 		case DB_ORACLE:
-			return load_dblib("oracle");
+			return load_dblib(genv, "oracle");
 
 		case DB_SQLITE:
-			return load_dblib("sqlite");
+			return load_dblib(genv, "sqlite");
 
 		default:
 			return NULL;
 	}
 }
 
-std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(std::string t, const std::shared_ptr<spdlog::logger>& _logger)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::getInterface(std::string t, const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger)
 {
 		if (t == "pgsql")
-			return load_dblib("pgsql");
+			return load_dblib(genv, "pgsql");
 
 		if (t == "odbc")
-			return load_dblib("odbc");
+			return load_dblib(genv, "odbc");
 
 		if (t == "mysql")
-			return load_dblib("mysql");
+			return load_dblib(genv, "mysql");
 
 		if (t == "oracle")
-			return load_dblib("oracle");
+			return load_dblib(genv, "oracle");
 
 		if (t == "sqlite")
-			return load_dblib("sqlite");
+			return load_dblib(genv, "sqlite");
 
 		return NULL;
 }
@@ -109,7 +109,7 @@ IDbManagerInterface* DbInterfaceFactory::getManagerInterface(std::string type)
 	return dynamic_cast<IDbManagerInterface *>(getManagerInterface(type));
 }
 
-std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
+std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const GlobalEnv* genv, const char *lib_id)
 {
 	char bfr[256];
 	std::shared_ptr<IDbInterface> dbi;
@@ -204,7 +204,7 @@ std::shared_ptr<IDbInterface> DbInterfaceFactory::load_dblib(const char *lib_id)
 	dbi->native_lib_ptr = (void *) libHandle;
 
 	if (dbi != nullptr) {
-		dbi->init(gixsql_logger);
+		dbi->init(genv, gixsql_logger);
 	}
 	return dbi;
 }

@@ -23,7 +23,7 @@
 #include "IConnection.h"
 #include "Logger.h"
 #include "utils.h"
-#include "varlen_defs.h"
+//#include "varlen_defs.h"
 #include "cobol_var_flags.h"
 
 #include <cstring>
@@ -32,7 +32,6 @@
 SQLHANDLE DbInterfaceODBC::odbc_global_env_context = nullptr;
 int DbInterfaceODBC::odbc_global_env_context_usage_count = 0;
 
-static std::string __get_trimmed_hostref_or_literal(void* data, int l);
 static std::string odbc_fixup_parameters(const std::string& sql);
 
 DbInterfaceODBC::DbInterfaceODBC()
@@ -55,7 +54,7 @@ DbInterfaceODBC::~DbInterfaceODBC()
 
 
 
-int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
+int DbInterfaceODBC::init(const GlobalEnv* genv, const std::shared_ptr<spdlog::logger>& _logger)
 {
 	conn_handle = NULL;
 
@@ -63,6 +62,8 @@ int DbInterfaceODBC::init(const std::shared_ptr<spdlog::logger>& _logger)
 	lib_logger = std::make_shared<spdlog::logger>("libgixsql-odbc", lib_sink);
 	lib_logger->set_level(_logger->level());
 	lib_logger->info("libgixsql-odbc logger started");
+
+	global_env = const_cast<GlobalEnv*>(genv);
 
 	if (!odbc_global_env_context) {
 		SQLRETURN rc = SQLAllocHandle(SQL_HANDLE_ENV, SQL_NULL_HANDLE, &odbc_global_env_context);
@@ -532,7 +533,7 @@ bool DbInterfaceODBC::is_cursor_from_prepared_statement(const std::shared_ptr<IC
 
 	if (squery.size() == 0) {
 		cursor->getQuerySource(&src_addr, &src_len);
-		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
+		squery = global_env->get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
 	trim(squery);
@@ -626,7 +627,7 @@ int DbInterfaceODBC::cursor_open(const std::shared_ptr<ICursor>& cursor)
 
 	if (squery.size() == 0) {
 		cursor->getQuerySource(&src_addr, &src_len);
-		squery = __get_trimmed_hostref_or_literal(src_addr, src_len);
+		squery = global_env->get_trimmed_hostref_or_literal(src_addr, src_len);
 	}
 
 	std::shared_ptr<ODBCStatementData> prepared_stmt_data;
@@ -1113,32 +1114,6 @@ bool DbInterfaceODBC::column_is_binary(SQLHANDLE stmt, int col_index, bool* is_b
 
 	*is_binary = (sql_type == SQL_BINARY || sql_type == SQL_VARBINARY || sql_type == SQL_LONGVARBINARY);
 	return true;
-}
-
-
-static std::string __get_trimmed_hostref_or_literal(void* data, int l)
-{
-	if (!data)
-		return std::string();
-
-	if (!l)
-		return std::string((char*)data);
-
-	if (l > 0) {
-		std::string s = std::string((char*)data, l);
-		return trim_copy(s);
-	}
-
-	// variable-length fields (negative length)
-	void* actual_data = (char*)data + VARLEN_LENGTH_SZ;
-	VARLEN_LENGTH_T* len_addr = (VARLEN_LENGTH_T*)data;
-	int actual_len = (*len_addr);
-
-	// Should we check the actual length against the defined length?
-	//...
-
-	std::string t = std::string((char*)actual_data, (-l) - VARLEN_LENGTH_SZ);
-	return trim_copy(t);
 }
 
 static std::string odbc_fixup_parameters(const std::string& sql)
