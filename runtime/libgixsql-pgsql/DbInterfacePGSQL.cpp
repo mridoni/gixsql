@@ -76,7 +76,7 @@ public:
 		if (_data) {
 			for (int i = 0; i < nitems; i++) {
 				if (_data[i])
-					delete _data[i];
+					delete[] _data[i];
 			}
 			delete[] _data;
 		}
