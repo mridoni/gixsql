@@ -480,6 +480,13 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 			f->level != 77 && f->level != 66 && f->level != 88) {
 			return NULL;
 		}
+	} else {
+		if (f->level != 1 && f->level != 77) {
+			fprintf(stderr, "parse error: %s level should start from 01 or 66 or 77 or 88\n", name.c_str());
+			//exit(-1);
+			return NULL;
+		}
+
 	}
 
 	if (f->level == 1 || f->level == 77) {
@@ -488,84 +495,74 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 			cb_field_founder(last_field)->sister = f;
 		}
 	}
+	else if (f->level == 66) {
+		/* level 66 */
+		f->parent = cb_field_founder(last_field);
+		for (p = f->parent->children; p && p->sister; p = p->sister);
+		if (p) {
+			p->sister = f;
+		}
+	}
+	else if (f->level == 88) {
+		/* level 88 */
+		f->parent = last_field;
+	}
+	else if (f->level > last_field->level) {
+		/* lower level */
+		last_field->children = f;
+		f->parent = last_field;
+	}
+	else if (f->level == last_field->level) {
+		/* same level */
+	same_level:
+		last_field->sister = f;
+		f->parent = last_field->parent;
+	}
 	else {
-		if (last_field == NULL) {
-			fprintf(stderr, "parse error: %s level should start from 01 or 66 or 77 or 88\n", name.c_str());
-			//exit(-1);
-			return NULL;
-		}
-
-		if (f->level == 66) {
-			/* level 66 */
-			f->parent = cb_field_founder(last_field);
-			for (p = f->parent->children; p && p->sister; p = p->sister);
-			if (p) {
-				p->sister = f;
+		/* upper level */
+		for (p = last_field->parent; p; p = p->parent) {
+			if (p->level == f->level) {
+				last_field = p;
+				goto same_level;
+			}
+			if (p->level < f->level) {
+				break;
 			}
 		}
-		else if (f->level == 88) {
-			/* level 88 */
-			f->parent = last_field;
-		}
-		else if (f->level > last_field->level) {
-			/* lower level */
-			last_field->children = f;
-			f->parent = last_field;
-		}
-		else if (f->level == last_field->level) {
-			/* same level */
-		same_level:
-			last_field->sister = f;
-			f->parent = last_field->parent;
-		}
-		else {
-			/* upper level */
-			for (p = last_field->parent; p; p = p->parent) {
-				if (p->level == f->level) {
-					last_field = p;
-					goto same_level;
-				}
-				if (p->level < f->level) {
-					break;
-				}
-			}
-			return NULL;
-		}
+		return NULL;
 	}
 
-	if (f) {
-		std::string path = f->sname;
-		cb_field_ptr p = f;
-		while (p->parent) {
-			path = p->parent->sname + ":" + path;
-			p = p->parent;
-		}
-
-		switch (this->data_division_section) {
-			case DD_SECTION_WS:
-				f->path = "WS:" + path;
-				f->data_section = DataSectionType::WorkingStorage;
-				break;
-
-			case DD_SECTION_LS:
-				f->path = "LS:" + path;
-				f->data_section = DataSectionType::LinkageSection;
-				break;
-
-			case DD_SECTION_LL:
-				f->path = "LL:" + path;
-				f->data_section = DataSectionType::LocalStorage;
-				break;
-
-
-			case DD_SECTION_FS:
-				f->path = "FS:" + path;
-				f->data_section = DataSectionType::FileSection;
-				break;
-
-		}
-		parser_data()->add_to_field_map(f->sname, f);
+	std::string path = f->sname;
+	cb_field_ptr p = f;
+	while (p->parent) {
+		path = p->parent->sname + ":" + path;
+		p = p->parent;
 	}
+
+	switch (this->data_division_section) {
+		case DD_SECTION_WS:
+			f->path = "WS:" + path;
+			f->data_section = DataSectionType::WorkingStorage;
+			break;
+
+		case DD_SECTION_LS:
+			f->path = "LS:" + path;
+			f->data_section = DataSectionType::LinkageSection;
+			break;
+
+		case DD_SECTION_LL:
+			f->path = "LL:" + path;
+			f->data_section = DataSectionType::LocalStorage;
+			break;
+
+
+		case DD_SECTION_FS:
+			f->path = "FS:" + path;
+			f->data_section = DataSectionType::FileSection;
+			break;
+
+	}
+	parser_data()->add_to_field_map(f->sname, f);
 
 	f->defined_at_source_line = lexer.getLineNo();
 	f->defined_at_source_file = lexer.driver->file;
@@ -575,6 +572,12 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 
 int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 {
+	if (pic == NULL || str.length() > 50) {
+		/* arbitrary limit; note on implementation limits: COBOL85 (30),
+  		   COBOL2002 and most others (50), COBOL2014 (63), GC (255) */
+		return 0;
+	}
+	
 	const char *p = str.c_str();
 
 	int			i;
@@ -588,10 +591,6 @@ int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 	int digits = 0;
 	int scale = 0;
 	int allocated = 0;
-
-	if (str.length() > 50) {
-		return 0;
-	}
 
 	for (; *p; p++) {
 		n = 1;

@@ -175,29 +175,19 @@ void SqlVar::createRealData()
 			dlength = ceil(((double)length + 1) / 2);
 			skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
 
-			int i;
 			int index = 0;
-			char* ptr;
-			unsigned char tmp;
-			unsigned char ubit = 0xF0;
-			unsigned char lbit = 0x0F;
+			const unsigned char ubit = 0xF0;
+			const unsigned char lbit = 0x0F;
 
-			for (i = 0; i < (int)dlength; i++) {
+			for (int i = 0; i < (int)dlength; i++) {
 
-				ptr = ((char*)addr) + i * sizeof(char);
-				tmp = (unsigned char)*ptr;
+				unsigned char *ptr = (unsigned char *)addr + i * sizeof(char);
 
 				if (i != 0 || !skip_first) {
-					//sprintf(val, "%d", (tmp & ubit) >> 4);
-					unsigned char c = ((tmp & ubit) >> 4) + ASCII_ZERO;
-					db_data_buffer[index] = c;
-					index++;
+					db_data_buffer[index++] = ASCII_ZERO + ((*ptr & ubit) >> 4);
 				}
 				if (i != dlength - 1) {
-					//sprintf(val, "%d", tmp & lbit);
-					unsigned char c = (tmp & lbit) + ASCII_ZERO;
-					db_data_buffer[index] = c;
-					index++;
+					db_data_buffer[index++] = ASCII_ZERO + (*ptr & lbit);
 				}
 			}
 
@@ -217,36 +207,27 @@ void SqlVar::createRealData()
 			skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
 
 			/* set real data */
-			int i;
 			int index = SIGN_LENGTH;
-			char* ptr;
-			unsigned char tmp;
-			unsigned char ubit = 0xF0;
-			unsigned char lbit = 0x0F;
+			const unsigned char ubit = 0xF0;
+			const unsigned char lbit = 0x0F;
 
-			for (i = 0; i < (int)dlength; i++) {
+			for (int i = 0; i < (int)dlength; i++) {
 
-				ptr = ((char*)addr) + i * sizeof(char);
-				tmp = (unsigned char)*ptr;
+				unsigned char *ptr = (unsigned char *)addr + i * sizeof(char);
 
 				if (i != 0 || !skip_first) {
-					//sprintf(val, "%d", (tmp & ubit) >> 4);
-					unsigned char c = ((tmp & ubit) >> 4) + 48;
-					db_data_buffer[index] = c;
-					index++;
+					db_data_buffer[index++] = ASCII_ZERO + ((*ptr & ubit) >> 4);
 				}
 				if (i != dlength - 1) {
-					//sprintf(val, "%d", tmp & lbit);
-					unsigned char c = (tmp & lbit) + 48;
-					db_data_buffer[index] = c;
-					index++;
+					db_data_buffer[index++] = ASCII_ZERO + (*ptr & lbit);
 				}
 				else {
-					if ((tmp & lbit) == 0x0C) {
-						db_data_buffer[0] = '+';
+					if ((tmp & lbit) == 0x0D) {
+						db_data_buffer[0] = '-';
 					}
 					else {
-						db_data_buffer[0] = '-';
+					// expected 0x0C, but -std=ibm may lead to 0x0F (and Pro*COB handles that as positive, too)
+						db_data_buffer[0] = '+';
 					}
 				}
 			}
