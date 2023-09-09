@@ -3,7 +3,7 @@
 	<RunConfiguration>
 		<EnvironmentVariables>
 			<!-- if empty use embedded -->
-			<GIXTEST_LOCAL_CONFIG>C:\Users\marchetto\source\repos\gixsql-null-indicators\gixsql-tests-nunit\gixsql_test_local_windows.xml</GIXTEST_LOCAL_CONFIG>
+			<GIXTEST_LOCAL_CONFIG>C:\Users\marchetto\source\repos\gixsql\gixsql-tests-nunit\gixsql_test_local_windows.xml</GIXTEST_LOCAL_CONFIG>
 		</EnvironmentVariables>
 	</RunConfiguration>
 </RunSettings>
