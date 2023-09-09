@@ -12,10 +12,13 @@ if [ "$1" != "/E" ] ; then
 	# These indicates the current version of GixSQL included in Gix-IDE
 	GIXSQLMAJ=1
 	GIXSQLMIN=0
-	GIXSQLREL=20b
+	GIXSQLREL=21dev
 	# These indicates the current version of GixSQL included in Gix-IDE (end)
 
 fi
 
 echo "Configuring version ($GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL) in header file for GixSQL"
 echo "#define VERSION \"$GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL\"" > $SCRIPT_DIR/config.h
+
+echo "Configuring version ($GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL) in version file for GixSQL"
+./version.sh
