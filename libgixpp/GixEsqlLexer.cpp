@@ -47,7 +47,7 @@ static std::regex rxUserDefinedCobolWord(R"(^[A-Za-z0-9]+([\-]+[A-Za-z0-9]+)*$)"
 #if (defined(_WIN32) || defined(_WIN64)) && !defined(__MINGW32__)
 #define SYS_EOL "\r\n"
 #else
-#define SYS_EOL "\n";
+#define SYS_EOL "\n"
 #endif
 
 int GixEsqlLexer::LexerInput(char* buff, int max_size)
