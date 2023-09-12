@@ -533,7 +533,7 @@ cb_field_ptr gix_esql_driver::cb_build_field_tree(int level, std::string name, c
 	}
 
 	std::string path = f->sname;
-	cb_field_ptr p = f;
+	p = f;
 	while (p->parent) {
 		path = p->parent->sname + ":" + path;
 		p = p->parent;

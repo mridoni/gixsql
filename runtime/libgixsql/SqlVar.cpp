@@ -222,7 +222,8 @@ void SqlVar::createRealData()
 					db_data_buffer[index++] = ASCII_ZERO + (*ptr & lbit);
 				}
 				else {
-					if ((tmp & lbit) == 0x0D) {
+
+					if ((*ptr & lbit) == 0x0D) {
 						db_data_buffer[0] = '-';
 					}
 					else {
