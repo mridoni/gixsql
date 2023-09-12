@@ -6,7 +6,8 @@ libgixsql_la_SOURCES = Connection.cpp  ConnectionManager.cpp  Cursor.cpp  Cursor
 			Connection.h Cursor.h DataSourceInfo.h gixsql.h ICursor.h IDbInterface.h IConnectionOptions.h Logger.h sqlca.h \
 			SqlVarList.h ConnectionManager.h CursorManager.h DbInterfaceFactory.h IConnection.h IDataSourceInfo.h \
 			IDbManagerInterface.h ISchemaManager.h platform.h SqlVar.h utils.h default_driver.h IResultSetContextData.h custom_formatters.h \
-            $(top_srcdir)/common/cobol_var_types.h $(top_srcdir)/common/varlen_defs.h $(top_srcdir)/common/cobol_var_flags.h
+            $(top_srcdir)/common/cobol_var_types.h $(top_srcdir)/common/varlen_defs.h $(top_srcdir)/common/cobol_var_flags.h \
+			GlobalEnv.h GlobalEnv.cpp
 
 libgixsql_la_CXXFLAGS = -std=c++17 -DSPDLOG_FMT_EXTERNAL -DNDEBUG -I$(top_srcdir)/libgixpp -I$(top_srcdir)/common
 libgixsql_la_LDFLAGS =  -lfmt -lstdc++fs -no-undefined -avoid-version
