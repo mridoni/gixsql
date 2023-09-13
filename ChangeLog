@@ -1,3 +1,10 @@
+=== v1.0.21 ======================================================
+Added some features and fixes
+- Logs can be rotated (parameters are: GIXSQL_LOG_ROTATE, GIXSQL_LOG_ROTATE_MAX_SIZE, GIXSQL_LOG_ROTATE_MAX_FILES, more documentation will follow)
+- The size of indicator for VARYING fields can be set at runtime with an environment variable (GIXSQL_VARYING_LEN_SZ_SHORT) that must coincide with the size specifying when preprocessing (a new parameter -N/--varying-length-size has been added to gixpp). See here: https://github.com/mridoni/gixsql/issues/54#issuecomment-1712474368
+- The handling of continuation lines has been fixed
+- Several pull requests by @GitMensch have been merged (thanks!!) that fix some memory bugs here and there
+
 === v1.0.20b ======================================================
 - Added SSL connection support for PostgreSQL
 - Preprocessor components have been refactored, parser and generator are now two different modules
