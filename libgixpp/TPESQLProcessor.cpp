@@ -185,6 +185,8 @@ int TPESQLProcessor::outputESQL()
 {
 	working_begin_line = 0;
 	working_end_line = 0;
+	linkage_begin_line = 0;
+	linkage_end_line = 0;
 
 	input_file = this->parser_data->parsed_filename();
 	output_file = owner->lastStep()->getOutput()->filename();
@@ -203,6 +205,10 @@ int TPESQLProcessor::outputESQL()
 
 	if (!find_working_storage(&working_begin_line, &working_end_line))
 		return -1;
+
+
+	// LINKAGE SECTION is optional, so we don't check for errors
+	find_linkage_section(&linkage_begin_line, &linkage_end_line);
 
 	startup_items = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item != 0; }).to_vector();
 	process_sql_query_list();
@@ -353,8 +359,15 @@ bool TPESQLProcessor::processNextFile()
 
 		default:
 			// Add original text, commented
-			for (int n = exec_sql_stmt->startLine; n <= exec_sql_stmt->endLine; n++) {
-				put_output_line(comment_line("GIXSQL", input_lines.at(n - 1)));
+			if (current_input_line != working_end_line && current_input_line != linkage_end_line) {
+				for (int n = exec_sql_stmt->startLine; n <= exec_sql_stmt->endLine; n++) {
+					put_output_line(comment_line("GIXSQL", input_lines.at(n - 1)));
+					current_input_line++;
+				}
+			}
+			else {
+				put_output_line(input_lines.at(current_input_line - 1));
+
 				current_input_line++;
 			}
 
@@ -1564,6 +1577,24 @@ bool TPESQLProcessor::find_working_storage(int* working_begin_line, int* working
 	}
 
 	return (*working_begin_line | *working_end_line) > 0;
+}
+
+bool TPESQLProcessor::find_linkage_section(int* linkage_begin_line, int* linkage_end_line)
+{
+	std::vector<cb_exec_sql_stmt_ptr>* p = parser_data->exec_list();
+
+	*linkage_begin_line = 0;
+	*linkage_end_line = 0;
+
+	for (auto e : *p) {
+		if (e->commandName == ESQL_LINKAGE_BEGIN)
+			*linkage_begin_line = e->startLine;
+
+		if (e->commandName == ESQL_LINKAGE_END)
+			*linkage_end_line = e->startLine;
+	}
+
+	return (*linkage_begin_line | *linkage_end_line) > 0;
 }
 
 std::string TPESQLProcessor::comment_line(const std::string& comment, const std::string& line)

@@ -94,6 +94,7 @@ private:
 	bool handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql_stmt_ptr stmt, bool is_in_ws);
 
 	bool find_working_storage(int *working_begin_line, int *working_end_line);
+	bool find_linkage_section(int* linkage_begin_line, int* linkage_end_line);
 
 	bool processNextFile();
 
@@ -137,8 +138,12 @@ private:
 	bool decode_indicator(const std::string& orig_name, std::string& var_name, std::string& ind_name);
 
 	std::stack<std::string> input_file_stack;
-	int working_begin_line;
-	int working_end_line;
+
+	int working_begin_line = 0;
+	int working_end_line = 0;
+	int linkage_begin_line = 0;
+	int linkage_end_line = 0;
+	
 	std::string code_tag;
 
 	std::vector<std::string> ws_query_list;
