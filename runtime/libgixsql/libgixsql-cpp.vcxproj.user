@@ -1,16 +1,22 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>
-    <LocalDebuggerWorkingDirectory>D:\gix_tmp_test\</LocalDebuggerWorkingDirectory>
-    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;D:\gix-ide-x64\bin
-DATASRC=pgsql://localhost/testdb1
-DATASRC_USR=test
-DATASRC_PWD=test
-GIXSQL_LOG_FILE=D:\gix_tmp_test\gixsql-TSQL004B-x64-mysql-msvc.log
+    <LocalDebuggerCommand>D:\REC106\DIST\REC10601.exe</LocalDebuggerCommand>
+    <LocalDebuggerWorkingDirectory>D:\REC106\dist</LocalDebuggerWorkingDirectory>
+    <LocalDebuggerEnvironment>PATH=%localappdata%\Gix\compiler-pkgs\gnucobol-3.1.2-windows-msvc-all\bin_x64;$(OutDir)
+NOMEDB=mysql://192.168.1.27:3306/test_vwfs
+USRPWDDB=test_vwfs.test_vwfs
+GIXSQL_LOG_FILE=D:\REC106\DIST\gixsql.log
+GIXSQL_LOG_TRUNCATE=1
 GIXSQL_LOG_LEVEL=trace
+FIL106=D:\REC106\DIST\INPUT\VWFS_ITG825024_COM106_V2019.269A
+CSVUNI=D:\REC106\DIST\OUT\REC10601_CEDA_2019_CSVUNI.CSV
+SKP=D:\REC106\DIST\SKP\REC10601.SKP
+OUTFILE=D:\REC106\DIST\DISPLAY\REC10601_CEDA_2019.DIS
+GIXSQL_VARYING_LEN_SZ_SHORT=1
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerCommandArguments> &lt; D:\REC106\DIST\SKP\REC10601.SKP &gt; D:\REC106\DIST\REC10601.out 2&gt;&amp;1</LocalDebuggerCommandArguments>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test_Debug|x64'">
     <LocalDebuggerCommand>D:\gix_tmp_test\TSQL004B.exe</LocalDebuggerCommand>

@@ -5,8 +5,15 @@
 
 #include <string>
 
+#ifndef LIBGIXSQL_API
+#if defined(_WIN32) || defined(_WIN64)
+#define LIBGIXSQL_API __declspec(dllexport)   
+#else  
+#define LIBGIXSQL_API
+#endif
+#endif
 
-class GlobalEnv
+class LIBGIXSQL_API GlobalEnv
 {
 	friend int f_norec_sqlcode();
 	friend int f_varlen_length_sz();
