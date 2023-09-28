@@ -118,4 +118,51 @@ jobs:
         path: |
           gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
 
+ debian-12-x64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:12
+
+    steps:
+    
+    - name: Build
+      env:
+        DIST: debian-12
+      run: |
+        export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+        export WORKSPACE=$(pwd)
+        apt update
+        apt install -y build-essential bison automake autoconf pkg-config libmariadb-dev-compat libmariadb-dev libpq-dev unixodbc-dev flex libspdlog-dev libfmt-dev git wget
+        git clone --recurse-submodules https://github.com/mridoni/gixsql.git --branch ${{ env.GIXSQL_BRANCH }} .
+        echo "HOST_PLATFORM      : ${{env.HOST_PLATFORM}}"
+        echo "BUILD_CONFIGURATION: ${{env.BUILD_CONFIGURATION}}"
+        chmod 755 ./prepbuild.sh && ./prepbuild.sh /E
+        chmod 755 ./prepdist.sh && ./prepdist.sh
+        autoreconf --install --force
+        ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
+        make -j$(nproc) && make install-strip
+        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+        ls -l
+        ls -lR $WORKSPACE/pkg
+    
+#    - name: Build package
+#      env:
+#          DIST: debian-12
+#          WORKSPACE: ${{ github.workspace }}
+#      shell: bash
+#      run: |
+#        chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
+#        ls -l
+#        ls -lR $WORKSPACE/pkg
+        
+    - name: Archive production artifacts
+      env:
+          DIST: debian-12
+      uses: actions/upload-artifact@v3
+      with:
+        name: gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}
+        path: |
+          gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
+
+
 
