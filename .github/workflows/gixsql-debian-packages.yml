@@ -48,7 +48,6 @@ jobs:
         ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
         make -j$(nproc) && make install-strip
         chmod 755 ./deploy/installers/linux/mkdeb-gixsql.sh && ./deploy/installers/linux/mkdeb-gixsql.sh
-        ls -lR $WORKSPACE
     
 #    - name: Build package
 #      env:
@@ -96,8 +95,6 @@ jobs:
         ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
         make -j$(nproc) && make install-strip
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
-        ls -l
-        ls -lR $WORKSPACE/pkg
     
 #    - name: Build package
 #      env:
@@ -143,8 +140,6 @@ jobs:
         ./configure --prefix=$WORKSPACE/pkg/${{ env.INSTALL_PREFIX }}
         make -j$(nproc) && make install-strip
         chmod 755 $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh && $WORKSPACE/deploy/installers/linux/mkdeb-gixsql.sh
-        ls -l
-        ls -lR $WORKSPACE/pkg
     
 #    - name: Build package
 #      env:

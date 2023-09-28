@@ -1623,9 +1623,14 @@ static bool gixsql_initialize()
 		{
 			unsigned long rotate_max_size;
 			int rotate_max_files;
-			bool rotate_on_open;
+			bool rotate_on_open;	// Not available on spdlog < 1.4.0
 			get_log_rotation_parameters(&rotate_max_size, &rotate_max_files, &rotate_on_open);
+
+#if SPDLOG_VERSION >= 10400
 			gixsql_std_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(filename, rotate_max_size, rotate_max_files, rotate_on_open);
+#else
+			gixsql_std_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(filename, rotate_max_size, rotate_max_files);
+#endif
 		}
 	}
 
