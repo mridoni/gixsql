@@ -83,7 +83,7 @@ AC_ARG_ENABLE([pgsql],
 AC_ARG_ENABLE([oracle],
   [AS_HELP_STRING([--enable-oracle], [Enable Oracle support @<:@yes@:>@])])
 
-AC_ARG_ENABLE([pgsql],
+AC_ARG_ENABLE([sqlite],
   [AS_HELP_STRING([--enable-sqlite], [Enable SQLite support @<:@yes@:>@])])  
 
 AC_ARG_WITH([default-driver],
