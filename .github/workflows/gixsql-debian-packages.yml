@@ -118,7 +118,8 @@ jobs:
         path: |
           gixsql-${{ env.DIST }}-${{ env.HOST_PLATFORM }}-${{ env.GIXSQLMAJ}}.${{ env.GIXSQLMIN}}.${{ env.GIXSQLREL}}-${{ env.GIX_REVISION}}.deb
 
- debian-12-x64:
+
+  debian-12-x64:
     runs-on: ubuntu-latest
     container:
       image: debian:12
