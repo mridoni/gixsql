@@ -19,8 +19,6 @@
 */
 
 #include <stdlib.h>
-#include <math.h>
-#include <string>
 #include <cstring>
 #include <locale.h>
 #include <inttypes.h>
@@ -169,11 +167,8 @@ void SqlVar::createRealData()
 		}
 		case CobolVarType::COBOL_TYPE_UNSIGNED_NUMBER_PD:
 		{
-			double dlength;
-			int skip_first;
-
-			dlength = ceil(((double)length + 1) / 2);
-			skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
+			const int dlength = (length / 2) + 1;
+			const int skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
 
 			int index = 0;
 			const unsigned char ubit = 0xF0;
@@ -200,11 +195,8 @@ void SqlVar::createRealData()
 		}
 		case CobolVarType::COBOL_TYPE_SIGNED_NUMBER_PD:
 		{
-			double dlength;
-			int skip_first;
-
-			dlength = ceil(((double)length + 1) / 2);
-			skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
+			const int dlength = (length / 2) + 1;
+			const int skip_first = (length + 1) % 2; // 1 -> skip first 4 bits
 
 			/* set real data */
 			int index = SIGN_LENGTH;
