@@ -135,7 +135,7 @@ AS_IF([test "$enable_sqlite" != "no"], [enable_sqlite=yes], [enable_sqlite=no])
 # Check if the driver ID is valid
 AS_IF([test "$with_default_driver" == "none" || test "$with_default_driver" == "odbc" || test "$with_default_driver" == "mysql" || test "$with_default_driver" == "pgsql" ] || test "$with_default_driver" == "oracle" ] || test "$with_default_driver" == "sqlite" ],
 		[],
-		[AC_MSG_ERROR([invalid DBMS driver id \"${with_default_driver}\".])]
+		[AC_MSG_ERROR([invalid DBMS driver id "${with_default_driver}".])]
 )
 
 
