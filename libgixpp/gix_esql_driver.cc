@@ -630,7 +630,7 @@ int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 		}
 
 
-		switch (c) {
+		switch (toupper(c)) {
 			case 'X':
 				if (s_count | v_count) {
 					return 0;
