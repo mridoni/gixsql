@@ -986,7 +986,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					pp_call.addParameter(pp_size, BY_VALUE);
 					pp_call.addParameter(pp_scale > 0 ? -pp_scale : 0, BY_VALUE);
 					pp_call.addParameter(pp_flags, BY_VALUE);
-					pp_call.addParameter(pp->sname, BY_REFERENCE);
+					pp_call.addParameter(pp->sname + " OF " + var_name, BY_REFERENCE);
 					pp_call.addParameter(0, BY_REFERENCE);
 
 					if (!put_call(pp_call, false))
@@ -1148,7 +1148,7 @@ bool TPESQLProcessor::handle_esql_stmt(const ESQL_Command cmd, const cb_exec_sql
 					pp_call.addParameter(pp_scale > 0 ? -pp_scale : 0, BY_VALUE);
 					pp_call.addParameter(pp_flags, BY_VALUE);
 
-					pp_call.addParameter(pp->sname, BY_REFERENCE);
+					pp_call.addParameter(pp->sname + " OF " + var_name, BY_REFERENCE);
 					pp_call.addParameter(0, BY_VALUE);
 
 					if (!put_call(pp_call, false))
@@ -2053,7 +2053,7 @@ bool TPESQLProcessor::put_res_host_parameters(const cb_exec_sql_stmt_ptr stmt, i
 				pp_call.addParameter(pp_size, BY_VALUE);
 				pp_call.addParameter(pp_scale > 0 ? -pp_scale : 0, BY_VALUE);
 				pp_call.addParameter(pp_flags, BY_VALUE);
-				pp_call.addParameter(pp->sname, BY_REFERENCE);
+				pp_call.addParameter(pp->sname + " OF " + var_name, BY_REFERENCE);
 				pp_call.addParameter(0, BY_REFERENCE);
 
 				if (!put_call(pp_call, false))
