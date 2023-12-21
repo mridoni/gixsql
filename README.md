@@ -327,15 +327,15 @@ Create an empty database or a schema, make sure you can access it with a given u
 
 Make sure that the preprocessor (gixpp) is in your path, then preprocess the COBOL source file:
 
-	gixpp -e -S -I. -ext ".,*.cpy,*.CPY" -i TEST001.cbl -o TEST001.cbsql
-	gixsql TEST001.cbl TEST001.cbsql -S -I. -ext ".,*.cpy,*.CPY"
+	gixpp -e -S -I. -E ".,*.cpy,*.CPY" -i TEST001.cbl -o TEST001.cbsql
+	gixsql TEST001.cbl TEST001.cbsql -S -I. -E ".,*.cpy,*.CPY"
 
 where:
 
 - `-e `: preprocess for ESQL (mandatory for preprocessing)
 - `-S`: use static calls when emitting GixSQL library calls (this is the mode to be normally used)
 - `-I.`: use the current directory for included COPY files (SQLCA is included from GixSQL's own directory)
-- `-ext ".,.cpy,.CPY"`: search for COPY files with one of these extensions (comma-separated list)
+- `-E ".,.cpy,.CPY"`: search for COPY files with one of these extensions (comma-separated list)
 - `-i` and `-o`: input and output file paths
 
 Another interesting option is `--picx-as`: this indicates how standard `PIC(X)` fields should be treated when sent to the DBMS. There are three possible options:
