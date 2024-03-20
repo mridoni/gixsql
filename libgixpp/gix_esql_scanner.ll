@@ -1245,7 +1245,7 @@ SUBSYSTEM "SQL"|"CICS"|"DLI"
 		return yy::gix_esql_parser::make_WORKINGEND(loc);
     }
 
-	"FD" {
+	("FD"|"SD") {
 		if (driver->data_division_section == DD_SECTION_FS) {
 			__yy_push_state(FD_STATE);
 		}
