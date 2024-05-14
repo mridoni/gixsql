@@ -152,6 +152,7 @@ public:
     std::string incfilename;
     std::string text_content;
     bool transaction_release;
+    bool cursor_from_prepared;
 
     hostref_or_literal_t *connectionid = nullptr;
     

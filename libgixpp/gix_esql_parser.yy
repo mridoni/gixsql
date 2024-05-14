@@ -115,7 +115,8 @@ static std::string to_std_string(connect_to_info_t *i) { if (i) { char buffer [3
 %token LINKAGEEND
 %token LOCALSTORAGEBEGIN	"Begin of LOCAL-STORAGE SECTION"
 %token LOCALSTORAGEEND		"End of LOCAL-STORAGE SECTION"
-%token FD
+%token FD               "FILE description (FD)"
+%token SD               "SORT description (SD)"
 %token FILEBEGIN		"Begin of FILE SECTION"
 %token FILEEND			"End of FILE SECTION"
 %token PROCEDURE_DIVISION	"PROCEDURE DIVISION"
@@ -644,6 +645,7 @@ CURSOR opt_with_hold FOR select { driver->cb_set_cursor_hold($2); }
 
 cursor_declaration_from_prepared_stmt:
 CURSOR opt_with_hold FOR strliteral_or_hostref { 
+        driver->cursor_from_prepared = true;
 	driver->cb_set_cursor_hold($2); 
 	driver->statement_source = $4;
 	driver->commandname = "SELECT";

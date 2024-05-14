@@ -144,6 +144,7 @@ struct cb_exec_sql_stmt_t
 	bool startup_item;
 	bool cursor_hold;
 	bool transaction_release;
+	bool cursor_from_prepared;
 
 	int sql_query_list_id;
 
@@ -169,6 +170,7 @@ struct cb_exec_sql_stmt_t
 		startup_item = false;
 		cursor_hold = false;
 		transaction_release = false;
+		cursor_from_prepared = false;
 	}
 
 	~cb_exec_sql_stmt_t()

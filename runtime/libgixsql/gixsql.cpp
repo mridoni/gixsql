@@ -826,7 +826,9 @@ LIBGIXSQL_API int GIXSQLCursorFetchOne(struct sqlca_t* st, char* cname)
 		}
 
 		int sql_code_local = DBERR_NO_ERROR;
-		(*it)->createCobolData(buffer.get(), datalen, &sql_code_local);
+		char* _data_bfr = is_null ? nullptr : buffer.get();
+		uint64_t _data_len = is_null ? 0 : datalen;
+		(*it)->createCobolData(_data_bfr, _data_len, &sql_code_local);
 		if (sql_code_local) {
 			setStatus(st, dbi, sql_code_local);
 			sqlcode = sql_code_local;

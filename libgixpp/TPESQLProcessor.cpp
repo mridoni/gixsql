@@ -542,11 +542,23 @@ bool TPESQLProcessor::put_cursor_declarations()
 
 	put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
 
+	auto cursor_open_list = startup_items;
+        auto other_crsrs_open = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_OPEN && !p->cursorName.empty(); }).to_vector();
+        cursor_open_list.insert(cursor_open_list.end(), other_crsrs_open.begin(), other_crsrs_open.end());
+
 	auto cursor_list = startup_items;
 	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
 	cursor_list.insert(cursor_list.end(), other_crsrs.begin(), other_crsrs.end());
 
 	for (cb_exec_sql_stmt_ptr stmt : cursor_list) {
+		if (stmt->host_list->size() <= 0 && stmt->cursor_from_prepared) {
+			for (cb_exec_sql_stmt_ptr stmt_open : cursor_open_list) {
+				if (stmt->cursorName == stmt_open->cursorName && stmt_open->commandName == ESQL_OPEN && stmt_open->host_list->size() > 0) {
+
+					stmt->host_list = stmt_open->host_list;
+				}
+			}
+		}
 		bool has_params = stmt->host_list->size() > 0;
 
 		//if (stmt->statementSource && !stmt->statementSource->is_literal) {
