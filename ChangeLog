@@ -4,6 +4,7 @@ Added some features and fixes
 - The size of indicator for VARYING fields can be set at runtime with an environment variable (GIXSQL_VARYING_LEN_SZ_SHORT) that must coincide with the size specifying when preprocessing (a new parameter -N/--varying-length-size has been added to gixpp). See here: https://github.com/mridoni/gixsql/issues/54#issuecomment-1712474368
 - The handling of continuation lines has been fixed
 - Several pull requests by @GitMensch have been merged (thanks!!) that fix some memory bugs here and there
+- PICTURE clauses are now also handled in lower-case (fixes #188)
 
 === v1.0.20b ======================================================
 - Added SSL connection support for PostgreSQL
@@ -76,16 +77,16 @@ Added some features and fixes
 
 === v1.0.17 ======================================================
 - Added support for "smart" cursor initialization (#88)
-- Added support for EXECUTE prepared-statement INTO #(87)
-- Fixed a logging problem (#84)
-- Fixed "wrong generated COBOL in 1.0.16" (#83)
-- Fixed "missing "close" for spdlog?" (#82)
+- Added support for EXECUTE prepared-statement INTOï¿½#(87)
+- Fixed a logging problemï¿½(#84)
+- Fixed "wrong generated COBOL in 1.0.16"ï¿½(#83)
+- Fixed "missing "close" for spdlog?"ï¿½(#82)
 - Added support for using prepared statements in cursors (#81)
 - Variable length fields indicators are now 32-bit long by default (#80)
 - Added support for using variable length fields with prepared statements (#79)
-- Added upport for using group fields in INSERT and SELECT..INTO statements (#6)
-- Added support for more connection string formats (including ocesql compatibility) (#16)
-- Added Support for DISCONNECT ALL (#89)
+- Added upport for using group fields in INSERT and SELECT..INTO statementsï¿½(#6)
+- Added support for more connection string formats (including ocesql compatibility)ï¿½(#16)
+- Added Support forï¿½DISCONNECT ALLï¿½(#89)
 - Performed some refactoring to improve code size
 - Fixed a few memory leaks
 

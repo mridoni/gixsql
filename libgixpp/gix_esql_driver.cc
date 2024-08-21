@@ -1,6 +1,8 @@
 /*
-This file is part of Gix-IDE, an IDE and platform for GnuCOBOL
-Copyright (C) 2021,2022 Marco Ridoni
+This file is part of GixSQL, an ESQL preprocessor to enable GnuCOBOL
+to access databases.
+
+Copyright (C) 2021-2024 Marco Ridoni
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -574,11 +576,13 @@ int gix_esql_driver::build_picture(const std::string str, cb_field_ptr pic)
 {
 	if (pic == NULL || str.length() > 50) {
 		/* arbitrary limit; note on implementation limits: COBOL85 (30),
-  		   COBOL2002 and most others (50), COBOL2014 (63), GC (255) */
+  		   COBOL2002 and most others (50), COBOL2014+2024 (63), GC (255) */
 		return 0;
 	}
 	
-	const char *p = str.c_str();
+	std::string str_u = str;
+	std::transform(str_u.begin(), str_u.end(), str_u.begin(), ::toupper);
+	const char *p = str_u.c_str();
 
 	int			i;
 	int			n;
