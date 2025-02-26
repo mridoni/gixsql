@@ -21,4 +21,4 @@ echo "Configuring version ($GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL) in header file for 
 echo "#define VERSION \"$GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL\"" > $SCRIPT_DIR/config.h
 
 echo "Configuring version ($GIXSQLMAJ.$GIXSQLMIN.$GIXSQLREL) in version file for GixSQL"
-./version.sh
+source ./version.sh

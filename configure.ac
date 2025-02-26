@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ([2.69])
-AC_INIT([gixsql], ['1.0.21dev'], [m.ridoni@mediumgray.info])
+AC_INIT([gixsql], [1.0.21dev], [m.ridoni@mediumgray.info])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([1.9.6 -Wall -Werror dist-bzip2 subdir-objects])
@@ -18,7 +18,7 @@ AC_PROG_MAKE_SET
 AC_PROG_RANLIB
 AM_PROG_AR
 AC_PROG_YACC
-AC_PROG_LEX
+AC_PROG_LEX([yywrap])
 
 LT_INIT
 AC_SUBST([LIBTOOL_DEPS])
@@ -133,10 +133,13 @@ AS_IF([test "$enable_sqlite" != "no"], [enable_sqlite=yes], [enable_sqlite=no])
 
 
 # Check if the driver ID is valid
-AS_IF([test "$with_default_driver" == "none" || test "$with_default_driver" == "odbc" || test "$with_default_driver" == "mysql" || test "$with_default_driver" == "pgsql" ] || test "$with_default_driver" == "oracle" ] || test "$with_default_driver" == "sqlite" ],
-		[],
-		[AC_MSG_ERROR([invalid DBMS driver id \"${with_default_driver}\".])]
-)
+case "$with_default_driver" in
+  none | odbc | mysql | pgsql | oracle | sqlite)
+     ;;
+  *)
+     AC_MSG_ERROR([invalid DBMS driver id "${with_default_driver}".])
+     ;;
+esac
 
 
 num_drivers=0

@@ -1,8 +1,15 @@
 ## Process this file with automake to generate Makefile.in
 ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = libcpputils libgixpp gixpp runtime/libgixsql
-EXTRA_DIST = copy/SQLCA.cpy misc/gixsql-wrapper README TESTING.md doc examples extra_files.mk
+EXTRA_DIST = copy/SQLCA.cpy misc/gixsql-wrapper misc/gixsql.cmd \
+             README TESTING.md doc examples extra_files.mk
 CLEANFILES = *~
+
+install-exec-hook:
+	install -c -m 755 $(top_srcdir)/misc/gixsql-wrapper $(DESTDIR)$(bindir)/gixsql
+
+uninstall-hook:
+	rm -f $(DESTDIR)$(bindir)/gixsql
 
 if ENABLE_MYSQL
 SUBDIRS += runtime/libgixsql-mysql
@@ -34,5 +41,3 @@ dist_doc_DATA = $(DOC_FILES)
 
 examplesdir = $(prefix)/share/gixsql/examples
 dist_examples_DATA = $(EXAMPLES_FILES)
-
-

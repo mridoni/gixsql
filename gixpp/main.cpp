@@ -77,10 +77,15 @@ int main(int argc, char** argv)
 	auto opt_outfile = options.add<Value<std::string>>("o", "outfile", "output file");
 	auto opt_symfile = options.add<Value<std::string>>("s", "symfile", "output symbol file");
 	auto opt_esql = options.add<Switch>("e", "esql", "preprocess for ESQL");
-	auto opt_esql_preprocess_copy = options.add<Switch>("p", "esql-preprocess-copy", "ESQL: preprocess all included COPY files");
+	auto opt_esql_preprocess_copy = options.add<Switch>("p", "esql-preprocess-copy", "ESQL: preprocess all included COPY files (instead of only those in EXEC SQL INCLUDE)");
 	auto opt_esql_copy_exts = options.add<Value<std::string>>("E", "esql-copy-exts", "ESQL: copy files extension list (comma-separated)");
 	auto opt_esql_param_style = options.add<Value<std::string>>("z", "param-style", "ESQL: generated parameters style (=a|d|c)", "d");
 	auto opt_esql_static_calls = options.add<Switch>("S", "esql-static-calls", "ESQL: emit static calls");
+	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "ESQL: emit COBOL85-compliant code");
+	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "ESQL: length/data suffixes for varlen fields (=LEN,ARR)");
+	auto opt_varying_len_sz = options.add<Value<std::string>>("N", "varying-length-size", "ESQL: size of the length indicator fields for VARYING fields(=2|4))", DEFAULT_VARYING_LEN_SZ);
+	auto opt_picx_as_varchar = options.add<Value<std::string>>("P", "picx-as", "ESQL: text field options (=char|charf|varchar)", "char");
+	auto opt_no_rec_code = options.add<Value<std::string>>("", "no-rec-code", "ESQL: custom code for \"no record\" condition(=nnn)");
 	auto opt_debug_info = options.add<Switch>("g", "debug-info", "generate debug info");
 	auto opt_consolidate = options.add<Switch>("c", "consolidate", "consolidate source to single-file");
 	auto opt_keep = options.add<Switch>("k", "keep", "keep temporary files");
@@ -88,11 +93,6 @@ int main(int argc, char** argv)
 	auto opt_verbose_debug = options.add<Switch>("d", "verbose-debug", "verbose (debug)");
 	auto opt_parser_scanner_debug = options.add<Switch>("D", "parser-scanner-debug", "parser/scanner debug output");
 	auto opt_emit_map_file = options.add<Switch>("m", "map", "emit map file");
-	auto opt_emit_cobol85 = options.add<Switch>("C", "cobol85", "emit COBOL85-compliant code");
-	auto opt_varying_ids = options.add<Value<std::string>>("Y", "varying", "length/data suffixes for varlen fields (=LEN,ARR)");
-	auto opt_varying_len_sz = options.add<Value<std::string>>("N", "varying-length-size", "size of the length indicator fields for VARYING fields(=2|4))", DEFAULT_VARYING_LEN_SZ);
-	auto opt_picx_as_varchar = options.add<Value<std::string>>("P", "picx-as", "text field options (=char|charf|varchar)", "char");
-	auto opt_no_rec_code = options.add<Value<std::string>>("", "no-rec-code", "custom code for \"no record\" condition(=nnn)");
 
 	options.parse(argc, argv);
 
@@ -106,13 +106,14 @@ int main(int argc, char** argv)
 	}
 
 	if (opt_help->is_set()) {
+		sprintf(vbfr, "Usage: gixpp options...");
+		std::cout << vbfr << std::endl << std::endl << options << std::endl;
 		rc = 0;
-		std::cout << options << std::endl;
 	}
 	else {
 		if (opt_version->is_set()) {
 			sprintf(vbfr, "gixpp - the ESQL preprocessor for Gix-IDE/GixSQL\nVersion: %s\nlibgixpp version: %s\n", GIXPP_VER, LIBGIXPP_VER);
-			std::cout << vbfr << std::endl;
+			std::cout << vbfr;
 			rc = 0;
 		}
 		else {

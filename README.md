@@ -275,40 +275,46 @@ Under the project directory (`%USERPROFILE%\Documents\Gix\Examples\TEST001` or `
 
 ### Using GixSQL
 
-If you want to manually precompile COBOL programs for ESQL, you can use the preprocessor binary (**gixpp** or **gixpp.exe**) you will find in the **bin** folder in Gix-IDE's installation directory. If you are running it from the console, make sure you have the same **bin** directory in your `PATH`/`LD_LIBRARY_PATH` since it contains some libraries that are needed by **gixpp**. These are the available command line options
+If you want to manually precompile COBOL programs for ESQL, you can use the preprocessor binary (**gixpp** or **gixpp.exe**) you will find in the **bin** folder in Gix-IDE's installation directory. If you are running it from the console, make sure you have the same **bin** directory in your `PATH`/`LD_LIBRARY_PATH` since it contains some libraries that are needed by **gixpp**.  
+These are the available command line options:
 
 ```text
 gixpp - the ESQL preprocessor for Gix-IDE/GixSQL
-Version: 1.0.18
-libgixpp version: 1.0.18
+Version: 1.0.21dev
+libgixpp version: 1.0.21dev
 
 Options:
-  -h, --help                  displays help on commandline options
-  -V, --version               displays version information
-  -I, --copypath arg          COPY file path list
-  -i, --infile arg            input file
-  -o, --outfile arg           output file
-  -s, --symfile arg           output symbol file
-  -e, --esql                  preprocess for ESQL
-  -p, --esql-preprocess-copy  ESQL: preprocess all included COPY files
-  -E, --esql-copy-exts arg    ESQL: copy files extension list (comma-separated)
-  -z, --param-style arg (=d)  ESQL: generated parameters style (=a|d|c
-  -S, --esql-static-calls     ESQL: emit static calls
-  -g, --debug-info            generate debug info
-  -c, --consolidate           consolidate source to single-file
-  -k, --keep                  keep temporary files
-  -v, --verbose               verbose
-  -d, --verbose-debug         verbose (debug)
-  -m, --map                   emit map file
-  -C, --cobol85               emit COBOL85-compliant code
-  -Y, --varying arg           length/data suffixes for varlen fields (=LEN,ARR)
-  -P, --picx-as arg (=char)   text field options (=char|charf|varchar)
-  --no-rec-code arg           custom code for "no record" condition(=nnn)
+  -h, --help                          displays help on commandline options
+  -V, --version                       displays version information
+  -I, --copypath arg                  COPY file path list
+  -i, --infile arg                    input file
+  -o, --outfile arg                   output file
+  -s, --symfile arg                   output symbol file
+  -e, --esql                          preprocess for ESQL
+  -p, --esql-preprocess-copy          ESQL: preprocess all included COPY files instead of only those in EXEC SQL INCLUDE
+  -E, --esql-copy-exts arg            ESQL: copy files extension list (comma-separated)
+  -z, --param-style arg (=d)          ESQL: generated parameter style (=a|d|c)
+  -S, --esql-static-calls             ESQL: emit static calls
+  -C, --cobol85                       ESQL: emit COBOL85-compliant code
+  -Y, --varying arg                   ESQL: length/data suffixes for varlen fields (=LEN,ARR)
+  -N, --varying-length-size arg (=4)  ESQL: size of the length indicator fields for VARYING fields(=2|4))
+  -P, --picx-as arg (=char)           ESQL: text field options (=char|charf|varchar)
+  --no-rec-code arg                   ESQL: custom code for "no record" condition(=nnn)
+  -g, --debug-info                    generate debug info
+  -c, --consolidate                   consolidate source to single-file
+  -k, --keep                          keep temporary files
+  -v, --verbose                       verbose
+  -d, --verbose-debug                 verbose (debug)
+  -D, --parser-scanner-debug          parser/scanner debug output
+  -m, --map                           emit map file
 ```
 
 Alternatively, you can use **gixsql**, which is a wrapper around the gixsql binary.
+```
+Usage: gixsql input-file output-file [options]...
+```
 
-When you want to build and link the resulting COBOL program from the console, remember to also add the `<gix-install-dir>/share/gixsql/copy` directory to the COPY path list (it contains SQLCA) and to include **libgixsql** (and the appropriate path, depending on your architecture) to the compiler's command line.
+When you want to build and link the resulting COBOL program from the console, remember to also add the `<gix-install-dir>/share/gixsql/copy` directory (it contains SQLCA) to the COPY path list, if you use static calls also **libgixsql** (and the appropriate path, depending on your architecture) to the COBOL  compiler's command line.
 
 
 ### Basic command line example
