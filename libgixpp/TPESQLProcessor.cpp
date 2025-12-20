@@ -535,6 +535,14 @@ bool TPESQLProcessor::put_cursor_declarations()
 	CobolVarType f_type;
 	int f_size, f_scale;
 	bool emit_static = parser_data->job_params()->opt_emit_static_calls;
+
+	auto cursor_list = startup_items;
+	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
+	cursor_list.insert(cursor_list.end(), other_crsrs.begin(), other_crsrs.end());
+
+	if (cursor_list.empty())
+		return true;
+
 	const char* _areab = AREA_B_CPREFIX;
 
 	put_output_line(code_tag + "*");
@@ -542,25 +550,28 @@ bool TPESQLProcessor::put_cursor_declarations()
 
 	put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
 
-	auto cursor_list = startup_items;
-	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
-	cursor_list.insert(cursor_list.end(), other_crsrs.begin(), other_crsrs.end());
+	bool ret = true;
 
 	for (cb_exec_sql_stmt_ptr stmt : cursor_list) {
 		bool has_params = stmt->host_list->size() > 0;
 
-		//if (stmt->statementSource && !stmt->statementSource->is_literal) {
-		//	raise_error("Cursors declared in WORKING-STORAGE cannot use a field as source: " + stmt->cursorName, ERR_CRSR_GEN, stmt->src_abs_path, stmt->startLine);
-		//	return false;
-		//}
+#if 0	/* note: that code was checked in as deactived; CHECKME: Should we have that? */
+		if (stmt->statementSource && !stmt->statementSource->is_literal) {
+			raise_error("Cursors declared in WORKING-STORAGE cannot use a field as source: " + stmt->cursorName, ERR_CRSR_GEN, stmt->src_abs_path, stmt->startLine);
+			ret = false;
+			continue;
+		}
+#endif
 
 		put_output_line(string_format(AREA_A_CPREFIX "GIXSQL-CI-P-%s.", string_replace(stmt->cursorName, "_", "-")));
 
 		if (has_params) {
 			put_start_exec_sql(false);
 
-			if (!put_host_parameters(stmt))
-				return false;
+			if (!put_host_parameters(stmt)) {
+				ret = false;
+				continue;
+			}
 
 			ESQLCall cd_call(get_call_id("CursorDeclareParams"), emit_static);
 			cd_call.addParameter("SQLCA", BY_REFERENCE);
@@ -579,7 +590,8 @@ bool TPESQLProcessor::put_cursor_declarations()
 				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
 				if (!parser_data->field_exists(var_name)) {
 					raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
-					return false;
+					ret = false;
+					continue;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
 				auto hr = parser_data->field_map(var_name);
@@ -590,7 +602,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 			cd_call.addParameter(std::to_string(stmt->host_list->size()), BY_VALUE);
 
 			if (!put_call(cd_call, false))
-				return false;
+				ret = false;
 
 			put_end_exec_sql(false);
 
@@ -613,7 +625,8 @@ bool TPESQLProcessor::put_cursor_declarations()
 				ASSERT_NO_INDICATOR(var_name, stmt->src_abs_path, stmt->startLine);
 				if (!parser_data->field_exists(var_name)) {
 					raise_error("Cannot find host variable: " + var_name, ERR_MISSING_HOSTVAR, stmt->src_abs_path, stmt->startLine);
-					return false;
+					ret = false;
+					continue;
 				}
 				cd_call.addParameter(var_name, BY_REFERENCE);
 				auto hr = parser_data->field_map(var_name);
@@ -621,8 +634,10 @@ bool TPESQLProcessor::put_cursor_declarations()
 				cd_call.addParameter(f_size * (is_varlen ? -1 : 1), BY_VALUE);
 			}
 
-			if (!put_call(cd_call, false))
-				return false;
+			if (!put_call(cd_call, false)) {
+				ret = false;
+				break;
+			}
 
 			put_whenever_handler(stmt->period);
 		}
@@ -632,7 +647,7 @@ bool TPESQLProcessor::put_cursor_declarations()
 
 	put_output_line(code_tag + "*");
 	put_output_line(code_tag + "*   ESQL CURSOR DECLARATIONS (END)");
-	return true;
+	return ret;
 }
 
 bool TPESQLProcessor::put_call(const ESQLCall& c, bool terminate_with_period, int indent_level)
