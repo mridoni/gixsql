@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <string>
 #include <stdbool.h>
-#include <malloc.h>
 #include <math.h>
 #include <algorithm> 
 #include <cctype>

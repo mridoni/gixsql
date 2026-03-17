@@ -50,6 +50,14 @@ static std::regex rxUserDefinedCobolWord(R"(^[A-Za-z0-9]+([\-]+[A-Za-z0-9]+)*$)"
 #define SYS_EOL "\n"
 #endif
 
+std::istream& yyinGetline(std::istream* yyin, char* buff, int max_size) {
+	return yyin->getline(buff, max_size);
+}
+
+std::istream& yyinGetline(std::istream& yyin, char* buff, int max_size) {
+	return yyin.getline(buff, max_size);
+}
+
 int GixEsqlLexer::LexerInput(char* buff, int max_size)
 {
 	char* bp;
@@ -59,7 +67,7 @@ int GixEsqlLexer::LexerInput(char* buff, int max_size)
 
 	memset(buff, 0, max_size);
 
-	while (yyin.getline(buff, max_size)) {
+	while (yyinGetline(yyin, buff, max_size)) {
 
 		cur_line_content = buff;
 

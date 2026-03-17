@@ -9,5 +9,6 @@ libgixsql_la_SOURCES = Connection.cpp  ConnectionManager.cpp  Cursor.cpp  Cursor
             $(top_srcdir)/common/cobol_var_types.h $(top_srcdir)/common/varlen_defs.h $(top_srcdir)/common/cobol_var_flags.h \
 			GlobalEnv.h GlobalEnv.cpp
 
-libgixsql_la_CXXFLAGS = -std=c++17 -DSPDLOG_FMT_EXTERNAL -DNDEBUG -I$(top_srcdir)/libgixpp -I$(top_srcdir)/common
-libgixsql_la_LDFLAGS =  -lfmt -lstdc++fs -no-undefined -avoid-version
+libgixsql_la_CXXFLAGS = -std=c++17 -DSPDLOG_FMT_EXTERNAL -DNDEBUG @FMT_CFLAGS@ @SPDLOG_CFLAGS@ -I$(top_srcdir)/libgixpp -I$(top_srcdir)/common 
+libgixsql_la_LIBADD = @FMT_LIBS@ @SPDLOG_LIBS@
+libgixsql_la_LDFLAGS = -no-undefined -avoid-version

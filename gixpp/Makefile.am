@@ -2,9 +2,14 @@
 
 bin_PROGRAMS = gixpp
 gixpp_SOURCES = main.cpp popl.hpp
-gixpp_CXXFLAGS = -std=c++17 -I.. -I $(top_srcdir)/common -I$(top_srcdir)/libcpputils -I$(top_srcdir)/libgixpp -I$(top_srcdir)/build-tools/grammar-tools
+gixpp_CXXFLAGS = -std=c++17 -I.. -I $(top_srcdir)/common -I$(top_srcdir)/libcpputils -I$(top_builddir)/libgixpp -I$(top_srcdir)/libgixpp
+
+if BUILD_WINDOWS
+gixpp_CXXFLAGS += -I$(top_srcdir)/build-tools/grammar-tools
+endif
+
 gixpp_LDFLAGS =
-gixpp_LDADD = ../libgixpp/libgixpp.a ../libcpputils/libcpputils.a -lstdc++fs
+gixpp_LDADD = ../libgixpp/libgixpp.a ../libcpputils/libcpputils.a
 
 #install-exec-hook:
 #	cp $(top_srcdir)/misc/gixsql-wrapper $(prefix)/bin/gixsql && \

@@ -49,30 +49,24 @@ build_mac=no
 
 # Detect the target system
 case "${host_os}" in
-    linux*)
-        build_linux=yes
-        ;;
     cygwin*|mingw*)
         build_windows=yes
-        ;;
-    darwin*)
-        build_mac=yes
-        ;;
-    *)
-        AC_MSG_ERROR(["OS $host_os is not supported"])
         ;;
 esac
 
 # Pass the conditionals to automake
-AM_CONDITIONAL([BUILD_LINUX], [test "$build_linux" = "yes"])
 AM_CONDITIONAL([BUILD_WINDOWS], [test "$build_windows" = "yes"])
-AM_CONDITIONAL([BUILD_OSX], [test "$build_mac" = "yes"])
 
 # Checks for libraries.
 PKG_PROG_PKG_CONFIG
 
 AC_ARG_ENABLE([mysql],
-  [AS_HELP_STRING([--enable-mysql], [Enable MySQL support @<:@yes@:>@])])
+  [AS_HELP_STRING([--enable-mysql], [Enable MySQL support (use libmysqlclient) @<:@yes@:>@])])
+
+AC_ARG_ENABLE([mysql-mariadb],
+  [AS_HELP_STRING([--enable-mysql-mariadb], [Enable MySQL support (use libmariadb) @<:@no@:>@])],
+  [enable_mysql_mariadb=$enableval],
+  [enable_mysql_mariadb=no])
 
 AC_ARG_ENABLE([odbc],
   [AS_HELP_STRING([--enable-odbc], [Enable ODBC support @<:@yes@:>@])])
@@ -100,13 +94,16 @@ AS_IF([test "$enable_mysql" != "no"],
       [AC_MSG_ERROR([libmysqlclient required, but not found.])],
       [enable_mysql=maybenot])])])
 
-AS_IF([test "$enable_mysql" != "no" && test "$enable_mysql" != "yes"],
+AS_IF([test "$enable_mysql_mariadb" != "no"],
   [PKG_CHECK_MODULES([MARIADB],
     [libmariadb],
-    [enable_mysql=yes],
-    [AS_IF([test "$enable_mysql" = "yes"],
-      [AC_MSG_ERROR([libmysqlclient required, but not found.])],
+    [enable_mysql_mariadb=yes],
+    [AS_IF([test "$enable_mysql_mariadb" = "yes"],
+      [AC_MSG_ERROR([libmariadb required, but not found.])],
       [enable_mysql=no])])])
+
+AS_IF([test "$enable_mysql" != "no"] && [test "$enable_mysql_mariadb" != "no"],
+  [AC_MSG_ERROR(["You cannot have both of '--enable-mysql' and '--enable-mysql-mariadb'!"])])
 
 AS_IF([test "$enable_odbc" != "no"],
   [PKG_CHECK_MODULES([ODBC],
@@ -131,21 +128,39 @@ AS_IF([test "$enable_oracle" != "no"], [enable_oracle=yes], [enable_oracle=no])
 
 AS_IF([test "$enable_sqlite" != "no"], [enable_sqlite=yes], [enable_sqlite=no])
 
+# Check spdlog
+PKG_CHECK_MODULES([SPDLOG],
+	[spdlog],
+	[],
+	[AC_MSG_ERROR([spdlog not found.])])
+AC_SUBST(SPDLOG_CFLAGS)
+AC_SUBST(SPDLOG_LIBS)
+
+# Check fmt
+PKG_CHECK_MODULES([FMT],
+	[fmt],
+	[],
+	[AC_MSG_ERROR([fmt not found.])])
+AC_SUBST(FMT_CFLAGS)
+AC_SUBST(FMT_LIBS)
+
+
 
 # Check if the driver ID is valid
 AS_IF([test "$with_default_driver" == "none" || test "$with_default_driver" == "odbc" || test "$with_default_driver" == "mysql" || test "$with_default_driver" == "pgsql" ] || test "$with_default_driver" == "oracle" ] || test "$with_default_driver" == "sqlite" ],
 		[],
-		[AC_MSG_ERROR([invalid DBMS driver id \"${with_default_driver}\".])]
+		[AC_MSG_ERROR([invalid DBMS driver id "${with_default_driver}".])]
 )
 
 
 num_drivers=0
 cur_driver=
-AS_IF([test "$enable_odbc" = "yes"],   [ ((num_drivers++)) ; cur_driver=odbc  ])
-AS_IF([test "$enable_mysql" = "yes"],  [ ((num_drivers++)) ; cur_driver=mysql ])
-AS_IF([test "$enable_pgsql" = "yes"],  [ ((num_drivers++)) ; cur_driver=pgsql ])
-AS_IF([test "$enable_oracle" = "yes"], [ ((num_drivers++)) ; cur_driver=oracle ])
-AS_IF([test "$enable_sqlite" = "yes"], [ ((num_drivers++)) ; cur_driver=sqlite ])
+AS_IF([test "$enable_odbc" = "yes"],   [ num_drivers=$((num_drivers+1)) ; cur_driver=odbc  ])
+AS_IF([test "$enable_mysql" = "yes"],  [ num_drivers=$((num_drivers+1)) ; cur_driver=mysql ])
+AS_IF([test "$enable_mysql_mariadb" = "yes"],  [ num_drivers=$((num_drivers+1)) ; cur_driver=mysql ])
+AS_IF([test "$enable_pgsql" = "yes"],  [ num_drivers=$((num_drivers+1)); cur_driver=pgsql ])
+AS_IF([test "$enable_oracle" = "yes"], [ num_drivers=$((num_drivers+1)); cur_driver=oracle ])
+AS_IF([test "$enable_sqlite" = "yes"], [ num_drivers=$((num_drivers+1)); cur_driver=sqlite ])
 
 AS_IF([test "$num_drivers" = "0" ], [ AC_MSG_ERROR([At least one DBMS driver must be enabled]) ])
 
@@ -181,6 +196,7 @@ AS_IF([test x$with_default_driver != xnone ],
 
 
 AM_CONDITIONAL([ENABLE_MYSQL],  [test "$enable_mysql" = "yes"])
+AM_CONDITIONAL([ENABLE_MYSQL],  [test "$enable_mysql_mariadb" = "yes"])
 AM_CONDITIONAL([ENABLE_ODBC],   [test "$enable_odbc" = "yes"])
 AM_CONDITIONAL([ENABLE_PGSQL],  [test "$enable_pgsql" = "yes"])
 AM_CONDITIONAL([ENABLE_ORACLE], [test "$enable_oracle" = "yes"])
@@ -204,3 +220,11 @@ AC_CONFIG_FILES([Makefile
                  runtime/libgixsql-sqlite/Makefile
 ])
 AC_OUTPUT
+
+
+echo "== Your configuration: =========="
+echo "mysql: $enable_mysql"
+echo "mysql (mariadb): $enable_mysql_mariadb"
+echo "odbc: $enable_odbc"
+echo "postgresql: $enable_pgsql"
+echo "================================="
