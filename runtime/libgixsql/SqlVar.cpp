@@ -37,9 +37,30 @@
 
 #define DBERR_NUM_OUT_OF_RANGE		-410
 
-#define COB_BSWAP_16(val) bitswap16(val)
-#define COB_BSWAP_32(val) bitswap32(val)
-#define COB_BSWAP_64(val) bitswap64(val)
+// bitswap ============
+// GNU/Linux
+#if defined( __linux__)
+#include <byteswap.h>
+#define COB_BSWAP_16(val) (bswap_16 (val))
+#define COB_BSWAP_32(val) (bswap_32(val))
+#define COB_BSWAP_64(val) (bswap_64 (val))
+// Mac
+#elif defined(__APPLE__)
+#define COB_BSWAP_16(val) (OSSwapInt16(val))
+#define COB_BSWAP_32(val) (OSSwapInt32(val))
+#define COB_BSWAP_64(val) (OSSwapInt64(val))
+// Windows
+#elif defined(_WIN32)
+#define COB_BSWAP_16(val) (_byteswap_ushort (val))
+#define COB_BSWAP_32(val) (_byteswap_ulong (val))
+#define COB_BSWAP_64(val) (_byteswap_uint64 (val))
+// Use built-in bitswap functions.
+#else
+#define COB_BSWAP_16(val) (gixsql_builtin_bitswap16(val))
+#define COB_BSWAP_32(val) (gixsql_builtin_bitswap32(val))
+#define COB_BSWAP_64(val) (gixsql_builtin_bitswap64(val))
+#endif
+// ====================
 
 #define CBL_FIELD_FLAG_NONE		(uint32_t)0x0
 #define CBL_FIELD_FLAG_VARLEN	(uint32_t)0x80
@@ -49,7 +70,7 @@
 #define ASCII_ZERO ((unsigned char)0x30)
 
 // Reverse the bits of a uint16_t value
-uint16_t bitswap16(uint16_t value) {
+uint16_t gixsql_builtin_bitswap16(uint16_t value) {
     value = (value >> 8) | (value << 8);                  // Swap bytes
     value = ((value & 0xF0F0) >> 4) | ((value & 0x0F0F) << 4); // Swap every 4 bits
     value = ((value & 0xCCCC) >> 2) | ((value & 0x3333) << 2); // Swap every 2 bits
@@ -58,7 +79,7 @@ uint16_t bitswap16(uint16_t value) {
 }
 
 // Reverse the bits of a uint32_t value
-uint32_t bitswap32(uint32_t value) {
+uint32_t gixsql_builtin_bitswap32(uint32_t value) {
     value = (value >> 16) | (value << 16);               // Swap high and low 16 bits
     value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8); // Swap every 8 bits
     value = ((value & 0xF0F0F0F0) >> 4) | ((value & 0x0F0F0F0F) << 4); // Swap every 4 bits
@@ -68,7 +89,7 @@ uint32_t bitswap32(uint32_t value) {
 }
 
 // Reverse the bits of a uint64_t value
-uint64_t bitswap64(uint64_t value) {
+uint64_t gixsql_builtin_bitswap64(uint64_t value) {
     value = (value >> 32) | (value << 32);               // Swap high and low 32 bits
     value = ((value & 0xFFFF0000FFFF0000ULL) >> 16) | ((value & 0x0000FFFF0000FFFFULL) << 16); // Swap every 16 bits
     value = ((value & 0xFF00FF00FF00FF00ULL) >> 8) | ((value & 0x00FF00FF00FF00FFULL) << 8); // Swap every 8 bits

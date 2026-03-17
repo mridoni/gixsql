@@ -2,7 +2,7 @@
 
 bin_PROGRAMS = gixpp
 gixpp_SOURCES = main.cpp popl.hpp
-gixpp_CXXFLAGS = -std=c++17 -I.. -I $(top_srcdir)/common -I$(top_srcdir)/libcpputils -I$(top_srcdir)/libgixpp
+gixpp_CXXFLAGS = -std=c++17 -I.. -I $(top_srcdir)/common -I$(top_srcdir)/libcpputils -I$(top_builddir)/libgixpp -I$(top_srcdir)/libgixpp
 
 if BUILD_WINDOWS
 gixpp_CXXFLAGS += -I$(top_srcdir)/build-tools/grammar-tools
