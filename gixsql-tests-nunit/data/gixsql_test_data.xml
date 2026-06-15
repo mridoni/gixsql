@@ -3512,5 +3512,36 @@
 			</expected-output>
 		</test>
 
+		<test name="TSQL044A" enabled="true">
+			<description>COMP (USAGE BINARY) host variable as parameter and target</description>
+			<issue-coverage>#000</issue-coverage>
+			<group></group>
+			<architecture>all</architecture>
+			<compiler-type>all</compiler-type>
+
+			<cobol-sources>
+				<src name="TSQL044A.cbl" />
+			</cobol-sources>
+
+			<data-sources count="1" />
+			<pre-run-drop-table data-source-index="1">tab1</pre-run-drop-table>
+			<pre-run-sql-statement data-source-index="1">CREATE TABLE TAB1 (FLD1 INT, FLD2 INT)</pre-run-sql-statement>
+			<pre-run-sql-statement data-source-index="1">INSERT INTO TAB1(FLD1, FLD2) VALUES(42, 1234)</pre-run-sql-statement>
+
+			<environment>
+				<variable key="DATASRC" value="${datasource1-noauth-url}" />
+				<variable key="DATASRC_USR" value="${datasource1-username}.${datasource1-password}" />
+			</environment>
+
+			<preprocess value="true" />
+			<compile value="true" />
+			<run value="true" />
+
+			<expected-output>
+				<line>SELECT SQLCODE: +0000000000</line>
+				<line>FLD2: 1234</line>
+			</expected-output>
+		</test>
+
 	</tests>
 </test-data>

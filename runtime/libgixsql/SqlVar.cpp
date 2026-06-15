@@ -78,9 +78,14 @@ SqlVar::SqlVar(CobolVarType _type, int _length, int _power, uint32_t _flags, voi
 	addr = _addr;
 	ind_addr = _ind_addr;
 	flags = _flags;
-	is_variable_length = (_flags & CBL_FIELD_FLAG_VARLEN);
-	is_binary = (_flags & CBL_FIELD_FLAG_BINARY);
-	is_autotrim = (_flags & CBL_FIELD_FLAG_AUTOTRIM);
+	// COMP integers are rendered to a display string by createRealData, so they
+	// must bind as text: clear the binary flag gixpp sets for USAGE BINARY.
+	if (_type == CobolVarType::COBOL_TYPE_UNSIGNED_BINARY ||
+		_type == CobolVarType::COBOL_TYPE_SIGNED_BINARY)
+		flags &= ~CBL_FIELD_FLAG_BINARY;
+	is_variable_length = (flags & CBL_FIELD_FLAG_VARLEN);
+	is_binary = (flags & CBL_FIELD_FLAG_BINARY);
+	is_autotrim = (flags & CBL_FIELD_FLAG_AUTOTRIM);
 	allocate_realdata_buffer();
 }
 
@@ -316,6 +321,9 @@ void SqlVar::createRealData()
 
 			}
 
+			// snprintf wrote a decimal string into the length-sized buffer; trim
+			// db_data_len to the text so trailing NULs aren't sent to the database.
+			db_data_len = (int)strlen((const char*)db_data_buffer.data());
 			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 
@@ -367,6 +375,9 @@ void SqlVar::createRealData()
 
 			}
 
+			// snprintf wrote a decimal string into the length-sized buffer; trim
+			// db_data_len to the text so trailing NULs aren't sent to the database.
+			db_data_len = (int)strlen((const char*)db_data_buffer.data());
 			spdlog::trace(FMT_FILE_FUNC "type: {}, length: {}, data: {}, db_data_buffer: [{}]", __FILE__, __func__, type, length, addr, std::string((const char *)db_data_buffer.data(), db_data_buffer_len));
 			break;
 
