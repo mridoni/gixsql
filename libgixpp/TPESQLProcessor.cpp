@@ -540,6 +540,10 @@ bool TPESQLProcessor::put_cursor_declarations()
 	put_output_line(code_tag + "*");
 	put_output_line(code_tag + "*   ESQL CURSOR DECLARATIONS (START)");
 
+	// Start a section of our own: without it the GO TO below would become the last
+	// statement of the program's last paragraph (or section), so a PERFORM of that
+	// paragraph would jump to GIX-SKIP-CRSR-INIT instead of returning to its caller.
+	put_output_line(AREA_A_CPREFIX "GIX-CRSR-DECL SECTION.");
 	put_output_line(std::string(_areab) + "GO TO GIX-SKIP-CRSR-INIT.");
 
 	auto cursor_list = startup_items;
