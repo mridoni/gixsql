@@ -358,8 +358,10 @@ bool TPESQLProcessor::processNextFile()
 		break;
 
 		default:
-			// Add original text, commented
-			if (current_input_line != working_end_line && current_input_line != linkage_end_line) {
+			// Add original text, commented. Only the WORKING-STORAGE/LINKAGE end markers
+			// (pseudo statements placed on the last line of the section) keep the original
+			// line: a real ESQL statement that ends on that line must be commented out too.
+			if (cmd != ESQL_Command::WorkingEnd) {
 				for (int n = exec_sql_stmt->startLine; n <= exec_sql_stmt->endLine; n++) {
 					put_output_line(comment_line("GIXSQL", input_lines.at(n - 1)));
 					current_input_line++;
