@@ -274,14 +274,14 @@ void SqlVar::createRealData()
 				case 1: 
 				{	// 1 byte
 					uint8_t n8 = *((uint8_t*)addr);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n8);
 				}
 				break;
 				
 				case 2:
 				{	// 1 byte
 					uint8_t n8 = *((uint8_t*)addr);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n8);
 				}
 				break;
 				
@@ -289,7 +289,7 @@ void SqlVar::createRealData()
 				{	// 2 bytes
 					uint16_t n16 = *((uint16_t*)addr);
 					n16 = COB_BSWAP_16(n16);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n16);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n16);
 				}
 				break;
 
@@ -297,7 +297,7 @@ void SqlVar::createRealData()
 				{	// 4 bytes
 					uint32_t n32 = *((uint32_t*)addr);
 					n32 = COB_BSWAP_32(n32);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n32);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n32);
 				}
 				break;
 
@@ -305,7 +305,7 @@ void SqlVar::createRealData()
 				{
 					uint64_t n64 = *((uint64_t*)addr);
 					n64 = COB_BSWAP_64(n64);
-					snprintf((char*)db_data_buffer.data(), length, "%" PRIu64, n64);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%" PRIu64, n64);
 				}
 				break;
 
@@ -325,14 +325,14 @@ void SqlVar::createRealData()
 				case 1: 
 				{	// 1 byte
 					int8_t n8 = *((int8_t*)addr);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n8);
 				}
 				break;
 				
 				case 2:
 				{	// 1 byte
 					int8_t n8 = *((int8_t*)addr);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n8);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n8);
 				}
 				break;
 				
@@ -340,7 +340,7 @@ void SqlVar::createRealData()
 				{	// 2 bytes
 					int16_t n16 = *((int16_t*)addr);
 					n16 = COB_BSWAP_16(n16);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n16);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n16);
 				}
 				break;
 
@@ -348,7 +348,7 @@ void SqlVar::createRealData()
 				{	// 4 bytes
 					int32_t n32 = *((int32_t*)addr);
 					n32 = COB_BSWAP_32(n32);
-					snprintf((char*)db_data_buffer.data(), length, "%d", n32);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%d", n32);
 				}
 				break;
 
@@ -356,7 +356,7 @@ void SqlVar::createRealData()
 				{	// 8 bytes
 					int64_t n64 = *((int64_t*)addr);
 					n64 = COB_BSWAP_64(n64);
-					snprintf((char*)db_data_buffer.data(), length, "%" PRId64, n64);
+					snprintf((char*)db_data_buffer.data(), db_data_buffer_len, "%" PRId64, n64);
 				}
 				break;
 
@@ -952,11 +952,12 @@ void SqlVar::allocate_realdata_buffer()
 			break;
 
 		case CobolVarType::COBOL_TYPE_UNSIGNED_BINARY:
-			db_data_buffer_len = length;
-			break;
-
 		case CobolVarType::COBOL_TYPE_SIGNED_BINARY:
-			db_data_buffer_len = length;
+			// Binary fields are rendered as decimal text (snprintf). 'length' is the number of
+			// PIC digits, which leaves no room for a sign or the terminating NUL, and a binary
+			// field can hold more digits than its PIC (e.g. 32767 in PIC S9(4) COMP-5).
+			// 20 digits + sign + NUL covers any 64-bit value.
+			db_data_buffer_len = 22;
 			break;
 
 		default:
