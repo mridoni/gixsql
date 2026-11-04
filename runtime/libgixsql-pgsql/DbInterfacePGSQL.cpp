@@ -898,7 +898,11 @@ Oid DbInterfacePGSQL::get_pgsql_type(CobolVarType t, uint32_t flags)
 
 	case CobolVarType::COBOL_TYPE_ALPHANUMERIC:
 	case CobolVarType::COBOL_TYPE_JAPANESE:
-		return CBL_FIELD_IS_BINARY(flags) ? OID_BYTEA : OID_VARCHAR;
+		// Leave text parameters untyped (0) so that PostgreSQL infers the type from the
+		// context, as it does for literals: typing them as varchar makes assignments to
+		// DATE/TIMESTAMP/numeric columns fail ("column is of type date but expression is
+		// of type character varying"), unlike Db2 and the other GixSQL backends.
+		return CBL_FIELD_IS_BINARY(flags) ? OID_BYTEA : 0;
 
 	default:
 		return 0;
