@@ -18,6 +18,7 @@ Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307
 USA.
 */
 
+#include <cctype>
 #include "gix_esql_driver.hh"
 
 #include <vector>
@@ -332,7 +333,13 @@ gix_esql_driver::cb_search_list(std::string text)
 void
 gix_esql_driver::cb_set_cursorname(std::string text)
 {
-	cursorname = string_replace(filenameID, "-", "_") + "_" + text;
+	// The file name becomes part of COBOL identifiers (GIXSQL-CI-F-..., GIXSQL-CI-P-...):
+	// map every character that is not valid in a COBOL word to '_'
+	std::string id = filenameID;
+	for (auto& c : id)
+		if (!isalnum((unsigned char)c))
+			c = '_';
+	cursorname = id + "_" + text;
 }
 
 void
