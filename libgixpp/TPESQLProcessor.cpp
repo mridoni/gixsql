@@ -1965,13 +1965,13 @@ void TPESQLProcessor::put_smart_cursor_init_flags()
 	// First we generate the flags for cursors declared in WORKING-STORAGE
 	for (cb_exec_sql_stmt_ptr stmt : startup_items) {
 		std::string cname = string_replace(stmt->cursorName, "_", "-");
-		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
+		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X VALUE SPACE.", cname));
 	}
 	// Then the other cursors
 	auto other_crsrs = cpplinq::from(*(parser_data->exec_list())).where([](cb_exec_sql_stmt_ptr p) { return p->startup_item == 0 && p->commandName == ESQL_SELECT && !p->cursorName.empty(); }).to_vector();
 	for (cb_exec_sql_stmt_ptr stmt : other_crsrs) {
 		std::string cname = string_replace(stmt->cursorName, "_", "-");
-		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X.", cname));
+		put_output_line(code_tag + string_format(" 01  GIXSQL-CI-F-%s PIC X VALUE SPACE.", cname));
 	}
 	put_output_line(code_tag + "*   ESQL CURSOR INIT FLAGS (END)");
 
